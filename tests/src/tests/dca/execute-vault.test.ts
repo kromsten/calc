@@ -305,6 +305,70 @@ describe('when executing a vault', () => {
       expect(vaultBeforeExecution.status).to.eql('scheduled') && expect(vaultAfterExecution.status).to.eql('active'));
   });
 
+  describe('until the vault balance is empty', () => {
+    let vault: Vault;
+    const deposit = coin(1000000, 'udemo');
+
+    before(async function (this: Context) {
+      const vaultId = await createVault(this, {
+        time_interval: 'every_second',
+      });
+
+      vault = (
+        await this.cosmWasmClient.queryContractSmart(this.dcaContractAddress, {
+          get_vault: {
+            vault_id: vaultId,
+          },
+        })
+      ).vault;
+
+      while (vault.status == 'active') {
+        await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+          execute_trigger: {
+            trigger_id: vaultId,
+          },
+        });
+
+        vault = (
+          await this.cosmWasmClient.queryContractSmart(this.dcaContractAddress, {
+            get_vault: {
+              vault_id: vaultId,
+            },
+          })
+        ).vault;
+
+        await setTimeout(1000);
+      }
+    });
+
+    it('still has a trigger', () => expect(vault.trigger).to.not.eql(null));
+
+    it('is inactive', () => expect(vault.status).to.eql('inactive'));
+
+    it('has a zero balance', () => expect(vault.balance.amount).to.eql('0'));
+
+    it('has a swapped amount equal to the total deposited', () =>
+      expect(vault.swapped_amount.amount).to.eql(deposit.amount));
+
+    it('deletes the final trigger on next execution', async function (this: Context) {
+      await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+        execute_trigger: {
+          trigger_id: vault.id,
+        },
+      });
+
+      vault = (
+        await this.cosmWasmClient.queryContractSmart(this.dcaContractAddress, {
+          get_vault: {
+            vault_id: vault.id,
+          },
+        })
+      ).vault;
+
+      expect(vault.trigger).to.eql(null);
+    });
+  });
+
   describe('with an unfilled fin limit order trigger', () => {
     let vaultId: number;
 
