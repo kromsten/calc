@@ -10,7 +10,6 @@ use crate::constants::{
 use crate::contract::AFTER_FIN_SWAP_REPLY_ID;
 use crate::handlers::execute_trigger::execute_trigger_handler;
 use crate::handlers::get_events_by_resource_id::get_events_by_resource_id;
-use crate::helpers::fee_helpers::{get_delegation_fee_rate, get_swap_fee_rate};
 use crate::msg::{ExecuteMsg, QueryMsg, TriggerIdsResponse, VaultResponse};
 use crate::state::config::{get_config, FeeCollector};
 use crate::state::vaults::{get_vault, update_vault};
@@ -2419,17 +2418,13 @@ fn for_active_vault_with_dca_plus_updates_standard_performance_data() {
     )
     .unwrap();
 
-    let fee_rate = get_swap_fee_rate(&deps.as_mut(), &vault).unwrap()
-        + get_delegation_fee_rate(&deps.as_mut(), &vault).unwrap()
-        + Decimal::from_str(FIN_TAKER_FEE).unwrap();
-
     assert_eq!(
         updated_dca_plus_config.standard_dca_swapped_amount.amount,
         vault.swap_amount
     );
     assert_eq!(
         updated_dca_plus_config.standard_dca_received_amount.amount,
-        vault.swap_amount * (Decimal::one() / price) * (Decimal::one() - fee_rate)
+        vault.swap_amount * (Decimal::one() / price)
     );
 }
 
@@ -2800,17 +2795,13 @@ fn for_inactive_vault_with_dca_plus_updates_standard_performance_data() {
     )
     .unwrap();
 
-    let fee_rate = get_swap_fee_rate(&deps.as_mut(), &vault).unwrap()
-        + get_delegation_fee_rate(&deps.as_mut(), &vault).unwrap()
-        + Decimal::from_str(FIN_TAKER_FEE).unwrap();
-
     assert_eq!(
         updated_dca_plus_config.standard_dca_swapped_amount.amount,
         vault.swap_amount
     );
     assert_eq!(
         updated_dca_plus_config.standard_dca_received_amount.amount,
-        vault.swap_amount * (Decimal::one() / price) * (Decimal::one() - fee_rate)
+        vault.swap_amount * (Decimal::one() / price)
     );
 }
 

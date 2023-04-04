@@ -186,8 +186,9 @@ pub fn execute_trigger(
                 + get_delegation_fee_rate(&deps, &vault)?
                 + Decimal::from_str(FIN_TAKER_FEE)?; // fin taker fee - TODO: remove once we can get this from the pair contracts
 
-            let receive_amount =
-                swap_amount * (Decimal::one() / actual_price) * (Decimal::one() - fee_rate);
+            let receive_amount = swap_amount * (Decimal::one() / actual_price);
+
+            let fee_amount = receive_amount * fee_rate;
 
             dca_plus_config.standard_dca_swapped_amount =
                 add_to_coin(dca_plus_config.standard_dca_swapped_amount, swap_amount);
@@ -207,10 +208,7 @@ pub fn execute_trigger(
                     EventData::SimulatedDcaVaultExecutionCompleted {
                         sent: Coin::new(swap_amount.into(), vault.get_swap_denom()),
                         received: Coin::new(receive_amount.into(), vault.get_receive_denom()),
-                        fee: Coin::new(
-                            (fee_rate * receive_amount).into(),
-                            vault.get_receive_denom(),
-                        ),
+                        fee: Coin::new(fee_amount.into(), vault.get_receive_denom()),
                     },
                 ),
             )?;
