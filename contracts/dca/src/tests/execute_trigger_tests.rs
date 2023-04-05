@@ -2594,6 +2594,43 @@ fn for_active_vault_with_slippage_exceeded_publishes_standard_dca_execution_skip
 }
 
 #[test]
+fn for_active_vault_with_price_threshold_exceeded_publishes_standard_dca_execution_skipped_event() {
+    let mut deps = mock_dependencies();
+    let env = mock_env();
+    let info = mock_info(ADMIN, &[]);
+
+    instantiate_contract(deps.as_mut(), env.clone(), info);
+
+    set_fin_price(&mut deps, &ONE_DECIMAL, &ONE_MICRON, &ONE_MICRON);
+
+    let vault = setup_new_vault(
+        deps.as_mut(),
+        env.clone(),
+        Vault {
+            minimum_receive_amount: Some(ONE + ONE),
+            dca_plus_config: Some(DcaPlusConfig::default()),
+            ..Vault::default()
+        },
+    );
+
+    execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
+
+    let events = get_events_by_resource_id(deps.as_ref(), vault.id, None, None)
+        .unwrap()
+        .events;
+
+    assert!(events.contains(&Event {
+        id: 2,
+        timestamp: env.block.time,
+        block_height: env.block.height,
+        resource_id: vault.id,
+        data: EventData::SimulatedDcaVaultExecutionSkipped {
+            reason: ExecutionSkippedReason::PriceThresholdExceeded { price: ONE_DECIMAL },
+        },
+    }));
+}
+
+#[test]
 fn for_scheduled_vault_updates_status_to_active() {
     let mut deps = mock_dependencies();
     let env = mock_env();

@@ -133,6 +133,23 @@ pub fn execute_trigger(
                 return Ok(false);
             }
 
+            if price_threshold_exceeded(swap_amount, vault.minimum_receive_amount, belief_price)? {
+                create_event(
+                    deps.storage,
+                    EventBuilder::new(
+                        vault.id,
+                        env.block.clone(),
+                        EventData::SimulatedDcaVaultExecutionSkipped {
+                            reason: ExecutionSkippedReason::PriceThresholdExceeded {
+                                price: belief_price,
+                            },
+                        },
+                    ),
+                )?;
+
+                return Ok(dca_plus_config.has_sufficient_funds());
+            }
+
             let actual_price_result = query_price(
                 deps.querier,
                 vault.pair.clone(),
@@ -250,7 +267,13 @@ pub fn execute_trigger(
         return Ok(response);
     }
 
-    if price_threshold_exceeded(&deps.as_ref(), &env, &vault, belief_price)? {
+    let swap_amount = get_swap_amount(&deps.as_ref(), &env, &vault)?;
+
+    if price_threshold_exceeded(
+        swap_amount.amount,
+        vault.minimum_receive_amount,
+        belief_price,
+    )? {
         create_event(
             deps.storage,
             EventBuilder::new(
@@ -290,7 +313,7 @@ pub fn execute_trigger(
     Ok(response.add_submessage(create_fin_swap_message(
         deps.querier,
         vault.pair.clone(),
-        get_swap_amount(&deps.as_ref(), &env, vault.clone())?,
+        swap_amount,
         vault.slippage_tolerance,
         Some(AFTER_FIN_SWAP_REPLY_ID),
         Some(ReplyOn::Always),
