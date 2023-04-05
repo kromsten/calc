@@ -1,10 +1,10 @@
 import { coin } from '@cosmjs/proto-signing';
 import dayjs from 'dayjs';
 import { Context } from 'mocha';
-import { map, range, reduce } from 'ramda';
+import { map, range } from 'ramda';
 import { EventData } from '../../types/dca/response/get_events';
 import { Vault } from '../../types/dca/response/get_vault';
-import { createVault, getBalances, provideAuthGrant } from '../helpers';
+import { createVault, getBalances } from '../helpers';
 import { expect } from '../shared.test';
 
 describe('when creating a vault', () => {
@@ -384,6 +384,7 @@ describe('when creating a vault', () => {
 
   describe('with dca plus & no trigger', () => {
     const deposit = coin(1000000, 'ukuji');
+    const swapAmount = '100000';
     let vault: Vault;
     let balancesBeforeExecution: Record<string, number>;
     let balancesAfterExecution: Record<string, number>;
@@ -392,9 +393,18 @@ describe('when creating a vault', () => {
     before(async function (this: Context) {
       balancesBeforeExecution = await getBalances(this.cosmWasmClient, [this.userWalletAddress], ['udemo']);
 
+      expectedPrice = await this.cosmWasmClient.queryContractSmart(this.swapContractAddress, {
+        get_price: {
+          swap_amount: coin(swapAmount, 'ukuji'),
+          target_denom: 'udemo',
+          price_type: 'actual',
+        },
+      });
+
       const vault_id = await createVault(
         this,
         {
+          swap_amount: swapAmount,
           use_dca_plus: true,
         },
         [deposit],
@@ -407,14 +417,6 @@ describe('when creating a vault', () => {
           },
         })
       ).vault;
-
-      expectedPrice = await this.cosmWasmClient.queryContractSmart(this.swapContractAddress, {
-        get_price: {
-          swap_amount: coin(vault.swap_amount, 'ukuji'),
-          target_denom: 'udemo',
-          price_type: 'actual',
-        },
-      });
 
       balancesAfterExecution = await getBalances(this.cosmWasmClient, [this.userWalletAddress], ['udemo']);
     });
@@ -443,7 +445,7 @@ describe('when creating a vault', () => {
 
     it('calculates the standard dca received amount', async function (this: Context) {
       expect(vault.dca_plus_config.standard_dca_received_amount.amount).to.equal(
-        `${Math.round((parseInt(vault.swap_amount) / expectedPrice) * (1 - this.calcSwapFee - this.finTakerFee)) + 1}`,
+        `${Math.round((parseInt(vault.swap_amount) / expectedPrice) * (1 - this.calcSwapFee - this.finTakerFee))}`,
       );
     });
   });

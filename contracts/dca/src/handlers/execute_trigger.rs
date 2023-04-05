@@ -203,15 +203,17 @@ pub fn execute_trigger(
                 + get_delegation_fee_rate(&deps, &vault)?
                 + Decimal::from_str(FIN_TAKER_FEE)?; // fin taker fee - TODO: remove once we can get this from the pair contracts
 
-            let receive_amount = swap_amount * (Decimal::one() / actual_price);
-
-            let fee_amount = receive_amount * fee_rate;
+            let received_amount_before_fee = swap_amount * (Decimal::one() / actual_price);
+            let fee_amount = received_amount_before_fee * fee_rate;
+            let received_amount_after_fee = received_amount_before_fee - fee_amount;
 
             dca_plus_config.standard_dca_swapped_amount =
                 add_to_coin(dca_plus_config.standard_dca_swapped_amount, swap_amount);
 
-            dca_plus_config.standard_dca_received_amount =
-                add_to_coin(dca_plus_config.standard_dca_received_amount, receive_amount);
+            dca_plus_config.standard_dca_received_amount = add_to_coin(
+                dca_plus_config.standard_dca_received_amount,
+                received_amount_after_fee,
+            );
 
             vault.dca_plus_config = Some(dca_plus_config.clone());
 
@@ -224,7 +226,10 @@ pub fn execute_trigger(
                     env.block.clone(),
                     EventData::SimulatedDcaVaultExecutionCompleted {
                         sent: Coin::new(swap_amount.into(), vault.get_swap_denom()),
-                        received: Coin::new(receive_amount.into(), vault.get_receive_denom()),
+                        received: Coin::new(
+                            received_amount_before_fee.into(),
+                            vault.get_receive_denom(),
+                        ),
                         fee: Coin::new(fee_amount.into(), vault.get_receive_denom()),
                     },
                 ),

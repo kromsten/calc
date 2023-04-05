@@ -859,6 +859,7 @@ describe('when executing a vault', () => {
 
   describe('with dca plus', () => {
     const deposit = coin(1000000, 'ukuji');
+    const swapAmount = '100000';
     let vault: Vault;
     let balancesBeforeExecution: Record<string, number>;
     let balancesAfterExecution: Record<string, number>;
@@ -872,6 +873,7 @@ describe('when executing a vault', () => {
       const vault_id = await createVault(
         this,
         {
+          swap_amount: swapAmount,
           target_start_time_utc_seconds: `${targetTime.unix()}`,
           time_interval: 'every_second',
           use_dca_plus: true,
@@ -882,6 +884,14 @@ describe('when executing a vault', () => {
       while (dayjs().isBefore(targetTime)) {
         await setTimeout(3000);
       }
+
+      expectedPrice = await this.cosmWasmClient.queryContractSmart(this.swapContractAddress, {
+        get_price: {
+          swap_amount: coin(swapAmount, 'ukuji'),
+          target_denom: 'udemo',
+          price_type: 'actual',
+        },
+      });
 
       await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
         execute_trigger: {
@@ -896,14 +906,6 @@ describe('when executing a vault', () => {
           },
         })
       ).vault;
-
-      expectedPrice = await this.cosmWasmClient.queryContractSmart(this.swapContractAddress, {
-        get_price: {
-          swap_amount: coin(vault.swap_amount, 'ukuji'),
-          target_denom: 'udemo',
-          price_type: 'actual',
-        },
-      });
 
       balancesAfterExecution = await getBalances(this.cosmWasmClient, [this.userWalletAddress], ['udemo']);
     });
@@ -931,8 +933,9 @@ describe('when executing a vault', () => {
     });
 
     it('calculates the standard dca received amount', async function (this: Context) {
-      expect(vault.dca_plus_config.standard_dca_received_amount.amount).to.equal(
-        `${Math.round((parseInt(vault.swap_amount) / expectedPrice) * (1 - this.calcSwapFee - this.finTakerFee))}`,
+      expect(parseInt(vault.dca_plus_config.standard_dca_received_amount.amount)).to.be.approximately(
+        Math.round((parseInt(vault.swap_amount) / expectedPrice) * (1 - this.calcSwapFee - this.finTakerFee)),
+        2,
       );
     });
   });

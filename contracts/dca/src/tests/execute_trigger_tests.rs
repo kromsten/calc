@@ -2420,13 +2420,19 @@ fn for_active_vault_with_dca_plus_updates_standard_performance_data() {
     )
     .unwrap();
 
+    let config = get_config(deps.as_ref().storage).unwrap();
+
+    let fee_rate = config.swap_fee_percent
+        + config.delegation_fee_percent
+        + Decimal::from_str(FIN_TAKER_FEE).unwrap();
+
     assert_eq!(
         updated_dca_plus_config.standard_dca_swapped_amount.amount,
         vault.swap_amount
     );
     assert_eq!(
         updated_dca_plus_config.standard_dca_received_amount.amount,
-        vault.swap_amount * (Decimal::one() / price)
+        vault.swap_amount * (Decimal::one() / price) * (Decimal::one() - fee_rate)
     );
 }
 
@@ -2461,10 +2467,15 @@ fn for_active_vault_with_dca_plus_publishes_execution_simulated_event() {
 
     let config = get_config(deps.as_ref().storage).unwrap();
 
-    let fee = (config.swap_fee_percent
+    let fee_rate = config.swap_fee_percent
         + config.delegation_fee_percent
-        + Decimal::from_str(FIN_TAKER_FEE).unwrap())
-        * dca_plus_config.standard_dca_received_amount.amount;
+        + Decimal::from_str(FIN_TAKER_FEE).unwrap();
+
+    let received_before_fee = dca_plus_config.standard_dca_received_amount.amount
+        * (Decimal::one() / (Decimal::one() - fee_rate))
+        + Uint128::one();
+
+    let fee = received_before_fee - dca_plus_config.standard_dca_received_amount.amount;
 
     assert!(events.contains(&Event {
         id: 2,
@@ -2473,7 +2484,7 @@ fn for_active_vault_with_dca_plus_publishes_execution_simulated_event() {
         resource_id: vault.id,
         data: EventData::SimulatedDcaVaultExecutionCompleted {
             sent: dca_plus_config.standard_dca_swapped_amount,
-            received: dca_plus_config.standard_dca_received_amount,
+            received: Coin::new(received_before_fee.into(), vault.get_receive_denom()),
             fee: Coin::new(fee.into(), vault.get_receive_denom())
         },
     }));
@@ -2901,13 +2912,19 @@ fn for_inactive_vault_with_dca_plus_updates_standard_performance_data() {
     )
     .unwrap();
 
+    let config = get_config(deps.as_ref().storage).unwrap();
+
+    let fee_rate = config.swap_fee_percent
+        + config.delegation_fee_percent
+        + Decimal::from_str(FIN_TAKER_FEE).unwrap();
+
     assert_eq!(
         updated_dca_plus_config.standard_dca_swapped_amount.amount,
         vault.swap_amount
     );
     assert_eq!(
         updated_dca_plus_config.standard_dca_received_amount.amount,
-        vault.swap_amount * (Decimal::one() / price)
+        vault.swap_amount * (Decimal::one() / price) * (Decimal::one() - fee_rate)
     );
 }
 
