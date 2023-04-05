@@ -246,6 +246,10 @@ pub fn execute_trigger(
         return Ok(response);
     }
 
+    if vault.is_inactive() {
+        return Ok(response);
+    }
+
     if price_threshold_exceeded(&deps.as_ref(), &env, &vault, belief_price)? {
         create_event(
             deps.storage,

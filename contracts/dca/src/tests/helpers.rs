@@ -1,14 +1,15 @@
-use super::mocks::{MockApp, ADMIN, DENOM_UKUJI, DENOM_UTEST, FEE_COLLECTOR};
+use super::mocks::{MockApp, ADMIN, DENOM_UKUJI, DENOM_UTEST, FEE_COLLECTOR, USER};
 use crate::{
     constants::{ONE, TEN},
     contract::instantiate,
+    handlers::get_vault::get_vault,
     msg::{EventsResponse, InstantiateMsg, QueryMsg, VaultResponse},
     state::{
         cache::{Cache, CACHE},
         config::FeeCollector,
         pairs::PAIRS,
         triggers::save_trigger,
-        vaults::save_vault,
+        vaults::{save_vault, update_vault},
     },
     types::{dca_plus_config::DcaPlusConfig, vault::Vault, vault_builder::VaultBuilder},
 };
@@ -22,7 +23,7 @@ use cosmwasm_std::{
     from_binary,
     testing::{MockApi, MockQuerier},
     to_binary, Addr, Coin, ContractResult, Decimal, DepsMut, Env, MemoryStorage, MessageInfo,
-    OwnedDeps, SystemResult, Uint128, WasmQuery,
+    OwnedDeps, SystemResult, Timestamp, Uint128, WasmQuery,
 };
 use fin_helpers::msg::{FinBookResponse, FinPoolResponseWithoutDenom};
 use kujira::fin::QueryMsg as FinQueryMsg;
@@ -92,6 +93,74 @@ pub fn instantiate_contract_with_multiple_fee_collectors(
     };
 
     instantiate(deps, env.clone(), info.clone(), instantiate_message).unwrap();
+}
+
+impl Default for Vault {
+    fn default() -> Self {
+        Self {
+            id: Uint128::zero(),
+            created_at: Timestamp::default(),
+            owner: Addr::unchecked(USER),
+            label: Some("vault".to_string()),
+            destinations: vec![Destination {
+                address: Addr::unchecked(USER),
+                allocation: Decimal::percent(100),
+                action: PostExecutionAction::Send,
+            }],
+            status: VaultStatus::Active,
+            balance: Coin::new(TEN.into(), DENOM_UKUJI),
+            swap_amount: ONE,
+            pair: Pair {
+                address: Addr::unchecked("pair"),
+                base_denom: DENOM_UKUJI.to_string(),
+                quote_denom: DENOM_UTEST.to_string(),
+            },
+            slippage_tolerance: None,
+            minimum_receive_amount: None,
+            time_interval: TimeInterval::Daily,
+            started_at: None,
+            swapped_amount: Coin::new(0, DENOM_UKUJI),
+            received_amount: Coin::new(0, DENOM_UTEST),
+            trigger: Some(TriggerConfiguration::Time {
+                target_time: Timestamp::from_seconds(0),
+            }),
+            dca_plus_config: None,
+        }
+    }
+}
+
+impl Default for DcaPlusConfig {
+    fn default() -> Self {
+        Self {
+            escrow_level: Decimal::percent(10),
+            model_id: 30,
+            total_deposit: Coin::new(TEN.into(), DENOM_UKUJI),
+            standard_dca_swapped_amount: Coin::new(0, DENOM_UKUJI),
+            standard_dca_received_amount: Coin::new(0, DENOM_UTEST),
+            escrowed_balance: Coin::new(0, DENOM_UTEST),
+        }
+    }
+}
+
+pub fn setup_new_vault(deps: DepsMut, env: Env, vault: Vault) -> Vault {
+    PAIRS
+        .save(deps.storage, vault.pair.address.clone(), &vault.pair)
+        .unwrap();
+
+    update_vault(deps.storage, &vault).unwrap();
+
+    save_trigger(
+        deps.storage,
+        Trigger {
+            vault_id: vault.id,
+            configuration: TriggerConfiguration::Time {
+                target_time: env.block.time,
+            },
+        },
+    )
+    .unwrap();
+
+    get_vault(deps.as_ref(), vault.id).unwrap().vault
 }
 
 pub fn setup_vault(
