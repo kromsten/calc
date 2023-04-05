@@ -149,16 +149,18 @@ pub fn setup_new_vault(deps: DepsMut, env: Env, vault: Vault) -> Vault {
 
     update_vault(deps.storage, &vault).unwrap();
 
-    save_trigger(
-        deps.storage,
-        Trigger {
-            vault_id: vault.id,
-            configuration: TriggerConfiguration::Time {
-                target_time: env.block.time,
+    if vault.trigger.is_some() {
+        save_trigger(
+            deps.storage,
+            Trigger {
+                vault_id: vault.id,
+                configuration: TriggerConfiguration::Time {
+                    target_time: env.block.time,
+                },
             },
-        },
-    )
-    .unwrap();
+        )
+        .unwrap();
+    }
 
     get_vault(deps.as_ref(), vault.id).unwrap().vault
 }

@@ -74,12 +74,6 @@ pub fn delete_trigger(store: &mut dyn Storage, vault_id: Uint128) -> StdResult<U
     Ok(trigger.vault_id)
 }
 
-pub fn clear_triggers(store: &mut dyn Storage) {
-    TRIGGERS.clear(store);
-    TRIGGER_IDS_BY_TARGET_TIME.clear(store);
-    TRIGGER_ID_BY_FIN_LIMIT_ORDER_IDX.clear(store);
-}
-
 #[cfg(test)]
 mod remove_trigger_tests {
     use cosmwasm_std::{testing::MockStorage, Timestamp};

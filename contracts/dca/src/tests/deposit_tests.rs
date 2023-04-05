@@ -1,15 +1,21 @@
 use std::str::FromStr;
 
 use crate::constants::{ONE, ONE_HUNDRED, ONE_THOUSAND, TEN};
+use crate::handlers::deposit::deposit_handler;
 use crate::msg::{ExecuteMsg, QueryMsg, VaultResponse};
 use crate::state::config::FeeCollector;
 use crate::tests::mocks::{fin_contract_unfilled_limit_order, MockApp, ADMIN, DENOM_UKUJI, USER};
+use crate::types::vault::Vault;
 use base::events::event::EventBuilder;
 use base::vaults::vault::VaultStatus;
-use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
+use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+use cosmwasm_std::{to_binary, Addr, Coin, CosmosMsg, Decimal, SubMsg, Uint128, WasmMsg};
 use cw_multi_test::Executor;
 
-use super::helpers::{assert_address_balances, assert_events_published, assert_vault_balance};
+use super::helpers::{
+    assert_address_balances, assert_events_published, assert_vault_balance, instantiate_contract,
+    setup_new_vault,
+};
 use super::mocks::DENOM_UTEST;
 
 #[test]
@@ -309,42 +315,69 @@ fn when_vault_is_inactive_should_change_status() {
 }
 
 #[test]
-fn when_vault_is_inactive_should_execute_vault() {
-    let user_address = Addr::unchecked(USER);
-    let user_balance = ONE_HUNDRED;
-    let vault_deposit = TEN;
-    let mut mock = MockApp::new(fin_contract_unfilled_limit_order())
-        .with_funds_for(&user_address, user_balance, DENOM_UKUJI)
-        .with_inactive_vault(&user_address, None, "vault");
+fn when_vault_is_inactive_without_a_trigger_should_execute_vault() {
+    let mut deps = mock_dependencies();
+    let env = mock_env();
 
-    let vault_id = mock.vault_ids.get("vault").unwrap().to_owned();
+    instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
 
-    mock.app
-        .execute_contract(
-            Addr::unchecked(ADMIN),
-            mock.dca_contract_address.clone(),
-            &ExecuteMsg::Deposit {
-                address: user_address.clone(),
-                vault_id,
-            },
-            &[Coin::new(vault_deposit.into(), DENOM_UKUJI)],
-        )
-        .unwrap();
-
-    assert_events_published(
-        &mock,
-        vault_id,
-        &[EventBuilder::new(
-            vault_id,
-            mock.app.block_info(),
-            base::events::event::EventData::DcaVaultExecutionTriggered {
-                base_denom: DENOM_UTEST.to_string(),
-                quote_denom: DENOM_UKUJI.to_string(),
-                asset_price: Decimal::one(),
-            },
-        )
-        .build(4)],
+    let vault = setup_new_vault(
+        deps.as_mut(),
+        env.clone(),
+        Vault {
+            status: VaultStatus::Inactive,
+            trigger: None,
+            ..Vault::default()
+        },
     );
+
+    let response = deposit_handler(
+        deps.as_mut(),
+        env.clone(),
+        mock_info(ADMIN, &[vault.balance]),
+        Addr::unchecked(USER),
+        vault.id,
+    )
+    .unwrap();
+
+    assert!(response
+        .messages
+        .contains(&SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.to_string(),
+            msg: to_binary(&ExecuteMsg::ExecuteTrigger {
+                trigger_id: vault.id
+            })
+            .unwrap(),
+            funds: vec![]
+        }))));
+}
+
+#[test]
+fn when_vault_is_inactive_with_a_trigger_should_not_execute_vault() {
+    let mut deps = mock_dependencies();
+    let env = mock_env();
+
+    instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
+
+    let vault = setup_new_vault(
+        deps.as_mut(),
+        env.clone(),
+        Vault {
+            status: VaultStatus::Inactive,
+            ..Vault::default()
+        },
+    );
+
+    let response = deposit_handler(
+        deps.as_mut(),
+        env,
+        mock_info(ADMIN, &[vault.balance]),
+        Addr::unchecked(USER),
+        vault.id,
+    )
+    .unwrap();
+
+    assert_eq!(response.messages.len(), 0);
 }
 
 #[test]

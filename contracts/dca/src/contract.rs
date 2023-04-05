@@ -7,7 +7,7 @@ use crate::handlers::create_custom_swap_fee::create_custom_swap_fee;
 use crate::handlers::create_pair::create_pair;
 use crate::handlers::create_vault::create_vault;
 use crate::handlers::delete_pair::delete_pair;
-use crate::handlers::deposit::deposit;
+use crate::handlers::deposit::deposit_handler;
 use crate::handlers::disburse_escrow::disburse_escrow_handler;
 use crate::handlers::execute_trigger::execute_trigger_handler;
 use crate::handlers::get_custom_swap_fees::get_custom_swap_fees;
@@ -157,7 +157,9 @@ pub fn execute(
         ),
         ExecuteMsg::CancelVault { vault_id } => cancel_vault(deps, env, info, vault_id),
         ExecuteMsg::ExecuteTrigger { trigger_id } => execute_trigger_handler(deps, env, trigger_id),
-        ExecuteMsg::Deposit { address, vault_id } => deposit(deps, env, info, address, vault_id),
+        ExecuteMsg::Deposit { address, vault_id } => {
+            deposit_handler(deps, env, info, address, vault_id)
+        }
         ExecuteMsg::UpdateConfig {
             fee_collectors,
             swap_fee_percent,

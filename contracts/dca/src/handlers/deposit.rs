@@ -1,10 +1,10 @@
-use super::execute_trigger::execute_trigger;
 use crate::error::ContractError;
 use crate::helpers::validation_helpers::{
     assert_contract_is_not_paused, assert_deposited_denom_matches_send_denom,
     assert_exactly_one_asset, assert_vault_is_not_cancelled,
 };
 use crate::helpers::vault_helpers::get_dca_plus_model_id;
+use crate::msg::ExecuteMsg;
 use crate::state::events::create_event;
 use crate::state::triggers::save_trigger;
 use crate::state::vaults::{get_vault, update_vault};
@@ -13,11 +13,11 @@ use base::events::event::{EventBuilder, EventData};
 use base::helpers::coin_helpers::add_to_coin;
 use base::triggers::trigger::{Trigger, TriggerConfiguration};
 use base::vaults::vault::VaultStatus;
-use cosmwasm_std::{Addr, Env};
+use cosmwasm_std::{to_binary, Addr, CosmosMsg, Env, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{DepsMut, MessageInfo, Response, Uint128};
 
-pub fn deposit(
+pub fn deposit_handler(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -79,9 +79,9 @@ pub fn deposit(
         ),
     )?;
 
-    let response = Response::new().add_attribute("method", "deposit");
+    let mut response = Response::new().add_attribute("method", "deposit");
 
-    if vault.is_active() && vault_was_inactive {
+    if vault.is_active() && vault_was_inactive && vault.trigger.is_none() {
         save_trigger(
             deps.storage,
             Trigger {
@@ -92,9 +92,14 @@ pub fn deposit(
             },
         )?;
 
-        return Ok(
-            execute_trigger(deps, env, vault.id, response.clone()).expect("time trigger executed")
-        );
+        response = response.add_message(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.to_string(),
+            msg: to_binary(&ExecuteMsg::ExecuteTrigger {
+                trigger_id: vault.id,
+            })
+            .unwrap(),
+            funds: vec![],
+        }));
     };
 
     Ok(response)
