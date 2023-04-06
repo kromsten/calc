@@ -6,7 +6,11 @@ use base::{pair::Pair, price_type::PriceType};
 use cosmwasm_std::{Addr, Coin, Decimal, QuerierWrapper, StdError, StdResult, Uint128};
 use kujira::fin::QueryMsg as FinQueryMsg;
 
-fn query_quote_price(querier: QuerierWrapper, pair: &Pair, swap_denom: &str) -> StdResult<Decimal> {
+fn query_quote_price(
+    querier: &QuerierWrapper,
+    pair: &Pair,
+    swap_denom: &str,
+) -> StdResult<Decimal> {
     let position_type = match swap_denom == pair.quote_denom {
         true => PositionType::Enter,
         false => PositionType::Exit,
@@ -36,7 +40,7 @@ fn query_quote_price(querier: QuerierWrapper, pair: &Pair, swap_denom: &str) -> 
 }
 
 pub fn query_belief_price(
-    querier: QuerierWrapper,
+    querier: &QuerierWrapper,
     pair: &Pair,
     swap_denom: &str,
 ) -> StdResult<Decimal> {
@@ -56,8 +60,8 @@ pub fn query_belief_price(
 }
 
 pub fn query_price(
-    querier: QuerierWrapper,
-    pair: Pair,
+    querier: &QuerierWrapper,
+    pair: &Pair,
     swap_amount: &Coin,
     price_type: PriceType,
 ) -> StdResult<Decimal> {
@@ -216,7 +220,7 @@ mod query_quote_price_tests {
         .unwrap();
 
         let response = query_quote_price(
-            deps.as_ref().querier,
+            &deps.as_ref().querier,
             &Pair {
                 address: Addr::unchecked("pair"),
                 base_denom: "base".to_string(),
@@ -252,7 +256,7 @@ mod query_quote_price_tests {
         .unwrap();
 
         let response = query_quote_price(
-            deps.as_ref().querier,
+            &deps.as_ref().querier,
             &Pair {
                 address: Addr::unchecked("pair"),
                 base_denom: "base".to_string(),
@@ -288,10 +292,10 @@ mod query_belief_price_tests {
             quote_denom: "quote".to_string(),
         };
 
-        let quote_price = query_quote_price(deps.as_ref().querier, pair, "quote").unwrap();
+        let quote_price = query_quote_price(&deps.as_ref().querier, pair, "quote").unwrap();
 
         let belief_price = query_belief_price(
-            deps.as_ref().querier,
+            &deps.as_ref().querier,
             &Pair {
                 address: Addr::unchecked("pair"),
                 base_denom: "base".to_string(),
@@ -316,8 +320,8 @@ mod query_belief_price_tests {
             quote_denom: "quote".to_string(),
         };
 
-        let quote_price = query_quote_price(deps.as_ref().querier, pair, "base").unwrap();
-        let belief_price = query_belief_price(deps.as_ref().querier, pair, "base").unwrap();
+        let quote_price = query_quote_price(&deps.as_ref().querier, pair, "base").unwrap();
+        let belief_price = query_belief_price(&deps.as_ref().querier, pair, "base").unwrap();
 
         assert_eq!(quote_price, Decimal::one() / belief_price);
     }
@@ -345,11 +349,11 @@ mod query_actual_price_tests {
             quote_denom: "quote".to_string(),
         };
 
-        let belief_price = query_belief_price(deps.as_ref().querier, &pair, "base").unwrap();
+        let belief_price = query_belief_price(&deps.as_ref().querier, &pair, "base").unwrap();
 
         let actual_price = query_price(
-            deps.as_ref().querier,
-            pair,
+            &deps.as_ref().querier,
+            &pair,
             &Coin::new(100, "base"),
             PriceType::Actual,
         )
@@ -372,11 +376,11 @@ mod query_actual_price_tests {
 
         let swap_denom = "base";
 
-        let belief_price = query_belief_price(deps.as_ref().querier, &pair, swap_denom).unwrap();
+        let belief_price = query_belief_price(&deps.as_ref().querier, &pair, swap_denom).unwrap();
 
         let actual_price = query_price(
-            deps.as_ref().querier,
-            pair,
+            &deps.as_ref().querier,
+            &pair,
             &Coin::new((ONE + ONE).into(), swap_denom),
             PriceType::Actual,
         )
@@ -399,11 +403,11 @@ mod query_actual_price_tests {
 
         let swap_denom = "quote";
 
-        let belief_price = query_belief_price(deps.as_ref().querier, &pair, swap_denom).unwrap();
+        let belief_price = query_belief_price(&deps.as_ref().querier, &pair, swap_denom).unwrap();
 
         let actual_price = query_price(
-            deps.as_ref().querier,
-            pair,
+            &deps.as_ref().querier,
+            &pair,
             &Coin::new((ONE + ONE).into(), swap_denom),
             PriceType::Actual,
         )
@@ -427,8 +431,8 @@ mod query_actual_price_tests {
         let swap_denom = "quote";
 
         let error = query_price(
-            deps.as_ref().querier,
-            pair,
+            &deps.as_ref().querier,
+            &pair,
             &Coin::new((TEN + TEN).into(), swap_denom),
             PriceType::Actual,
         )
@@ -455,8 +459,8 @@ mod query_actual_price_tests {
         let swap_denom = "other";
 
         let error = query_price(
-            deps.as_ref().querier,
-            pair.clone(),
+            &deps.as_ref().querier,
+            &pair.clone(),
             &Coin::new(TEN.into(), swap_denom),
             PriceType::Actual,
         )

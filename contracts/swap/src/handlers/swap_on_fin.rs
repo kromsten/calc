@@ -43,7 +43,7 @@ pub fn swap_on_fin_handler(
     )?;
 
     Ok(Response::new().add_submessage(create_fin_swap_message(
-        deps.querier,
+        &deps.querier,
         pair,
         swap_amount,
         slippage_tolerance,

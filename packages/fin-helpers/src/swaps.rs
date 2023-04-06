@@ -9,7 +9,7 @@ use cosmwasm_std::{
 use kujira::fin::ExecuteMsg;
 
 pub fn create_fin_swap_message(
-    querier: QuerierWrapper,
+    querier: &QuerierWrapper,
     pair: Pair,
     swap_amount: Coin,
     slippage_tolerance: Option<Decimal>,

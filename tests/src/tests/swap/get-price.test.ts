@@ -76,7 +76,7 @@ describe('when fetching prices', () => {
     expect(price).to.equal(`${300 / (200 / 2 + 100 / 4)}`);
   });
 
-  it('returns an belief base price', async function (this: Context) {
+  it('returns a belief base price', async function (this: Context) {
     const price = await this.cosmWasmClient.queryContractSmart(swapContractAddress, {
       get_price: {
         swap_amount: coin(300, baseDenom),

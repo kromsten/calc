@@ -4,8 +4,7 @@ use super::mocks::{
     fin_contract_high_swap_price, fin_contract_partially_filled_order,
 };
 use crate::constants::{
-    FIN_TAKER_FEE, ONE, ONE_DECIMAL, ONE_HUNDRED, ONE_MICRON, ONE_THOUSAND, TEN, TEN_MICRONS,
-    TWO_MICRONS,
+    FIN_TAKER_FEE, ONE, ONE_DECIMAL, ONE_HUNDRED, ONE_THOUSAND, TEN, TEN_MICRONS, TWO_MICRONS,
 };
 use crate::contract::AFTER_FIN_SWAP_REPLY_ID;
 use crate::handlers::execute_trigger::execute_trigger_handler;
@@ -2413,8 +2412,8 @@ fn for_active_vault_with_dca_plus_updates_standard_performance_data() {
         .unwrap();
 
     let price = query_price(
-        deps.as_ref().querier,
-        vault.pair.clone(),
+        &deps.as_ref().querier,
+        &vault.pair,
         &Coin::new(vault.swap_amount.into(), vault.get_swap_denom()),
         PriceType::Actual,
     )
@@ -2576,15 +2575,17 @@ fn for_active_vault_with_slippage_exceeded_publishes_standard_dca_execution_skip
     let info = mock_info(ADMIN, &[]);
 
     instantiate_contract(deps.as_mut(), env.clone(), info);
-    set_fin_price(&mut deps, &ONE_DECIMAL, &ONE_MICRON, &ONE_MICRON);
+    set_fin_price(&mut deps, &ONE_DECIMAL, &ONE, &TEN_MICRONS);
 
-    let vault = setup_vault(
+    let vault = setup_new_vault(
         deps.as_mut(),
         env.clone(),
-        TEN,
-        ONE,
-        VaultStatus::Active,
-        true,
+        Vault {
+            swap_amount: TEN,
+            slippage_tolerance: Some(Decimal::percent(2)),
+            dca_plus_config: Some(DcaPlusConfig::default()),
+            ..Vault::default()
+        },
     );
 
     execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
@@ -2605,14 +2606,15 @@ fn for_active_vault_with_slippage_exceeded_publishes_standard_dca_execution_skip
 }
 
 #[test]
-fn for_active_vault_with_price_threshold_exceeded_publishes_standard_dca_execution_skipped_event() {
+fn for_active_vault_with_price_threshold_exceeded_publishes_simulated_dca_execution_skipped_event()
+{
     let mut deps = mock_dependencies();
     let env = mock_env();
     let info = mock_info(ADMIN, &[]);
 
     instantiate_contract(deps.as_mut(), env.clone(), info);
 
-    set_fin_price(&mut deps, &ONE_DECIMAL, &ONE_MICRON, &ONE_MICRON);
+    set_fin_price(&mut deps, &ONE_DECIMAL, &ONE, &TEN_MICRONS);
 
     let vault = setup_new_vault(
         deps.as_mut(),
@@ -2905,8 +2907,8 @@ fn for_inactive_vault_with_dca_plus_updates_standard_performance_data() {
         .unwrap();
 
     let price = query_price(
-        deps.as_ref().querier,
-        vault.pair.clone(),
+        &deps.as_ref().querier,
+        &vault.pair,
         &Coin::new(vault.swap_amount.into(), vault.get_swap_denom()),
         PriceType::Actual,
     )

@@ -71,8 +71,8 @@ pub fn get_price_for_pair(
             base_denom,
             quote_denom,
         } => query_price(
-            querier,
-            FinPair {
+            &querier,
+            &FinPair {
                 address,
                 base_denom,
                 quote_denom,
