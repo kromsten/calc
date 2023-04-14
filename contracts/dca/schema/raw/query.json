@@ -117,12 +117,14 @@
               "minimum": 0.0
             },
             "start_after": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "uint128",
-              "minimum": 0.0
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Uint128"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "status": {
               "anyOf": [
@@ -158,12 +160,14 @@
               "minimum": 0.0
             },
             "start_after": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "uint128",
-              "minimum": 0.0
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Uint128"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           },
           "additionalProperties": false

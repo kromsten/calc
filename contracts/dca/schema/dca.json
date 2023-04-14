@@ -1,6 +1,6 @@
 {
   "contract_name": "dca",
-  "contract_version": "1.5.1",
+  "contract_version": "1.5.2",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -725,12 +725,14 @@
                 "minimum": 0.0
               },
               "start_after": {
-                "type": [
-                  "integer",
-                  "null"
-                ],
-                "format": "uint128",
-                "minimum": 0.0
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Uint128"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               "status": {
                 "anyOf": [
@@ -766,12 +768,14 @@
                 "minimum": 0.0
               },
               "start_after": {
-                "type": [
-                  "integer",
-                  "null"
-                ],
-                "format": "uint128",
-                "minimum": 0.0
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Uint128"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "additionalProperties": false

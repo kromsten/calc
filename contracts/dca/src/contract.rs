@@ -47,7 +47,7 @@ pub const AFTER_Z_DELEGATION_REPLY_ID: u64 = 3;
 pub const AFTER_BANK_SWAP_REPLY_ID: u64 = 4;
 
 #[entry_point]
-pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
