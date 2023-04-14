@@ -165,7 +165,7 @@ pub fn get_vaults_by_address(
     store: &dyn Storage,
     address: Addr,
     status: Option<VaultStatus>,
-    start_after: Option<u128>,
+    start_after: Option<Uint128>,
     limit: Option<u16>,
 ) -> StdResult<Vec<Vault>> {
     let partition = match status {
@@ -204,7 +204,7 @@ pub fn get_vaults_by_address(
 
 pub fn get_vaults(
     store: &dyn Storage,
-    start_after: Option<u128>,
+    start_after: Option<Uint128>,
     limit: Option<u16>,
 ) -> StdResult<Vec<Vault>> {
     Ok(vault_store()

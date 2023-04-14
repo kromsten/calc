@@ -215,7 +215,7 @@ fn with_start_after_should_return_vaults_after_start_after() {
             &QueryMsg::GetVaultsByAddress {
                 address: user_address.clone(),
                 status: None,
-                start_after: Some(1),
+                start_after: Some(Uint128::one()),
                 limit: None,
             },
         )
@@ -263,7 +263,7 @@ fn with_limit_and_start_after_should_return_limited_vaults_after_start_after() {
             &QueryMsg::GetVaultsByAddress {
                 address: user_address.clone(),
                 status: None,
-                start_after: Some(1),
+                start_after: Some(Uint128::one()),
                 limit: Some(1),
             },
         )

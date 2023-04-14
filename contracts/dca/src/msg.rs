@@ -114,12 +114,12 @@ pub enum QueryMsg {
     GetVaultsByAddress {
         address: Addr,
         status: Option<VaultStatus>,
-        start_after: Option<u128>,
+        start_after: Option<Uint128>,
         limit: Option<u16>,
     },
     #[returns(VaultsResponse)]
     GetVaults {
-        start_after: Option<u128>,
+        start_after: Option<Uint128>,
         limit: Option<u16>,
     },
     #[returns(EventsResponse)]

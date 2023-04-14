@@ -204,7 +204,7 @@ fn with_start_after_should_return_vaults_after_start_after() {
         .query_wasm_smart(
             &mock.dca_contract_address,
             &QueryMsg::GetVaults {
-                start_after: Some(1),
+                start_after: Some(Uint128::one()),
                 limit: None,
             },
         )
@@ -250,7 +250,7 @@ fn with_limit_and_start_after_should_return_limited_vaults_after_start_after() {
         .query_wasm_smart(
             &mock.dca_contract_address,
             &QueryMsg::GetVaults {
-                start_after: Some(1),
+                start_after: Some(Uint128::one()),
                 limit: Some(1),
             },
         )
