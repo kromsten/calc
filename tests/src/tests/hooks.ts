@@ -105,6 +105,7 @@ const instantiateDCAContract = async (
     adminContractAddress,
     {
       admin: adminContractAddress,
+      executors: [],
       delegation_fee_percent: `${automationFee}`,
       fee_collectors: [{ address: feeCollectorAdress, allocation: '1.0' }],
       page_limit: 1000,

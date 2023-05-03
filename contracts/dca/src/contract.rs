@@ -27,7 +27,7 @@ use crate::handlers::update_config::update_config_handler;
 use crate::handlers::update_swap_adjustments_handler::update_swap_adjustments_handler;
 use crate::handlers::update_vault::update_vault_handler;
 use crate::helpers::validation_helpers::{
-    assert_dca_plus_escrow_level_is_less_than_100_percent,
+    assert_addresses_are_valid, assert_dca_plus_escrow_level_is_less_than_100_percent,
     assert_fee_collector_addresses_are_valid, assert_fee_collector_allocations_add_up_to_one,
 };
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
@@ -47,11 +47,34 @@ pub const AFTER_Z_DELEGATION_REPLY_ID: u64 = 3;
 pub const AFTER_BANK_SWAP_REPLY_ID: u64 = 4;
 
 #[entry_point]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+    deps.api.addr_validate(&msg.admin.to_string())?;
+    deps.api
+        .addr_validate(&msg.staking_router_address.to_string())?;
+
+    assert_addresses_are_valid(deps.as_ref(), &msg.executors, "executor")?;
+    assert_fee_collector_addresses_are_valid(deps.as_ref(), &msg.fee_collectors)?;
+    assert_fee_collector_allocations_add_up_to_one(&msg.fee_collectors)?;
+    assert_dca_plus_escrow_level_is_less_than_100_percent(msg.dca_plus_escrow_level)?;
+
+    update_config(
+        deps.storage,
+        Config {
+            admin: msg.admin.clone(),
+            executors: msg.executors,
+            fee_collectors: msg.fee_collectors,
+            swap_fee_percent: msg.swap_fee_percent,
+            delegation_fee_percent: msg.delegation_fee_percent,
+            staking_router_address: msg.staking_router_address,
+            page_limit: msg.page_limit,
+            paused: msg.paused,
+            dca_plus_escrow_level: msg.dca_plus_escrow_level,
+        },
+    )?;
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    Ok(Response::new())
+    Ok(Response::new().add_attribute("method", "migrate"))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -73,6 +96,7 @@ pub fn instantiate(
         deps.storage,
         Config {
             admin: msg.admin.clone(),
+            executors: msg.executors,
             fee_collectors: msg.fee_collectors,
             swap_fee_percent: msg.swap_fee_percent,
             delegation_fee_percent: msg.delegation_fee_percent,
@@ -140,6 +164,7 @@ pub fn execute(
             deposit_handler(deps, env, info, address, vault_id)
         }
         ExecuteMsg::UpdateConfig {
+            executors,
             fee_collectors,
             swap_fee_percent,
             delegation_fee_percent,
@@ -150,6 +175,7 @@ pub fn execute(
         } => update_config_handler(
             deps,
             info,
+            executors,
             fee_collectors,
             swap_fee_percent,
             delegation_fee_percent,
@@ -171,7 +197,7 @@ pub fn execute(
         ExecuteMsg::UpdateSwapAdjustments {
             position_type,
             adjustments,
-        } => update_swap_adjustments_handler(deps, env, position_type, adjustments),
+        } => update_swap_adjustments_handler(deps, env, info, position_type, adjustments),
         ExecuteMsg::DisburseEscrow { vault_id } => {
             disburse_escrow_handler(deps, env, info, vault_id)
         }

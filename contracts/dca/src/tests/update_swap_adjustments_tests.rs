@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    testing::{mock_dependencies, mock_env},
+    testing::{mock_dependencies, mock_env, mock_info},
     Decimal,
 };
 use fin_helpers::position_type::PositionType;
@@ -9,6 +9,8 @@ use crate::{
     handlers::update_swap_adjustments_handler::update_swap_adjustments_handler,
     state::swap_adjustments::get_swap_adjustment,
 };
+
+use super::{helpers::instantiate_contract, mocks::ADMIN};
 
 #[test]
 fn updates_swap_adjustments() {
@@ -26,10 +28,15 @@ fn updates_swap_adjustments() {
     ];
 
     let mut deps = mock_dependencies();
+    let env = mock_env();
+    let info = mock_info(ADMIN, &[]);
+
+    instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 
     update_swap_adjustments_handler(
         deps.as_mut(),
-        mock_env(),
+        env,
+        info,
         PositionType::Enter,
         old_adjustments.clone(),
     )
@@ -51,6 +58,7 @@ fn updates_swap_adjustments() {
     update_swap_adjustments_handler(
         deps.as_mut(),
         mock_env(),
+        mock_info(ADMIN, &[]),
         PositionType::Enter,
         new_adjustments.clone(),
     )

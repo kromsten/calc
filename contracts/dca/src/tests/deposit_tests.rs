@@ -1,15 +1,12 @@
-use std::str::FromStr;
-
 use crate::constants::{ONE, ONE_HUNDRED, ONE_THOUSAND, TEN};
 use crate::handlers::deposit::deposit_handler;
 use crate::msg::{ExecuteMsg, QueryMsg, VaultResponse};
-use crate::state::config::FeeCollector;
 use crate::tests::mocks::{fin_contract_unfilled_limit_order, MockApp, ADMIN, DENOM_UKUJI, USER};
 use crate::types::vault::Vault;
 use base::events::event::EventBuilder;
 use base::vaults::vault::VaultStatus;
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-use cosmwasm_std::{to_binary, Addr, Coin, CosmosMsg, Decimal, SubMsg, Uint128, WasmMsg};
+use cosmwasm_std::{to_binary, Addr, Coin, CosmosMsg, SubMsg, Uint128, WasmMsg};
 use cw_multi_test::Executor;
 
 use super::helpers::{
@@ -555,12 +552,10 @@ fn when_contract_is_paused_should_fail() {
             Addr::unchecked(ADMIN),
             mock.dca_contract_address.clone(),
             &ExecuteMsg::UpdateConfig {
-                fee_collectors: Some(vec![FeeCollector {
-                    address: ADMIN.to_string(),
-                    allocation: Decimal::from_str("1").unwrap(),
-                }]),
-                swap_fee_percent: Some(Decimal::from_str("0.015").unwrap()),
-                delegation_fee_percent: Some(Decimal::from_str("0.0075").unwrap()),
+                executors: None,
+                fee_collectors: None,
+                swap_fee_percent: None,
+                delegation_fee_percent: None,
                 staking_router_address: None,
                 page_limit: None,
                 paused: Some(true),

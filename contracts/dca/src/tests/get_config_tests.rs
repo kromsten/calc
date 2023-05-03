@@ -21,6 +21,7 @@ fn get_config_should_succeed() {
 
     let instantiate_message = InstantiateMsg {
         admin: Addr::unchecked(ADMIN),
+        executors: vec![Addr::unchecked("executor")],
         fee_collectors: vec![FeeCollector {
             address: "fee-collector".to_string(),
             allocation: Decimal::from_str("1").unwrap(),

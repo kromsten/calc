@@ -5,6 +5,7 @@ use cw_storage_plus::{Item, Map};
 #[cw_serde]
 pub struct Config {
     pub admin: Addr,
+    pub executors: Vec<Addr>,
     pub fee_collectors: Vec<FeeCollector>,
     pub swap_fee_percent: Decimal,
     pub delegation_fee_percent: Decimal,
@@ -20,7 +21,7 @@ pub struct FeeCollector {
     pub allocation: Decimal,
 }
 
-const CONFIG: Item<Config> = Item::new("config_v6");
+const CONFIG: Item<Config> = Item::new("config_v7");
 
 pub fn get_config(store: &dyn Storage) -> StdResult<Config> {
     CONFIG.load(store)

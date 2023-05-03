@@ -12,6 +12,7 @@ use fin_helpers::position_type::PositionType;
 #[cw_serde]
 pub struct InstantiateMsg {
     pub admin: Addr,
+    pub executors: Vec<Addr>,
     pub fee_collectors: Vec<FeeCollector>,
     pub swap_fee_percent: Decimal,
     pub delegation_fee_percent: Decimal,
@@ -24,6 +25,7 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub struct MigrateMsg {
     pub admin: Addr,
+    pub executors: Vec<Addr>,
     pub fee_collectors: Vec<FeeCollector>,
     pub swap_fee_percent: Decimal,
     pub delegation_fee_percent: Decimal,
@@ -68,6 +70,7 @@ pub enum ExecuteMsg {
         trigger_id: Uint128,
     },
     UpdateConfig {
+        executors: Option<Vec<Addr>>,
         fee_collectors: Option<Vec<FeeCollector>>,
         swap_fee_percent: Option<Decimal>,
         delegation_fee_percent: Option<Decimal>,

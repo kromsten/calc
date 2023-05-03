@@ -35,6 +35,21 @@ pub fn assert_sender_is_admin(
     Ok(())
 }
 
+pub fn assert_sender_is_executor(
+    storage: &mut dyn Storage,
+    env: &Env,
+    sender: &Addr,
+) -> Result<(), ContractError> {
+    let config = get_config(storage)?;
+    if !config.executors.contains(&sender)
+        && sender != &config.admin
+        && sender != &env.contract.address
+    {
+        return Err(ContractError::Unauthorized {});
+    }
+    Ok(())
+}
+
 pub fn asset_sender_is_vault_owner(vault_owner: Addr, sender: Addr) -> Result<(), ContractError> {
     if sender != vault_owner {
         return Err(ContractError::Unauthorized {});
@@ -216,6 +231,17 @@ pub fn assert_address_is_valid(
             val: format!("{} address {} is invalid", label, address),
         }),
     }
+}
+
+pub fn assert_addresses_are_valid(
+    deps: Deps,
+    addresses: &[Addr],
+    label: &str,
+) -> Result<(), ContractError> {
+    Ok(addresses
+        .iter()
+        .map(|address| assert_address_is_valid(deps, address.clone(), label.to_string()))
+        .collect::<Result<(), ContractError>>()?)
 }
 
 pub fn assert_destination_allocations_add_up_to_one(

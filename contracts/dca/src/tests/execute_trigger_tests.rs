@@ -10,7 +10,7 @@ use crate::contract::AFTER_FIN_SWAP_REPLY_ID;
 use crate::handlers::execute_trigger::execute_trigger_handler;
 use crate::handlers::get_events_by_resource_id::get_events_by_resource_id;
 use crate::msg::{ExecuteMsg, QueryMsg, TriggerIdsResponse, VaultResponse};
-use crate::state::config::{get_config, FeeCollector};
+use crate::state::config::get_config;
 use crate::state::vaults::{get_vault, update_vault};
 use crate::tests::helpers::{
     assert_address_balances, assert_events_published, assert_vault_balance, set_fin_price,
@@ -2189,12 +2189,10 @@ fn when_contract_is_paused_should_fail() {
             Addr::unchecked(ADMIN),
             mock.dca_contract_address.clone(),
             &ExecuteMsg::UpdateConfig {
-                fee_collectors: Some(vec![FeeCollector {
-                    address: ADMIN.to_string(),
-                    allocation: Decimal::from_str("1").unwrap(),
-                }]),
-                swap_fee_percent: Some(Decimal::from_str("0.015").unwrap()),
-                delegation_fee_percent: Some(Decimal::from_str("0.0075").unwrap()),
+                executors: None,
+                fee_collectors: None,
+                swap_fee_percent: None,
+                delegation_fee_percent: None,
                 staking_router_address: None,
                 page_limit: None,
                 paused: Some(true),

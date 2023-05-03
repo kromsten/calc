@@ -73,6 +73,7 @@ impl MockApp {
             Addr::unchecked(ADMIN),
             &InstantiateMsg {
                 admin: Addr::unchecked(ADMIN),
+                executors: vec![Addr::unchecked("executor")],
                 fee_collectors: vec![FeeCollector {
                     address: FEE_COLLECTOR.to_string(),
                     allocation: Decimal::from_str("1").unwrap(),

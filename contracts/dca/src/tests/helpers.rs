@@ -32,6 +32,7 @@ use std::str::FromStr;
 pub fn instantiate_contract(deps: DepsMut, env: Env, info: MessageInfo) {
     let instantiate_message = InstantiateMsg {
         admin: Addr::unchecked(ADMIN),
+        executors: vec![Addr::unchecked("executor")],
         fee_collectors: vec![FeeCollector {
             address: ADMIN.to_string(),
             allocation: Decimal::from_str("1").unwrap(),
@@ -54,6 +55,7 @@ pub fn instantiate_contract_with_community_pool_fee_collector(
 ) {
     let instantiate_message = InstantiateMsg {
         admin: Addr::unchecked(ADMIN),
+        executors: vec![Addr::unchecked("executor")],
         fee_collectors: vec![
             FeeCollector {
                 address: FEE_COLLECTOR.to_string(),
@@ -83,6 +85,7 @@ pub fn instantiate_contract_with_multiple_fee_collectors(
 ) {
     let instantiate_message = InstantiateMsg {
         admin: Addr::unchecked(ADMIN),
+        executors: vec![Addr::unchecked("executor")],
         fee_collectors,
         swap_fee_percent: Decimal::from_str("0.0165").unwrap(),
         delegation_fee_percent: Decimal::from_str("0.0075").unwrap(),

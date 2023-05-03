@@ -25,6 +25,7 @@ fn instantiation_with_valid_admin_address_should_succeed() {
 
     let instantiate_message = InstantiateMsg {
         admin: Addr::unchecked(VALID_ADDRESS_ONE),
+        executors: vec![Addr::unchecked(VALID_ADDRESS_ONE)],
         fee_collectors: vec![FeeCollector {
             address: VALID_ADDRESS_ONE.to_string(),
             allocation: Decimal::from_str("1").unwrap(),
@@ -56,6 +57,7 @@ fn instantiation_with_invalid_admin_address_should_fail() {
 
     let instantiate_message = InstantiateMsg {
         admin: Addr::unchecked(INVALID_ADDRESS),
+        executors: vec![Addr::unchecked(VALID_ADDRESS_ONE)],
         fee_collectors: vec![FeeCollector {
             address: VALID_ADDRESS_ONE.to_string(),
             allocation: Decimal::from_str("1").unwrap(),
@@ -84,6 +86,7 @@ fn instantiation_with_invalid_fee_collector_address_should_fail() {
 
     let instantiate_message = InstantiateMsg {
         admin: Addr::unchecked(VALID_ADDRESS_ONE),
+        executors: vec![Addr::unchecked(VALID_ADDRESS_ONE)],
         fee_collectors: vec![FeeCollector {
             address: INVALID_ADDRESS.to_string(),
             allocation: Decimal::from_str("1").unwrap(),
@@ -112,6 +115,7 @@ fn instantiation_with_fee_collector_amounts_not_equal_to_100_percent_should_fail
 
     let instantiate_message = InstantiateMsg {
         admin: Addr::unchecked(VALID_ADDRESS_ONE),
+        executors: vec![Addr::unchecked(VALID_ADDRESS_ONE)],
         fee_collectors: vec![],
         swap_fee_percent: Decimal::from_str("0.015").unwrap(),
         delegation_fee_percent: Decimal::from_str("0.0075").unwrap(),
@@ -137,6 +141,7 @@ fn create_pair_with_valid_address_should_succeed() {
 
     let instantiate_message = InstantiateMsg {
         admin: Addr::unchecked(VALID_ADDRESS_ONE),
+        executors: vec![Addr::unchecked(VALID_ADDRESS_ONE)],
         fee_collectors: vec![FeeCollector {
             address: VALID_ADDRESS_ONE.to_string(),
             allocation: Decimal::from_str("1").unwrap(),
@@ -183,6 +188,7 @@ fn create_pair_that_already_exists_should_fail() {
 
     let instantiate_message = InstantiateMsg {
         admin: Addr::unchecked(VALID_ADDRESS_ONE),
+        executors: vec![Addr::unchecked(VALID_ADDRESS_ONE)],
         fee_collectors: vec![FeeCollector {
             address: VALID_ADDRESS_ONE.to_string(),
             allocation: Decimal::from_str("1").unwrap(),
@@ -245,6 +251,7 @@ fn create_pair_with_invalid_address_should_fail() {
 
     let instantiate_message = InstantiateMsg {
         admin: Addr::unchecked(VALID_ADDRESS_ONE),
+        executors: vec![Addr::unchecked(VALID_ADDRESS_ONE)],
         fee_collectors: vec![FeeCollector {
             address: VALID_ADDRESS_ONE.to_string(),
             allocation: Decimal::from_str("1").unwrap(),
@@ -286,6 +293,7 @@ fn create_pair_with_unauthorised_sender_should_fail() {
 
     let instantiate_message = InstantiateMsg {
         admin: Addr::unchecked(VALID_ADDRESS_ONE),
+        executors: vec![Addr::unchecked(VALID_ADDRESS_ONE)],
         fee_collectors: vec![FeeCollector {
             address: VALID_ADDRESS_ONE.to_string(),
             allocation: Decimal::from_str("1").unwrap(),
@@ -331,6 +339,7 @@ fn delete_pair_with_valid_address_should_succeed() {
 
     let instantiate_message = InstantiateMsg {
         admin: Addr::unchecked(VALID_ADDRESS_ONE),
+        executors: vec![Addr::unchecked(VALID_ADDRESS_ONE)],
         fee_collectors: vec![FeeCollector {
             address: VALID_ADDRESS_ONE.to_string(),
             allocation: Decimal::from_str("1").unwrap(),
@@ -387,6 +396,7 @@ fn get_all_pairs_with_one_whitelisted_pair_should_succeed() {
 
     let instantiate_message = InstantiateMsg {
         admin: Addr::unchecked(VALID_ADDRESS_ONE),
+        executors: vec![Addr::unchecked(VALID_ADDRESS_ONE)],
         fee_collectors: vec![FeeCollector {
             address: VALID_ADDRESS_ONE.to_string(),
             allocation: Decimal::from_str("1").unwrap(),
@@ -439,6 +449,7 @@ fn get_all_pairs_with_no_whitelisted_pairs_should_succeed() {
 
     let instantiate_message = InstantiateMsg {
         admin: Addr::unchecked(VALID_ADDRESS_ONE),
+        executors: vec![Addr::unchecked(VALID_ADDRESS_ONE)],
         fee_collectors: vec![FeeCollector {
             address: VALID_ADDRESS_ONE.to_string(),
             allocation: Decimal::from_str("1").unwrap(),
@@ -472,6 +483,7 @@ fn cancel_vault_with_valid_inputs_should_succeed() {
 
     let instantiate_message = InstantiateMsg {
         admin: Addr::unchecked(VALID_ADDRESS_ONE),
+        executors: vec![Addr::unchecked(VALID_ADDRESS_ONE)],
         fee_collectors: vec![FeeCollector {
             address: VALID_ADDRESS_ONE.to_string(),
             allocation: Decimal::from_str("1").unwrap(),
@@ -559,6 +571,7 @@ fn get_active_vault_by_address_and_id_should_succeed() {
 
     let instantiate_message = InstantiateMsg {
         admin: Addr::unchecked(VALID_ADDRESS_ONE),
+        executors: vec![Addr::unchecked(VALID_ADDRESS_ONE)],
         fee_collectors: vec![FeeCollector {
             address: VALID_ADDRESS_ONE.to_string(),
             allocation: Decimal::from_str("1").unwrap(),
@@ -641,6 +654,7 @@ fn get_all_active_vaults_by_address_should_succeed() {
 
     let instantiate_message = InstantiateMsg {
         admin: Addr::unchecked(VALID_ADDRESS_ONE),
+        executors: vec![Addr::unchecked(VALID_ADDRESS_ONE)],
         fee_collectors: vec![FeeCollector {
             address: VALID_ADDRESS_ONE.to_string(),
             allocation: Decimal::from_str("1").unwrap(),
@@ -757,6 +771,7 @@ fn get_all_events_by_vault_id_for_new_vault_should_succeed() {
 
     let instantiate_message = InstantiateMsg {
         admin: Addr::unchecked(VALID_ADDRESS_ONE),
+        executors: vec![Addr::unchecked(VALID_ADDRESS_ONE)],
         fee_collectors: vec![FeeCollector {
             address: VALID_ADDRESS_ONE.to_string(),
             allocation: Decimal::from_str("1").unwrap(),
@@ -844,6 +859,7 @@ fn get_all_events_by_vault_id_for_non_existent_vault_should_should_succeed() {
 
     let instantiate_message = InstantiateMsg {
         admin: Addr::unchecked(VALID_ADDRESS_ONE),
+        executors: vec![Addr::unchecked(VALID_ADDRESS_ONE)],
         fee_collectors: vec![FeeCollector {
             address: VALID_ADDRESS_ONE.to_string(),
             allocation: Decimal::from_str("1").unwrap(),

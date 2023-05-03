@@ -1,7 +1,7 @@
 use crate::{
     error::ContractError,
     helpers::validation_helpers::{
-        assert_dca_plus_escrow_level_is_less_than_100_percent,
+        assert_addresses_are_valid, assert_dca_plus_escrow_level_is_less_than_100_percent,
         assert_fee_collector_addresses_are_valid, assert_fee_collector_allocations_add_up_to_one,
         assert_sender_is_admin,
     },
@@ -12,6 +12,7 @@ use cosmwasm_std::{Addr, Decimal, DepsMut, MessageInfo, Response};
 pub fn update_config_handler(
     deps: DepsMut,
     info: MessageInfo,
+    executors: Option<Vec<Addr>>,
     fee_collectors: Option<Vec<FeeCollector>>,
     swap_fee_percent: Option<Decimal>,
     delegation_fee_percent: Option<Decimal>,
@@ -25,6 +26,7 @@ pub fn update_config_handler(
 
     let config = Config {
         admin: existing_config.admin,
+        executors: executors.unwrap_or(existing_config.executors),
         fee_collectors: fee_collectors.unwrap_or(existing_config.fee_collectors),
         swap_fee_percent: swap_fee_percent.unwrap_or(existing_config.swap_fee_percent),
         delegation_fee_percent: delegation_fee_percent
@@ -40,6 +42,7 @@ pub fn update_config_handler(
             .unwrap_or(existing_config.dca_plus_escrow_level),
     };
 
+    assert_addresses_are_valid(deps.as_ref(), &config.executors, "executor")?;
     assert_fee_collector_addresses_are_valid(deps.as_ref(), &config.fee_collectors)?;
     assert_fee_collector_allocations_add_up_to_one(&config.fee_collectors)?;
     assert_dca_plus_escrow_level_is_less_than_100_percent(config.dca_plus_escrow_level)?;
