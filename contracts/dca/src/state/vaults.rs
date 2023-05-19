@@ -1,12 +1,12 @@
 use super::{pairs::PAIRS, state_helpers::fetch_and_increment_counter, triggers::get_trigger};
 use crate::types::{
-    dca_plus_config::DcaPlusConfig, price_delta_limit::PriceDeltaLimit, vault::Vault,
+    dca_plus_config::DcaPlusConfig, old_vault::OldVault, price_delta_limit::PriceDeltaLimit,
     vault_builder::VaultBuilder,
 };
 use base::{
     pair::Pair,
-    triggers::trigger::{TimeInterval, TriggerConfiguration},
-    vaults::vault::{Destination, DestinationDeprecated, VaultStatus},
+    triggers::trigger::{OldTimeInterval, OldTriggerConfiguration},
+    vaults::vault::{DestinationDeprecated, OldDestination, OldVaultStatus},
 };
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
@@ -23,21 +23,21 @@ struct VaultDTO {
     pub owner: Addr,
     pub label: Option<String>,
     pub destinations: Vec<DestinationDeprecated>,
-    pub status: VaultStatus,
+    pub status: OldVaultStatus,
     pub balance: Coin,
     pub pair_address: Addr,
     pub swap_amount: Uint128,
     pub slippage_tolerance: Option<Decimal>,
     pub minimum_receive_amount: Option<Uint128>,
-    pub time_interval: TimeInterval,
+    pub time_interval: OldTimeInterval,
     pub started_at: Option<Timestamp>,
     pub swapped_amount: Coin,
     pub received_amount: Coin,
     pub price_delta_limits: Vec<PriceDeltaLimit>,
 }
 
-impl From<Vault> for VaultDTO {
-    fn from(vault: Vault) -> Self {
+impl From<OldVault> for VaultDTO {
+    fn from(vault: OldVault) -> Self {
         Self {
             id: vault.id,
             created_at: vault.created_at,
@@ -62,10 +62,10 @@ impl From<Vault> for VaultDTO {
 fn vault_from(
     data: &VaultDTO,
     pair: Pair,
-    trigger: Option<TriggerConfiguration>,
-    destinations: &mut Vec<Destination>,
+    trigger: Option<OldTriggerConfiguration>,
+    destinations: &mut Vec<OldDestination>,
     dca_plus_config: Option<DcaPlusConfig>,
-) -> Vault {
+) -> OldVault {
     destinations.append(
         &mut data
             .destinations
@@ -74,7 +74,7 @@ fn vault_from(
             .map(|destination| destination.into())
             .collect(),
     );
-    Vault {
+    OldVault {
         id: data.id,
         created_at: data.created_at,
         owner: data.owner.clone(),
@@ -97,7 +97,7 @@ fn vault_from(
 
 const DESTINATIONS: Map<u128, Binary> = Map::new("destinations_v20");
 
-fn get_destinations(store: &dyn Storage, vault_id: Uint128) -> StdResult<Vec<Destination>> {
+fn get_destinations(store: &dyn Storage, vault_id: Uint128) -> StdResult<Vec<OldDestination>> {
     let destinations = DESTINATIONS.may_load(store, vault_id.into())?;
     match destinations {
         Some(destinations) => Ok(from_binary(&destinations)?),
@@ -136,7 +136,7 @@ fn vault_store<'a>() -> IndexedMap<'a, u128, VaultDTO, VaultIndexes<'a>> {
     IndexedMap::new("vaults_v20", indexes)
 }
 
-pub fn save_vault(store: &mut dyn Storage, vault_builder: VaultBuilder) -> StdResult<Vault> {
+pub fn save_vault(store: &mut dyn Storage, vault_builder: VaultBuilder) -> StdResult<OldVault> {
     let vault = vault_builder.build(fetch_and_increment_counter(store, VAULT_COUNTER)?.into());
     DESTINATIONS.save(
         store,
@@ -150,7 +150,7 @@ pub fn save_vault(store: &mut dyn Storage, vault_builder: VaultBuilder) -> StdRe
     Ok(vault)
 }
 
-pub fn get_vault(store: &dyn Storage, vault_id: Uint128) -> StdResult<Vault> {
+pub fn get_vault(store: &dyn Storage, vault_id: Uint128) -> StdResult<OldVault> {
     let data = vault_store().load(store, vault_id.into())?;
     Ok(vault_from(
         &data,
@@ -164,10 +164,10 @@ pub fn get_vault(store: &dyn Storage, vault_id: Uint128) -> StdResult<Vault> {
 pub fn get_vaults_by_address(
     store: &dyn Storage,
     address: Addr,
-    status: Option<VaultStatus>,
+    status: Option<OldVaultStatus>,
     start_after: Option<Uint128>,
     limit: Option<u16>,
-) -> StdResult<Vec<Vault>> {
+) -> StdResult<Vec<OldVault>> {
     let partition = match status {
         Some(status) => vault_store()
             .idx
@@ -199,14 +199,14 @@ pub fn get_vaults_by_address(
                 get_dca_plus_config(store, vault_data.id),
             )
         })
-        .collect::<Vec<Vault>>())
+        .collect::<Vec<OldVault>>())
 }
 
 pub fn get_vaults(
     store: &dyn Storage,
     start_after: Option<Uint128>,
     limit: Option<u16>,
-) -> StdResult<Vec<Vault>> {
+) -> StdResult<Vec<OldVault>> {
     Ok(vault_store()
         .range(
             store,
@@ -230,10 +230,10 @@ pub fn get_vaults(
                 get_dca_plus_config(store, vault_data.id),
             )
         })
-        .collect::<Vec<Vault>>())
+        .collect::<Vec<OldVault>>())
 }
 
-pub fn update_vault(store: &mut dyn Storage, vault: &Vault) -> StdResult<()> {
+pub fn update_vault(store: &mut dyn Storage, vault: &OldVault) -> StdResult<()> {
     DESTINATIONS.save(
         store,
         vault.id.into(),
@@ -256,8 +256,8 @@ mod destination_store_tests {
     use crate::types::vault_builder::VaultBuilder;
     use base::{
         pair::Pair,
-        triggers::trigger::TimeInterval,
-        vaults::vault::{Destination, PostExecutionAction, VaultStatus},
+        triggers::trigger::OldTimeInterval,
+        vaults::vault::{OldDestination, OldVaultStatus, PostExecutionAction},
     };
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env},
@@ -269,12 +269,12 @@ mod destination_store_tests {
             env.block.time,
             Addr::unchecked("owner"),
             None,
-            vec![Destination {
+            vec![OldDestination {
                 address: Addr::unchecked("owner"),
                 allocation: Decimal::one(),
                 action: PostExecutionAction::Send,
             }],
-            VaultStatus::Active,
+            OldVaultStatus::Active,
             Coin::new(1000u128, "ukuji".to_string()),
             Pair {
                 address: Addr::unchecked("pair"),
@@ -285,7 +285,7 @@ mod destination_store_tests {
             None,
             None,
             None,
-            TimeInterval::Daily,
+            OldTimeInterval::Daily,
             None,
             Coin {
                 denom: "demo".to_string(),
@@ -308,7 +308,7 @@ mod destination_store_tests {
         let vault_builder = create_vault_builder(env);
         let vault = save_vault(store, vault_builder).unwrap();
 
-        let destinations: Vec<Destination> =
+        let destinations: Vec<OldDestination> =
             from_binary(&DESTINATIONS.load(store, vault.id.into()).unwrap()).unwrap();
         assert_eq!(destinations, vault.destinations);
         assert!(!destinations.is_empty());
@@ -357,7 +357,7 @@ mod destination_store_tests {
         let vault_builder = create_vault_builder(env);
         let mut vault = save_vault(store, vault_builder).unwrap();
 
-        vault.status = VaultStatus::Inactive;
+        vault.status = OldVaultStatus::Inactive;
         update_vault(store, &vault).unwrap();
 
         let fetched_vault = get_vault(store, vault.id).unwrap();
@@ -432,10 +432,10 @@ mod destination_store_tests {
             .save(store, vault.id.into(), &vault_dto)
             .unwrap();
 
-        vault.status = VaultStatus::Inactive;
+        vault.status = OldVaultStatus::Inactive;
         update_vault(store, &vault).unwrap();
 
-        let destinations: Vec<Destination> =
+        let destinations: Vec<OldDestination> =
             from_binary(&DESTINATIONS.load(store, vault.id.into()).unwrap()).unwrap();
         assert_eq!(destinations, vault.destinations);
         assert!(!destinations.is_empty());
@@ -472,7 +472,7 @@ mod destination_store_tests {
             .save(store, vault.id.into(), &vault_dto)
             .unwrap();
 
-        vault.status = VaultStatus::Inactive;
+        vault.status = OldVaultStatus::Inactive;
         update_vault(store, &vault).unwrap();
 
         let fetched_vault = get_vault(store, vault.id).unwrap();

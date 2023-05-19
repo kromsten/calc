@@ -2,7 +2,7 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal};
 
 #[cw_serde]
-pub enum VaultStatus {
+pub enum OldVaultStatus {
     Scheduled,
     Active,
     Inactive,
@@ -29,14 +29,14 @@ pub struct DestinationDeprecated {
 }
 
 #[cw_serde]
-pub struct Destination {
+pub struct OldDestination {
     pub address: Addr,
     pub allocation: Decimal,
     pub action: PostExecutionAction,
 }
 
-impl From<Destination> for DestinationDeprecated {
-    fn from(destination: Destination) -> Self {
+impl From<OldDestination> for DestinationDeprecated {
+    fn from(destination: OldDestination) -> Self {
         DestinationDeprecated {
             address: destination.address,
             allocation: destination.allocation,
@@ -48,9 +48,9 @@ impl From<Destination> for DestinationDeprecated {
     }
 }
 
-impl From<DestinationDeprecated> for Destination {
+impl From<DestinationDeprecated> for OldDestination {
     fn from(destination: DestinationDeprecated) -> Self {
-        Destination {
+        OldDestination {
             address: destination.address,
             allocation: destination.allocation,
             action: match destination.action {

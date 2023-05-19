@@ -3,7 +3,7 @@ use crate::{
     constants::{ONE, TEN},
     msg::{ExecuteMsg, QueryMsg, TriggerIdsResponse},
 };
-use base::triggers::trigger::TimeInterval;
+use base::triggers::trigger::OldTimeInterval;
 use cosmwasm_std::{Addr, Coin, Uint64};
 use cw_multi_test::Executor;
 
@@ -32,7 +32,7 @@ fn should_return_active_triggers_only() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: Some(Uint64::from(
                     mock.app.block_info().time.seconds() + 100,
                 )),

@@ -26,13 +26,13 @@ use base::{
         coin_helpers::add_to_coin, community_pool::create_fund_community_pool_msg,
         math_helpers::checked_mul,
     },
-    vaults::vault::{PostExecutionAction, VaultStatus},
+    vaults::vault::{OldVaultStatus, PostExecutionAction},
 };
 use cosmwasm_std::{
     testing::{mock_dependencies, mock_env, mock_info},
     BankMsg, Coin, Decimal, Reply, SubMsg, SubMsgResponse, SubMsgResult, Uint128,
 };
-use fin_helpers::{codes::ERROR_SWAP_SLIPPAGE_EXCEEDED, position_type::PositionType};
+use fin_helpers::{codes::ERROR_SWAP_SLIPPAGE_EXCEEDED, position_type::OldPositionType};
 use std::{cmp::min, str::FromStr};
 
 #[test]
@@ -458,7 +458,7 @@ fn with_succcesful_swap_with_dca_plus_escrows_funds() {
 
     update_swap_adjustments(
         deps.as_mut().storage,
-        PositionType::Exit,
+        OldPositionType::Exit,
         vec![
             (30, Decimal::from_str("1.0").unwrap()),
             (35, Decimal::from_str("1.0").unwrap()),
@@ -547,7 +547,7 @@ fn with_succcesful_swap_publishes_dca_execution_completed_event() {
 
     update_swap_adjustments(
         deps.as_mut().storage,
-        PositionType::Exit,
+        OldPositionType::Exit,
         vec![
             (30, Decimal::from_str("1.0").unwrap()),
             (35, Decimal::from_str("1.0").unwrap()),
@@ -630,7 +630,7 @@ fn with_succcesful_swap_with_dca_plus_publishes_execution_completed_event() {
 
     update_swap_adjustments(
         deps.as_mut().storage,
-        PositionType::Exit,
+        OldPositionType::Exit,
         vec![
             (30, Decimal::from_str("1.0").unwrap()),
             (35, Decimal::from_str("1.0").unwrap()),
@@ -784,7 +784,7 @@ fn with_failed_swap_leaves_vault_active() {
 
     let vault = get_vault(&mut deps.storage, vault_id).unwrap();
 
-    assert_eq!(vault.status, VaultStatus::Active);
+    assert_eq!(vault.status, OldVaultStatus::Active);
 }
 
 #[test]
@@ -1048,7 +1048,7 @@ fn with_insufficient_remaining_funds_sets_vault_to_inactive() {
         env.clone(),
         ONE,
         ONE,
-        VaultStatus::Active,
+        OldVaultStatus::Active,
         false,
     );
 
@@ -1081,7 +1081,7 @@ fn with_insufficient_remaining_funds_sets_vault_to_inactive() {
     .unwrap();
 
     let vault = get_vault(&deps.storage, vault.id).unwrap();
-    assert_eq!(vault.status, VaultStatus::Inactive);
+    assert_eq!(vault.status, OldVaultStatus::Inactive);
 }
 
 #[test]
@@ -1095,7 +1095,7 @@ fn for_dca_plus_vault_with_failed_swap_publishes_slippage_tolerance_exceeded_eve
         env.clone(),
         ONE,
         ONE,
-        VaultStatus::Active,
+        OldVaultStatus::Active,
         true,
     );
 
@@ -1150,7 +1150,7 @@ fn for_dca_plus_vault_with_low_funds_and_failed_swap_publishes_unknown_failure_e
         env.clone(),
         Uint128::new(49000),
         ONE,
-        VaultStatus::Active,
+        OldVaultStatus::Active,
         true,
     );
 
@@ -1205,7 +1205,7 @@ fn for_dca_plus_vault_with_insufficient_remaining_funds_sets_vault_to_inactive()
         env.clone(),
         ONE,
         ONE,
-        VaultStatus::Active,
+        OldVaultStatus::Active,
         true,
     );
 
@@ -1238,5 +1238,5 @@ fn for_dca_plus_vault_with_insufficient_remaining_funds_sets_vault_to_inactive()
     .unwrap();
 
     let vault = get_vault(&deps.storage, vault.id).unwrap();
-    assert_eq!(vault.status, VaultStatus::Inactive);
+    assert_eq!(vault.status, OldVaultStatus::Inactive);
 }

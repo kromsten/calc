@@ -18,16 +18,16 @@ use crate::state::pairs::PAIRS;
 use crate::state::triggers::save_trigger;
 use crate::state::vaults::{save_vault, update_vault};
 use crate::types::dca_plus_config::DcaPlusConfig;
-use crate::types::vault::Vault;
+use crate::types::old_vault::OldVault;
 use crate::types::vault_builder::VaultBuilder;
 use base::events::event::{EventBuilder, EventData};
-use base::triggers::trigger::{TimeInterval, Trigger, TriggerConfiguration};
-use base::vaults::vault::{Destination, PostExecutionAction, VaultStatus};
+use base::triggers::trigger::{OldTimeInterval, OldTrigger, OldTriggerConfiguration};
+use base::vaults::vault::{OldDestination, OldVaultStatus, PostExecutionAction};
 use cosmwasm_std::{coin, to_binary, Addr, Coin, CosmosMsg, Decimal, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Timestamp, Uint128, Uint64};
 use fin_helpers::limit_orders::create_submit_order_sub_msg;
-use fin_helpers::position_type::PositionType;
+use fin_helpers::position_type::OldPositionType;
 use fin_helpers::queries::query_pair_config;
 
 pub fn create_vault(
@@ -36,13 +36,13 @@ pub fn create_vault(
     info: &MessageInfo,
     owner: Addr,
     label: Option<String>,
-    mut destinations: Vec<Destination>,
+    mut destinations: Vec<OldDestination>,
     pair_address: Addr,
-    position_type: Option<PositionType>,
+    position_type: Option<OldPositionType>,
     slippage_tolerance: Option<Decimal>,
     minimum_receive_amount: Option<Uint128>,
     swap_amount: Uint128,
-    time_interval: TimeInterval,
+    time_interval: OldTimeInterval,
     target_start_time_utc_seconds: Option<Uint64>,
     target_receive_amount: Option<Uint128>,
     use_dca_plus: Option<bool>,
@@ -61,7 +61,7 @@ pub fn create_vault(
     }
 
     if destinations.is_empty() {
-        destinations.push(Destination {
+        destinations.push(OldDestination {
             address: owner.clone(),
             allocation: Decimal::percent(100),
             action: PostExecutionAction::Send,
@@ -114,9 +114,9 @@ pub fn create_vault(
         destinations,
         created_at: env.block.time,
         status: if info.funds[0].amount.clone() <= Uint128::from(50000u128) {
-            VaultStatus::Inactive
+            OldVaultStatus::Inactive
         } else {
-            VaultStatus::Scheduled
+            OldVaultStatus::Scheduled
         },
         pair: pair.clone(),
         swap_amount,
@@ -210,7 +210,7 @@ pub fn create_vault(
 fn create_time_trigger(
     deps: &mut DepsMut,
     env: &Env,
-    vault: &Vault,
+    vault: &OldVault,
     target_start_time_utc_seconds: Option<Uint64>,
     response: &Response,
 ) -> Result<Response, ContractError> {
@@ -221,9 +221,9 @@ fn create_time_trigger(
 
     save_trigger(
         deps.storage,
-        Trigger {
+        OldTrigger {
             vault_id: vault.id,
-            configuration: TriggerConfiguration::Time { target_time },
+            configuration: OldTriggerConfiguration::Time { target_time },
         },
     )?;
 
@@ -232,7 +232,7 @@ fn create_time_trigger(
 
 fn create_fin_limit_order_trigger(
     deps: DepsMut,
-    mut vault: Vault,
+    mut vault: OldVault,
     target_receive_amount: Uint128,
     response: Response,
 ) -> Result<Response, ContractError> {
@@ -246,9 +246,9 @@ fn create_fin_limit_order_trigger(
 
     save_trigger(
         deps.storage,
-        Trigger {
+        OldTrigger {
             vault_id: vault.id,
-            configuration: TriggerConfiguration::FinLimitOrder {
+            configuration: OldTriggerConfiguration::FinLimitOrder {
                 order_idx: None,
                 target_price,
             },

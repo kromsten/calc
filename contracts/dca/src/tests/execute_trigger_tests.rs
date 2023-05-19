@@ -4,7 +4,7 @@ use super::mocks::{
     fin_contract_high_swap_price, fin_contract_partially_filled_order,
 };
 use crate::constants::{
-    FIN_TAKER_FEE, ONE, ONE_DECIMAL, ONE_HUNDRED, ONE_THOUSAND, TEN, TEN_MICRONS, TWO_MICRONS,
+    ONE, ONE_DECIMAL, ONE_HUNDRED, ONE_THOUSAND, SWAP_FEE_RATE, TEN, TEN_MICRONS, TWO_MICRONS,
 };
 use crate::contract::AFTER_FIN_SWAP_REPLY_ID;
 use crate::handlers::execute_trigger::execute_trigger_handler;
@@ -21,17 +21,17 @@ use crate::tests::mocks::{
     fin_contract_unfilled_limit_order, MockApp, ADMIN, DENOM_UKUJI, DENOM_UTEST, USER,
 };
 use crate::types::dca_plus_config::DcaPlusConfig;
-use crate::types::vault::Vault;
+use crate::types::old_vault::OldVault;
 use base::events::event::{Event, EventBuilder, EventData, ExecutionSkippedReason};
 use base::helpers::math_helpers::checked_mul;
 use base::helpers::time_helpers::get_next_target_time;
 use base::price_type::PriceType;
-use base::triggers::trigger::TriggerConfiguration;
-use base::vaults::vault::{Destination, PostExecutionAction, VaultStatus};
+use base::triggers::trigger::OldTriggerConfiguration;
+use base::vaults::vault::{OldDestination, OldVaultStatus, PostExecutionAction};
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{to_binary, Addr, Coin, CosmosMsg, Decimal, SubMsg, Uint128, WasmMsg};
 use cw_multi_test::Executor;
-use fin_helpers::position_type::PositionType;
+use fin_helpers::position_type::OldPositionType;
 use fin_helpers::queries::query_price;
 use kujira::fin::ExecuteMsg as FinExecuteMsg;
 use std::str::FromStr;
@@ -402,7 +402,7 @@ fn for_filled_fin_limit_order_trigger_should_distribute_to_multiple_destinations
     let mut destinations = vec![];
 
     for i in 0..5 {
-        destinations.push(Destination {
+        destinations.push(OldDestination {
             address: Addr::unchecked(format!("{}-{:?}", USER, i)),
             allocation: Decimal::percent(20),
             action: PostExecutionAction::Send,
@@ -1061,7 +1061,7 @@ fn for_ready_time_trigger_should_distribute_to_multiple_destinations_properly() 
     let mut destinations = vec![];
 
     for i in 0..5 {
-        destinations.push(Destination {
+        destinations.push(OldDestination {
             address: Addr::unchecked(format!("{}-{:?}", USER, i)),
             allocation: Decimal::percent(20),
             action: PostExecutionAction::Send,
@@ -1200,7 +1200,7 @@ fn for_ready_time_trigger_with_dca_plus_should_withhold_escrow() {
             Addr::unchecked(ADMIN),
             mock.dca_contract_address.clone(),
             &ExecuteMsg::UpdateSwapAdjustments {
-                position_type: PositionType::Enter,
+                position_type: OldPositionType::Enter,
                 adjustments: vec![
                     (30, Decimal::from_str("1.0").unwrap()),
                     (35, Decimal::from_str("1.0").unwrap()),
@@ -1305,7 +1305,7 @@ fn for_ready_time_trigger_with_dca_plus_should_adjust_swap_amount() {
             Addr::unchecked(ADMIN),
             mock.dca_contract_address.clone(),
             &ExecuteMsg::UpdateSwapAdjustments {
-                position_type: PositionType::Enter,
+                position_type: OldPositionType::Enter,
                 adjustments: vec![
                     (30, Decimal::from_str("1.3").unwrap()),
                     (35, Decimal::from_str("1.3").unwrap()),
@@ -1960,7 +1960,7 @@ fn until_vault_is_empty_should_update_vault_status() {
         .unwrap()
         .vault;
 
-    assert_eq!(vault.status, VaultStatus::Inactive);
+    assert_eq!(vault.status, OldVaultStatus::Inactive);
 }
 
 #[test]
@@ -2368,7 +2368,7 @@ fn for_active_vault_creates_new_trigger() {
         env.clone(),
         TEN,
         ONE,
-        VaultStatus::Active,
+        OldVaultStatus::Active,
         false,
     );
 
@@ -2378,7 +2378,7 @@ fn for_active_vault_creates_new_trigger() {
 
     assert_eq!(
         updated_vault.trigger,
-        Some(TriggerConfiguration::Time {
+        Some(OldTriggerConfiguration::Time {
             target_time: get_next_target_time(env.block.time, env.block.time, vault.time_interval)
         })
     );
@@ -2398,7 +2398,7 @@ fn for_active_vault_with_dca_plus_updates_standard_performance_data() {
         env.clone(),
         TEN,
         ONE,
-        VaultStatus::Active,
+        OldVaultStatus::Active,
         true,
     );
 
@@ -2421,7 +2421,7 @@ fn for_active_vault_with_dca_plus_updates_standard_performance_data() {
 
     let fee_rate = config.swap_fee_percent
         + config.delegation_fee_percent
-        + Decimal::from_str(FIN_TAKER_FEE).unwrap();
+        + Decimal::from_str(SWAP_FEE_RATE).unwrap();
 
     assert_eq!(
         updated_dca_plus_config.standard_dca_swapped_amount.amount,
@@ -2447,7 +2447,7 @@ fn for_active_vault_with_dca_plus_publishes_execution_simulated_event() {
         env.clone(),
         TEN,
         ONE,
-        VaultStatus::Active,
+        OldVaultStatus::Active,
         true,
     );
 
@@ -2466,7 +2466,7 @@ fn for_active_vault_with_dca_plus_publishes_execution_simulated_event() {
 
     let fee_rate = config.swap_fee_percent
         + config.delegation_fee_percent
-        + Decimal::from_str(FIN_TAKER_FEE).unwrap();
+        + Decimal::from_str(SWAP_FEE_RATE).unwrap();
 
     let received_before_fee = dca_plus_config.standard_dca_received_amount.amount
         * (Decimal::one() / (Decimal::one() - fee_rate))
@@ -2501,7 +2501,7 @@ fn for_active_vault_sends_fin_swap_message() {
         env.clone(),
         TEN,
         ONE,
-        VaultStatus::Active,
+        OldVaultStatus::Active,
         false,
     );
 
@@ -2515,6 +2515,7 @@ fn for_active_vault_sends_fin_swap_message() {
                 max_spread: None,
                 to: None,
                 offer_asset: None,
+                callback: None
             })
             .unwrap(),
             funds: vec![Coin::new(vault.swap_amount.into(), vault.get_swap_denom())],
@@ -2537,7 +2538,7 @@ fn for_active_dca_plus_vault_with_finished_standard_dca_does_not_update_stats() 
         env.clone(),
         TEN,
         ONE,
-        VaultStatus::Active,
+        OldVaultStatus::Active,
         true,
     );
 
@@ -2578,11 +2579,11 @@ fn for_active_vault_with_slippage_exceeded_publishes_standard_dca_execution_skip
     let vault = setup_new_vault(
         deps.as_mut(),
         env.clone(),
-        Vault {
+        OldVault {
             swap_amount: TEN,
             slippage_tolerance: Some(Decimal::percent(2)),
             dca_plus_config: Some(DcaPlusConfig::default()),
-            ..Vault::default()
+            ..OldVault::default()
         },
     );
 
@@ -2617,10 +2618,10 @@ fn for_active_vault_with_price_threshold_exceeded_publishes_simulated_dca_execut
     let vault = setup_new_vault(
         deps.as_mut(),
         env.clone(),
-        Vault {
+        OldVault {
             minimum_receive_amount: Some(ONE + ONE),
             dca_plus_config: Some(DcaPlusConfig::default()),
-            ..Vault::default()
+            ..OldVault::default()
         },
     );
 
@@ -2655,7 +2656,7 @@ fn for_scheduled_vault_updates_status_to_active() {
         env.clone(),
         TEN,
         ONE,
-        VaultStatus::Scheduled,
+        OldVaultStatus::Scheduled,
         false,
     );
 
@@ -2663,7 +2664,7 @@ fn for_scheduled_vault_updates_status_to_active() {
 
     let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
 
-    assert_eq!(updated_vault.status, VaultStatus::Active);
+    assert_eq!(updated_vault.status, OldVaultStatus::Active);
 }
 
 #[test]
@@ -2680,7 +2681,7 @@ fn for_scheduled_vault_creates_new_trigger() {
         env.clone(),
         TEN,
         ONE,
-        VaultStatus::Scheduled,
+        OldVaultStatus::Scheduled,
         false,
     );
 
@@ -2690,7 +2691,7 @@ fn for_scheduled_vault_creates_new_trigger() {
 
     assert_eq!(
         updated_vault.trigger,
-        Some(TriggerConfiguration::Time {
+        Some(OldTriggerConfiguration::Time {
             target_time: get_next_target_time(env.block.time, env.block.time, vault.time_interval)
         })
     );
@@ -2710,7 +2711,7 @@ fn for_scheduled_vault_sends_fin_swap_message() {
         env.clone(),
         TEN,
         ONE,
-        VaultStatus::Scheduled,
+        OldVaultStatus::Scheduled,
         false,
     );
 
@@ -2724,6 +2725,7 @@ fn for_scheduled_vault_sends_fin_swap_message() {
                 max_spread: None,
                 to: None,
                 offer_asset: None,
+                callback: None
             })
             .unwrap(),
             funds: vec![Coin::new(vault.swap_amount.into(), vault.get_swap_denom())],
@@ -2746,7 +2748,7 @@ fn for_inactive_vault_does_not_create_a_new_trigger() {
         env.clone(),
         TEN,
         ONE,
-        VaultStatus::Inactive,
+        OldVaultStatus::Inactive,
         false,
     );
 
@@ -2771,7 +2773,7 @@ fn for_inactive_vault_with_dca_plus_creates_new_trigger() {
         env.clone(),
         TEN,
         ONE,
-        VaultStatus::Inactive,
+        OldVaultStatus::Inactive,
         true,
     );
 
@@ -2781,7 +2783,7 @@ fn for_inactive_vault_with_dca_plus_creates_new_trigger() {
 
     assert_eq!(
         updated_vault.trigger,
-        Some(TriggerConfiguration::Time {
+        Some(OldTriggerConfiguration::Time {
             target_time: get_next_target_time(env.block.time, env.block.time, vault.time_interval)
         })
     );
@@ -2801,7 +2803,7 @@ fn for_inactive_vault_with_dca_plus_and_finished_standard_dca_does_not_create_ne
         env.clone(),
         ONE,
         ONE,
-        VaultStatus::Inactive,
+        OldVaultStatus::Inactive,
         true,
     );
 
@@ -2825,15 +2827,15 @@ fn for_inactive_vault_with_dca_plus_and_finished_standard_dca_does_not_create_sw
     let vault = setup_new_vault(
         deps.as_mut(),
         env.clone(),
-        Vault {
-            status: VaultStatus::Inactive,
+        OldVault {
+            status: OldVaultStatus::Inactive,
             dca_plus_config: Some(DcaPlusConfig {
                 total_deposit: Coin::new(TEN.into(), DENOM_UKUJI),
                 standard_dca_swapped_amount: Coin::new(TEN.into(), DENOM_UKUJI),
                 standard_dca_received_amount: Coin::new(TEN.into(), DENOM_UKUJI),
                 ..DcaPlusConfig::default()
             }),
-            ..Vault::default()
+            ..OldVault::default()
         },
     );
 
@@ -2862,15 +2864,15 @@ fn for_inactive_vault_with_dca_plus_and_unfinished_standard_dca_does_not_disburs
     let vault = setup_new_vault(
         deps.as_mut(),
         env.clone(),
-        Vault {
-            status: VaultStatus::Inactive,
+        OldVault {
+            status: OldVaultStatus::Inactive,
             dca_plus_config: Some(DcaPlusConfig {
                 total_deposit: Coin::new(TEN.into(), DENOM_UKUJI),
                 standard_dca_swapped_amount: Coin::new(ONE.into(), DENOM_UKUJI),
                 standard_dca_received_amount: Coin::new(TEN.into(), DENOM_UKUJI),
                 ..DcaPlusConfig::default()
             }),
-            ..Vault::default()
+            ..OldVault::default()
         },
     );
 
@@ -2893,7 +2895,7 @@ fn for_inactive_vault_with_dca_plus_updates_standard_performance_data() {
         env.clone(),
         TEN,
         ONE,
-        VaultStatus::Inactive,
+        OldVaultStatus::Inactive,
         true,
     );
 
@@ -2916,7 +2918,7 @@ fn for_inactive_vault_with_dca_plus_updates_standard_performance_data() {
 
     let fee_rate = config.swap_fee_percent
         + config.delegation_fee_percent
-        + Decimal::from_str(FIN_TAKER_FEE).unwrap();
+        + Decimal::from_str(SWAP_FEE_RATE).unwrap();
 
     assert_eq!(
         updated_dca_plus_config.standard_dca_swapped_amount.amount,
@@ -2942,7 +2944,7 @@ fn for_inactive_dca_plus_vault_with_finished_standard_dca_disburses_escrow() {
         env.clone(),
         ONE,
         ONE,
-        VaultStatus::Inactive,
+        OldVaultStatus::Inactive,
         true,
     );
 
@@ -2971,7 +2973,7 @@ fn for_cancelled_vault_deletes_trigger() {
         env.clone(),
         TEN,
         ONE,
-        VaultStatus::Cancelled,
+        OldVaultStatus::Cancelled,
         true,
     );
 
@@ -2983,7 +2985,7 @@ fn for_cancelled_vault_deletes_trigger() {
 
     assert_eq!(
         vault.trigger,
-        Some(TriggerConfiguration::Time {
+        Some(OldTriggerConfiguration::Time {
             target_time: env.block.time
         })
     );

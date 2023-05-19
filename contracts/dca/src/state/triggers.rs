@@ -1,8 +1,8 @@
-use base::triggers::trigger::{Trigger, TriggerConfiguration};
+use base::triggers::trigger::{OldTrigger, OldTriggerConfiguration};
 use cosmwasm_std::{StdResult, Storage, Uint128};
 use cw_storage_plus::Map;
 
-pub const TRIGGERS: Map<u128, Trigger> = Map::new("triggers_v20");
+pub const TRIGGERS: Map<u128, OldTrigger> = Map::new("triggers_v20");
 
 pub const TRIGGER_ID_BY_FIN_LIMIT_ORDER_IDX: Map<u128, u128> =
     Map::new("trigger_id_by_fin_limit_order_idx_v20");
@@ -10,10 +10,10 @@ pub const TRIGGER_ID_BY_FIN_LIMIT_ORDER_IDX: Map<u128, u128> =
 pub const TRIGGER_IDS_BY_TARGET_TIME: Map<u64, Vec<u128>> =
     Map::new("trigger_ids_by_target_time_v20");
 
-pub fn save_trigger(store: &mut dyn Storage, trigger: Trigger) -> StdResult<Uint128> {
+pub fn save_trigger(store: &mut dyn Storage, trigger: OldTrigger) -> StdResult<Uint128> {
     TRIGGERS.save(store, trigger.vault_id.into(), &trigger)?;
     match trigger.configuration {
-        TriggerConfiguration::Time { target_time } => {
+        OldTriggerConfiguration::Time { target_time } => {
             let existing_triggers_at_time =
                 TRIGGER_IDS_BY_TARGET_TIME.may_load(store, target_time.seconds())?;
 
@@ -30,7 +30,7 @@ pub fn save_trigger(store: &mut dyn Storage, trigger: Trigger) -> StdResult<Uint
                 }
             }
         }
-        TriggerConfiguration::FinLimitOrder { order_idx, .. } => {
+        OldTriggerConfiguration::FinLimitOrder { order_idx, .. } => {
             if order_idx.is_some() {
                 TRIGGER_ID_BY_FIN_LIMIT_ORDER_IDX.save(
                     store,
@@ -43,7 +43,7 @@ pub fn save_trigger(store: &mut dyn Storage, trigger: Trigger) -> StdResult<Uint
     Ok(trigger.vault_id)
 }
 
-pub fn get_trigger(store: &dyn Storage, vault_id: Uint128) -> StdResult<Option<Trigger>> {
+pub fn get_trigger(store: &dyn Storage, vault_id: Uint128) -> StdResult<Option<OldTrigger>> {
     TRIGGERS.may_load(store, vault_id.into())
 }
 
@@ -51,7 +51,7 @@ pub fn delete_trigger(store: &mut dyn Storage, vault_id: Uint128) -> StdResult<U
     let trigger = TRIGGERS.load(store, vault_id.into())?;
     TRIGGERS.remove(store, trigger.vault_id.into());
     match trigger.configuration {
-        TriggerConfiguration::Time { target_time } => {
+        OldTriggerConfiguration::Time { target_time } => {
             let existing_triggers_at_time =
                 TRIGGER_IDS_BY_TARGET_TIME.may_load(store, target_time.seconds())?;
 
@@ -65,7 +65,7 @@ pub fn delete_trigger(store: &mut dyn Storage, vault_id: Uint128) -> StdResult<U
                 }
             }
         }
-        TriggerConfiguration::FinLimitOrder { order_idx, .. } => {
+        OldTriggerConfiguration::FinLimitOrder { order_idx, .. } => {
             if order_idx.is_some() {
                 TRIGGER_ID_BY_FIN_LIMIT_ORDER_IDX.remove(store, order_idx.unwrap().u128());
             }
@@ -85,9 +85,9 @@ mod remove_trigger_tests {
         let mut store = MockStorage::new();
         let target_time = Timestamp::from_seconds(100);
 
-        let trigger = Trigger {
+        let trigger = OldTrigger {
             vault_id: Uint128::from(1u128),
-            configuration: TriggerConfiguration::Time { target_time },
+            configuration: OldTriggerConfiguration::Time { target_time },
         };
 
         save_trigger(&mut store, trigger.clone()).unwrap();

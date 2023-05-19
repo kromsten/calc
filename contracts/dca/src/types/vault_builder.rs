@@ -1,25 +1,25 @@
-use super::{dca_plus_config::DcaPlusConfig, vault::Vault};
+use super::{dca_plus_config::DcaPlusConfig, old_vault::OldVault};
 use base::{
     pair::Pair,
-    triggers::trigger::TimeInterval,
-    vaults::vault::{Destination, VaultStatus},
+    triggers::trigger::OldTimeInterval,
+    vaults::vault::{OldDestination, OldVaultStatus},
 };
 use cosmwasm_std::{Addr, Coin, Decimal, Timestamp, Uint128};
-use fin_helpers::position_type::PositionType;
+use fin_helpers::position_type::OldPositionType;
 
 pub struct VaultBuilder {
     pub created_at: Timestamp,
     pub owner: Addr,
     pub label: Option<String>,
-    pub destinations: Vec<Destination>,
-    pub status: VaultStatus,
+    pub destinations: Vec<OldDestination>,
+    pub status: OldVaultStatus,
     pub balance: Coin,
     pub pair: Pair,
     pub swap_amount: Uint128,
-    pub position_type: Option<PositionType>,
+    pub position_type: Option<OldPositionType>,
     pub slippage_tolerance: Option<Decimal>,
     pub minimum_receive_amount: Option<Uint128>,
-    pub time_interval: TimeInterval,
+    pub time_interval: OldTimeInterval,
     pub started_at: Option<Timestamp>,
     pub swapped_amount: Coin,
     pub received_amount: Coin,
@@ -31,15 +31,15 @@ impl VaultBuilder {
         created_at: Timestamp,
         owner: Addr,
         label: Option<String>,
-        destinations: Vec<Destination>,
-        status: VaultStatus,
+        destinations: Vec<OldDestination>,
+        status: OldVaultStatus,
         balance: Coin,
         pair: Pair,
         swap_amount: Uint128,
-        position_type: Option<PositionType>,
+        position_type: Option<OldPositionType>,
         slippage_tolerance: Option<Decimal>,
         minimum_receive_amount: Option<Uint128>,
-        time_interval: TimeInterval,
+        time_interval: OldTimeInterval,
         started_at: Option<Timestamp>,
         swapped_amount: Coin,
         received_amount: Coin,
@@ -65,8 +65,8 @@ impl VaultBuilder {
         }
     }
 
-    pub fn build(self, id: Uint128) -> Vault {
-        Vault {
+    pub fn build(self, id: Uint128) -> OldVault {
+        OldVault {
             id,
             created_at: self.created_at,
             owner: self.owner,

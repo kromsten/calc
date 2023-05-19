@@ -1,7 +1,7 @@
 use crate::{
     contract::{AFTER_BANK_SWAP_REPLY_ID, AFTER_Z_DELEGATION_REPLY_ID},
     state::config::get_config,
-    types::vault::Vault,
+    types::old_vault::OldVault,
 };
 use base::{helpers::math_helpers::checked_mul, vaults::vault::PostExecutionAction};
 use cosmwasm_std::{
@@ -11,7 +11,7 @@ use staking_router::msg::ExecuteMsg;
 
 pub fn get_disbursement_messages(
     deps: Deps,
-    vault: &Vault,
+    vault: &OldVault,
     amount_to_disburse: Uint128,
 ) -> StdResult<Vec<SubMsg>> {
     let config = get_config(deps.storage)?;

@@ -2,9 +2,9 @@ use crate::constants::{ONE, ONE_HUNDRED, ONE_THOUSAND, TEN};
 use crate::handlers::deposit::deposit_handler;
 use crate::msg::{ExecuteMsg, QueryMsg, VaultResponse};
 use crate::tests::mocks::{fin_contract_unfilled_limit_order, MockApp, ADMIN, DENOM_UKUJI, USER};
-use crate::types::vault::Vault;
+use crate::types::old_vault::OldVault;
 use base::events::event::EventBuilder;
-use base::vaults::vault::VaultStatus;
+use base::vaults::vault::OldVaultStatus;
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{to_binary, Addr, Coin, CosmosMsg, SubMsg, Uint128, WasmMsg};
 use cw_multi_test::Executor;
@@ -187,7 +187,7 @@ fn when_vault_is_scheduled_should_not_change_status() {
         .query_wasm_smart(&mock.dca_contract_address, &QueryMsg::GetVault { vault_id })
         .unwrap();
 
-    assert_eq!(vault_response.vault.status, VaultStatus::Scheduled);
+    assert_eq!(vault_response.vault.status, OldVaultStatus::Scheduled);
 }
 
 #[test]
@@ -227,7 +227,7 @@ fn when_vault_is_active_should_not_change_status() {
         .query_wasm_smart(&mock.dca_contract_address, &QueryMsg::GetVault { vault_id })
         .unwrap();
 
-    assert_eq!(vault_response.vault.status, VaultStatus::Active);
+    assert_eq!(vault_response.vault.status, OldVaultStatus::Active);
 }
 
 #[test]
@@ -308,7 +308,7 @@ fn when_vault_is_inactive_should_change_status() {
         .query_wasm_smart(&mock.dca_contract_address, &QueryMsg::GetVault { vault_id })
         .unwrap();
 
-    assert_eq!(vault_response.vault.status, VaultStatus::Active);
+    assert_eq!(vault_response.vault.status, OldVaultStatus::Active);
 }
 
 #[test]
@@ -321,10 +321,10 @@ fn when_vault_is_inactive_without_a_trigger_should_execute_vault() {
     let vault = setup_new_vault(
         deps.as_mut(),
         env.clone(),
-        Vault {
-            status: VaultStatus::Inactive,
+        OldVault {
+            status: OldVaultStatus::Inactive,
             trigger: None,
-            ..Vault::default()
+            ..OldVault::default()
         },
     );
 
@@ -359,9 +359,9 @@ fn when_vault_is_inactive_with_a_trigger_should_not_execute_vault() {
     let vault = setup_new_vault(
         deps.as_mut(),
         env.clone(),
-        Vault {
-            status: VaultStatus::Inactive,
-            ..Vault::default()
+        OldVault {
+            status: OldVaultStatus::Inactive,
+            ..OldVault::default()
         },
     );
 
@@ -405,7 +405,7 @@ fn when_vault_is_inactive_and_insufficient_funds_should_not_change_status() {
         .query_wasm_smart(&mock.dca_contract_address, &QueryMsg::GetVault { vault_id })
         .unwrap();
 
-    assert_eq!(vault_response.vault.status, VaultStatus::Inactive);
+    assert_eq!(vault_response.vault.status, OldVaultStatus::Inactive);
 }
 
 #[test]

@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use base::{
-    helpers::message_helpers::get_flat_map_for_event_type, triggers::trigger::TimeInterval,
+    helpers::message_helpers::get_flat_map_for_event_type, triggers::trigger::OldTimeInterval,
 };
 use cosmwasm_std::{Addr, Coin, Uint128};
 use cw_multi_test::Executor;
@@ -38,7 +38,7 @@ fn should_succeed() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Daily,
+                time_interval: OldTimeInterval::Daily,
                 target_receive_amount: None,
                 target_start_time_utc_seconds: None,
                 use_dca_plus: None,
@@ -100,7 +100,7 @@ fn cancelled_vault_should_fail() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Daily,
+                time_interval: OldTimeInterval::Daily,
                 target_receive_amount: None,
                 target_start_time_utc_seconds: None,
                 use_dca_plus: None,

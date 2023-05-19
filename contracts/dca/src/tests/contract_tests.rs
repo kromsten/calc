@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use base::triggers::trigger::TimeInterval;
+use base::triggers::trigger::OldTimeInterval;
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{attr, from_binary, Addr, Coin, Decimal, Uint128, Uint64};
 
@@ -525,7 +525,7 @@ fn cancel_vault_with_valid_inputs_should_succeed() {
         position_type: None,
         slippage_tolerance: None,
         swap_amount: Uint128::new(50001u128),
-        time_interval: TimeInterval::Daily,
+        time_interval: OldTimeInterval::Daily,
         target_start_time_utc_seconds: Some(Uint64::new(1762770365)),
         target_receive_amount: None,
         minimum_receive_amount: None,
@@ -613,7 +613,7 @@ fn get_active_vault_by_address_and_id_should_succeed() {
         position_type: None,
         slippage_tolerance: None,
         swap_amount: Uint128::new(50001u128),
-        time_interval: TimeInterval::Daily,
+        time_interval: OldTimeInterval::Daily,
         target_start_time_utc_seconds: Some(Uint64::new(1662770365)),
         target_receive_amount: None,
         minimum_receive_amount: None,
@@ -696,7 +696,7 @@ fn get_all_active_vaults_by_address_should_succeed() {
         position_type: None,
         slippage_tolerance: None,
         swap_amount: Uint128::new(50001u128),
-        time_interval: TimeInterval::Daily,
+        time_interval: OldTimeInterval::Daily,
         target_start_time_utc_seconds: Some(Uint64::new(1662770365)),
         target_receive_amount: None,
         minimum_receive_amount: None,
@@ -725,7 +725,7 @@ fn get_all_active_vaults_by_address_should_succeed() {
         position_type: None,
         slippage_tolerance: None,
         swap_amount: Uint128::new(50001u128),
-        time_interval: TimeInterval::Daily,
+        time_interval: OldTimeInterval::Daily,
         target_start_time_utc_seconds: Some(Uint64::new(1662770365)),
         target_receive_amount: None,
         minimum_receive_amount: None,
@@ -813,7 +813,7 @@ fn get_all_events_by_vault_id_for_new_vault_should_succeed() {
         position_type: None,
         slippage_tolerance: None,
         swap_amount: Uint128::new(50001u128),
-        time_interval: TimeInterval::Daily,
+        time_interval: OldTimeInterval::Daily,
         target_start_time_utc_seconds: Some(Uint64::new(1762770365)),
         target_receive_amount: None,
         minimum_receive_amount: None,

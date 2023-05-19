@@ -1,14 +1,14 @@
 use super::fee_helpers::{get_delegation_fee_rate, get_swap_fee_rate};
 use crate::{
-    constants::FIN_TAKER_FEE,
+    constants::SWAP_FEE_RATE,
     state::{events::create_event, swap_adjustments::get_swap_adjustment, vaults::update_vault},
-    types::{dca_plus_config::DcaPlusConfig, vault::Vault},
+    types::{dca_plus_config::DcaPlusConfig, old_vault::OldVault},
 };
 use base::{
     events::event::{EventBuilder, EventData, ExecutionSkippedReason},
     helpers::{coin_helpers::add_to_coin, time_helpers::get_total_execution_duration},
     price_type::PriceType,
-    triggers::trigger::TimeInterval,
+    triggers::trigger::OldTimeInterval,
 };
 use cosmwasm_std::{
     Coin, Decimal, Deps, Env, QuerierWrapper, StdResult, Storage, Timestamp, Uint128,
@@ -16,7 +16,7 @@ use cosmwasm_std::{
 use fin_helpers::queries::{calculate_slippage, query_price};
 use std::{cmp::min, str::FromStr};
 
-pub fn get_swap_amount(deps: &Deps, env: &Env, vault: &Vault) -> StdResult<Coin> {
+pub fn get_swap_amount(deps: &Deps, env: &Env, vault: &OldVault) -> StdResult<Coin> {
     let adjusted_amount =
         vault
             .clone()
@@ -43,7 +43,7 @@ pub fn get_dca_plus_model_id(
     block_time: &Timestamp,
     balance: &Coin,
     swap_amount: &Uint128,
-    time_interval: &TimeInterval,
+    time_interval: &OldTimeInterval,
 ) -> u8 {
     let execution_duration = get_total_execution_duration(
         *block_time,
@@ -70,7 +70,7 @@ pub fn get_dca_plus_model_id(
 }
 
 pub fn get_dca_plus_performance_factor(
-    vault: &Vault,
+    vault: &OldVault,
     current_price: Decimal,
 ) -> StdResult<Decimal> {
     let dca_plus_config = vault
@@ -114,9 +114,9 @@ pub fn simulate_standard_dca_execution(
     querier: &QuerierWrapper,
     storage: &mut dyn Storage,
     env: &Env,
-    vault: Vault,
+    vault: OldVault,
     belief_price: Decimal,
-) -> StdResult<Vault> {
+) -> StdResult<OldVault> {
     vault
         .dca_plus_config
         .clone()
@@ -175,13 +175,13 @@ pub fn simulate_standard_dca_execution(
 
             let fee_rate = get_swap_fee_rate(storage, &vault)?
                 + get_delegation_fee_rate(storage, &vault)?
-                + Decimal::from_str(FIN_TAKER_FEE)?; // fin taker fee - TODO: remove once we can get this from the pair contracts
+                + Decimal::from_str(SWAP_FEE_RATE)?; // fin taker fee - TODO: remove once we can get this from the pair contracts
 
             let received_amount_before_fee = swap_amount * (Decimal::one() / actual_price);
             let fee_amount = received_amount_before_fee * fee_rate;
             let received_amount_after_fee = received_amount_before_fee - fee_amount;
 
-            let vault = Vault {
+            let vault = OldVault {
                 dca_plus_config: Some(DcaPlusConfig {
                     standard_dca_swapped_amount: add_to_coin(
                         dca_plus_config.standard_dca_swapped_amount,
@@ -225,13 +225,13 @@ mod get_swap_amount_tests {
     };
 
     use super::*;
-    use base::{pair::Pair, vaults::vault::VaultStatus};
+    use base::{pair::Pair, vaults::vault::OldVaultStatus};
     use cosmwasm_std::{
         coin,
         testing::{mock_dependencies, mock_env},
         Addr,
     };
-    use fin_helpers::position_type::PositionType;
+    use fin_helpers::position_type::OldPositionType;
 
     #[test]
     fn should_return_full_balance_when_vault_has_low_funds() {
@@ -273,13 +273,13 @@ mod get_swap_amount_tests {
         let balance = Uint128::new(100);
         let swap_amount = Uint128::new(50);
 
-        let vault = Vault {
+        let vault = OldVault {
             id: Uint128::new(1),
             created_at: Timestamp::from_seconds(0),
             owner: Addr::unchecked("owner"),
             label: None,
             destinations: vec![],
-            status: VaultStatus::Active,
+            status: OldVaultStatus::Active,
             balance: coin(balance.into(), "base"),
             pair: Pair {
                 address: Addr::unchecked("pair"),
@@ -289,7 +289,7 @@ mod get_swap_amount_tests {
             swap_amount,
             slippage_tolerance: None,
             minimum_receive_amount: None,
-            time_interval: TimeInterval::Daily,
+            time_interval: OldTimeInterval::Daily,
             started_at: None,
             swapped_amount: coin(0, "base"),
             received_amount: coin(0, "quote"),
@@ -308,7 +308,7 @@ mod get_swap_amount_tests {
 
         update_swap_adjustments(
             deps.as_mut().storage,
-            PositionType::Exit,
+            OldPositionType::Exit,
             vec![(30, swap_adjustment)],
             env.block.time,
         )
@@ -331,13 +331,13 @@ mod get_swap_amount_tests {
         let balance = Uint128::new(50);
         let swap_amount = Uint128::new(100);
 
-        let vault = Vault {
+        let vault = OldVault {
             id: Uint128::new(1),
             created_at: Timestamp::from_seconds(0),
             owner: Addr::unchecked("owner"),
             label: None,
             destinations: vec![],
-            status: VaultStatus::Active,
+            status: OldVaultStatus::Active,
             balance: coin(balance.into(), "base"),
             pair: Pair {
                 address: Addr::unchecked("pair"),
@@ -347,7 +347,7 @@ mod get_swap_amount_tests {
             swap_amount,
             slippage_tolerance: None,
             minimum_receive_amount: None,
-            time_interval: TimeInterval::Daily,
+            time_interval: OldTimeInterval::Daily,
             started_at: None,
             swapped_amount: coin(0, "base"),
             received_amount: coin(0, "quote"),
@@ -366,7 +366,7 @@ mod get_swap_amount_tests {
 
         update_swap_adjustments(
             deps.as_mut().storage,
-            PositionType::Exit,
+            OldPositionType::Exit,
             vec![(30, swap_adjustment)],
             env.block.time,
         )
@@ -388,13 +388,13 @@ mod get_swap_amount_tests {
         let balance = Uint128::new(50);
         let swap_amount = Uint128::new(100);
 
-        let vault = Vault {
+        let vault = OldVault {
             id: Uint128::new(1),
             created_at: Timestamp::from_seconds(0),
             owner: Addr::unchecked("owner"),
             label: None,
             destinations: vec![],
-            status: VaultStatus::Active,
+            status: OldVaultStatus::Active,
             balance: coin(balance.into(), "base"),
             pair: Pair {
                 address: Addr::unchecked("pair"),
@@ -404,7 +404,7 @@ mod get_swap_amount_tests {
             swap_amount,
             slippage_tolerance: None,
             minimum_receive_amount: None,
-            time_interval: TimeInterval::Daily,
+            time_interval: OldTimeInterval::Daily,
             started_at: None,
             swapped_amount: coin(0, "base"),
             received_amount: coin(0, "quote"),
@@ -423,7 +423,7 @@ mod get_swap_amount_tests {
 
         update_swap_adjustments(
             deps.as_mut().storage,
-            PositionType::Exit,
+            OldPositionType::Exit,
             vec![(30, swap_adjustment)],
             env.block.time,
         )
@@ -445,13 +445,13 @@ mod get_swap_amount_tests {
         let balance = Uint128::new(100);
         let swap_amount = Uint128::new(80);
 
-        let vault = Vault {
+        let vault = OldVault {
             id: Uint128::new(1),
             created_at: Timestamp::from_seconds(0),
             owner: Addr::unchecked("owner"),
             label: None,
             destinations: vec![],
-            status: VaultStatus::Active,
+            status: OldVaultStatus::Active,
             balance: coin(balance.into(), "base"),
             pair: Pair {
                 address: Addr::unchecked("pair"),
@@ -461,7 +461,7 @@ mod get_swap_amount_tests {
             swap_amount,
             slippage_tolerance: None,
             minimum_receive_amount: None,
-            time_interval: TimeInterval::Daily,
+            time_interval: OldTimeInterval::Daily,
             started_at: None,
             swapped_amount: coin(0, "base"),
             received_amount: coin(0, "quote"),
@@ -480,7 +480,7 @@ mod get_swap_amount_tests {
 
         update_swap_adjustments(
             deps.as_mut().storage,
-            PositionType::Exit,
+            OldPositionType::Exit,
             vec![(30, swap_adjustment)],
             env.block.time,
         )
@@ -494,14 +494,14 @@ mod get_swap_amount_tests {
         );
     }
 
-    fn vault_with(balance: Uint128, swap_amount: Uint128) -> Vault {
-        Vault {
+    fn vault_with(balance: Uint128, swap_amount: Uint128) -> OldVault {
+        OldVault {
             id: Uint128::new(1),
             created_at: Timestamp::from_seconds(0),
             owner: Addr::unchecked("owner"),
             label: None,
             destinations: vec![],
-            status: VaultStatus::Active,
+            status: OldVaultStatus::Active,
             balance: coin(balance.into(), "base"),
             pair: Pair {
                 address: Addr::unchecked("pair"),
@@ -511,7 +511,7 @@ mod get_swap_amount_tests {
             swap_amount,
             slippage_tolerance: None,
             minimum_receive_amount: None,
-            time_interval: TimeInterval::Daily,
+            time_interval: OldTimeInterval::Daily,
             started_at: None,
             swapped_amount: coin(0, "base"),
             received_amount: coin(0, "quote"),
@@ -574,7 +574,7 @@ mod price_threshold_exceeded_tests {
 
 #[cfg(test)]
 mod get_dca_plus_model_id_tests {
-    use base::triggers::trigger::TimeInterval;
+    use base::triggers::trigger::OldTimeInterval;
     use cosmwasm_std::{testing::mock_env, Coin, Uint128};
 
     use crate::{
@@ -594,7 +594,7 @@ mod get_dca_plus_model_id_tests {
                 &env.block.time,
                 &balance,
                 &swap_amount,
-                &TimeInterval::Daily
+                &OldTimeInterval::Daily
             ),
             30
         );
@@ -612,7 +612,7 @@ mod get_dca_plus_model_id_tests {
                 &env.block.time,
                 &balance,
                 &swap_amount,
-                &TimeInterval::Daily
+                &OldTimeInterval::Daily
             ),
             90
         );
@@ -630,7 +630,7 @@ mod get_dca_plus_model_id_tests {
                 &env.block.time,
                 &balance,
                 &swap_amount,
-                &TimeInterval::Daily
+                &OldTimeInterval::Daily
             ),
             60
         );
@@ -641,9 +641,9 @@ mod get_dca_plus_model_id_tests {
 mod get_dca_plus_performance_factor_tests {
     use crate::{
         helpers::vault_helpers::get_dca_plus_performance_factor,
-        types::{dca_plus_config::DcaPlusConfig, vault::Vault},
+        types::{dca_plus_config::DcaPlusConfig, old_vault::OldVault},
     };
-    use base::{pair::Pair, triggers::trigger::TimeInterval, vaults::vault::VaultStatus};
+    use base::{pair::Pair, triggers::trigger::OldTimeInterval, vaults::vault::OldVaultStatus};
     use cosmwasm_std::{Addr, Coin, Decimal, Timestamp, Uint128};
     use std::str::FromStr;
 
@@ -653,10 +653,10 @@ mod get_dca_plus_performance_factor_tests {
         standard_dca_swapped_amount: Uint128,
         received_amount: Uint128,
         standard_dca_received_amount: Uint128,
-    ) -> Vault {
+    ) -> OldVault {
         let escrow_level = Decimal::percent(5);
 
-        Vault {
+        OldVault {
             balance: Coin {
                 denom: "swap_denom".to_string(),
                 amount: total_deposit - swapped_amount,
@@ -691,7 +691,7 @@ mod get_dca_plus_performance_factor_tests {
             owner: Addr::unchecked("owner"),
             label: None,
             destinations: vec![],
-            status: VaultStatus::Active,
+            status: OldVaultStatus::Active,
             pair: Pair {
                 address: Addr::unchecked("pair"),
                 base_denom: "receive_denom".to_string(),
@@ -700,7 +700,7 @@ mod get_dca_plus_performance_factor_tests {
             swap_amount: swapped_amount / Uint128::new(2),
             slippage_tolerance: None,
             minimum_receive_amount: None,
-            time_interval: TimeInterval::Daily,
+            time_interval: OldTimeInterval::Daily,
             started_at: None,
             trigger: None,
         }
@@ -837,14 +837,14 @@ mod get_dca_plus_performance_factor_tests {
 mod simulate_standard_dca_execution_tests {
     use super::simulate_standard_dca_execution;
     use crate::{
-        constants::{FIN_TAKER_FEE, ONE, ONE_DECIMAL, TEN, TEN_MICRONS},
+        constants::{ONE, ONE_DECIMAL, SWAP_FEE_RATE, TEN, TEN_MICRONS},
         handlers::get_events_by_resource_id::get_events_by_resource_id,
         helpers::fee_helpers::{get_delegation_fee_rate, get_swap_fee_rate},
         tests::{
             helpers::{instantiate_contract, set_fin_price},
             mocks::{ADMIN, DENOM_UKUJI},
         },
-        types::{dca_plus_config::DcaPlusConfig, vault::Vault},
+        types::{dca_plus_config::DcaPlusConfig, old_vault::OldVault},
     };
     use base::events::event::{Event, EventData, ExecutionSkippedReason};
     use cosmwasm_std::{
@@ -862,7 +862,7 @@ mod simulate_standard_dca_execution_tests {
 
         set_fin_price(&mut deps, &ONE_DECIMAL, &ONE, &TEN_MICRONS);
 
-        let vault = Vault::default();
+        let vault = OldVault::default();
 
         let updated_vault = simulate_standard_dca_execution(
             &deps.as_ref().querier,
@@ -890,13 +890,13 @@ mod simulate_standard_dca_execution_tests {
 
         set_fin_price(&mut deps, &ONE_DECIMAL, &ONE, &TEN_MICRONS);
 
-        let vault = Vault {
+        let vault = OldVault {
             dca_plus_config: Some(DcaPlusConfig {
                 total_deposit: Coin::new(TEN.into(), DENOM_UKUJI),
                 standard_dca_swapped_amount: Coin::new(TEN.into(), DENOM_UKUJI),
                 ..DcaPlusConfig::default()
             }),
-            ..Vault::default()
+            ..OldVault::default()
         };
 
         let updated_vault = simulate_standard_dca_execution(
@@ -926,11 +926,11 @@ mod simulate_standard_dca_execution_tests {
 
         set_fin_price(&mut deps, &ONE_DECIMAL, &ONE, &TEN_MICRONS);
 
-        let vault = Vault {
+        let vault = OldVault {
             swap_amount: ONE,
             minimum_receive_amount: Some(ONE + ONE),
             dca_plus_config: Some(DcaPlusConfig::default()),
-            ..Vault::default()
+            ..OldVault::default()
         };
 
         let belief_price = Decimal::one();
@@ -971,11 +971,11 @@ mod simulate_standard_dca_execution_tests {
 
         set_fin_price(&mut deps, &ONE_DECIMAL, &ONE, &TEN_MICRONS);
 
-        let vault = Vault {
+        let vault = OldVault {
             swap_amount: TEN,
             slippage_tolerance: Some(Decimal::percent(2)),
             dca_plus_config: Some(DcaPlusConfig::default()),
-            ..Vault::default()
+            ..OldVault::default()
         };
 
         simulate_standard_dca_execution(
@@ -1012,10 +1012,10 @@ mod simulate_standard_dca_execution_tests {
 
         set_fin_price(&mut deps, &ONE_DECIMAL, &ONE, &TEN_MICRONS);
 
-        let vault = Vault {
+        let vault = OldVault {
             swap_amount: ONE,
             dca_plus_config: Some(DcaPlusConfig::default()),
-            ..Vault::default()
+            ..OldVault::default()
         };
 
         let belief_price = Decimal::one();
@@ -1035,7 +1035,7 @@ mod simulate_standard_dca_execution_tests {
 
         let fee_rate = get_swap_fee_rate(storage_deps.as_ref().storage, &vault).unwrap()
             + get_delegation_fee_rate(storage_deps.as_ref().storage, &vault).unwrap()
-            + Decimal::from_str(FIN_TAKER_FEE).unwrap();
+            + Decimal::from_str(SWAP_FEE_RATE).unwrap();
 
         let received_amount = vault.swap_amount * Decimal::one();
         let fee_amount = received_amount * fee_rate;
@@ -1069,10 +1069,10 @@ mod simulate_standard_dca_execution_tests {
             &deps.as_ref().querier,
             storage_deps.as_mut().storage,
             &env,
-            Vault {
+            OldVault {
                 swap_amount: ONE,
                 dca_plus_config: Some(DcaPlusConfig::default()),
-                ..Vault::default()
+                ..OldVault::default()
             },
             belief_price,
         )
@@ -1080,7 +1080,7 @@ mod simulate_standard_dca_execution_tests {
 
         let fee_rate = get_swap_fee_rate(storage_deps.as_ref().storage, &vault).unwrap()
             + get_delegation_fee_rate(storage_deps.as_ref().storage, &vault).unwrap()
-            + Decimal::from_str(FIN_TAKER_FEE).unwrap();
+            + Decimal::from_str(SWAP_FEE_RATE).unwrap();
 
         let received_amount_before_fee = vault.swap_amount * Decimal::one();
         let fee_amount = received_amount_before_fee * fee_rate;

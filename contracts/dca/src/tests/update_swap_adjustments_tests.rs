@@ -2,7 +2,7 @@ use cosmwasm_std::{
     testing::{mock_dependencies, mock_env, mock_info},
     Decimal,
 };
-use fin_helpers::position_type::PositionType;
+use fin_helpers::position_type::OldPositionType;
 use std::str::FromStr;
 
 use crate::{
@@ -37,7 +37,7 @@ fn updates_swap_adjustments() {
         deps.as_mut(),
         env,
         info,
-        PositionType::Enter,
+        OldPositionType::Enter,
         old_adjustments.clone(),
     )
     .unwrap();
@@ -59,7 +59,7 @@ fn updates_swap_adjustments() {
         deps.as_mut(),
         mock_env(),
         mock_info(ADMIN, &[]),
-        PositionType::Enter,
+        OldPositionType::Enter,
         new_adjustments.clone(),
     )
     .unwrap();
@@ -68,7 +68,7 @@ fn updates_swap_adjustments() {
         |((model, new_adjustment), (_, old_adjustment))| {
             let stored_adjustment = get_swap_adjustment(
                 deps.as_ref().storage,
-                PositionType::Enter,
+                OldPositionType::Enter,
                 *model,
                 mock_env().block.time,
             )

@@ -13,8 +13,8 @@ use crate::state::triggers::{delete_trigger, save_trigger};
 use crate::state::vaults::{get_vault, update_vault};
 use base::events::event::{EventBuilder, EventData, ExecutionSkippedReason};
 use base::helpers::time_helpers::get_next_target_time;
-use base::triggers::trigger::{Trigger, TriggerConfiguration};
-use base::vaults::vault::VaultStatus;
+use base::triggers::trigger::{OldTrigger, OldTriggerConfiguration};
+use base::vaults::vault::OldVaultStatus;
 use cosmwasm_std::{to_binary, CosmosMsg, ReplyOn, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{DepsMut, Env, Response, Uint128};
@@ -56,10 +56,10 @@ pub fn execute_trigger_handler(
         .clone()
         .expect(format!("trigger for vault id {}", vault.id).as_str())
     {
-        TriggerConfiguration::Time { target_time } => {
+        OldTriggerConfiguration::Time { target_time } => {
             assert_target_time_is_in_past(env.block.time, target_time)?;
         }
-        TriggerConfiguration::FinLimitOrder { order_idx, .. } => {
+        OldTriggerConfiguration::FinLimitOrder { order_idx, .. } => {
             if let Some(order_idx) = order_idx {
                 let limit_order =
                     query_order_details(deps.querier, vault.pair.address.clone(), order_idx)?;
@@ -85,7 +85,7 @@ pub fn execute_trigger_handler(
     }
 
     if vault.is_scheduled() {
-        vault.status = VaultStatus::Active;
+        vault.status = OldVaultStatus::Active;
         vault.started_at = Some(env.block.time);
     }
 
@@ -127,13 +127,13 @@ pub fn execute_trigger_handler(
     if should_execute_again {
         save_trigger(
             deps.storage,
-            Trigger {
+            OldTrigger {
                 vault_id: vault.id,
-                configuration: TriggerConfiguration::Time {
+                configuration: OldTriggerConfiguration::Time {
                     target_time: get_next_target_time(
                         env.block.time,
                         match vault.trigger {
-                            Some(TriggerConfiguration::Time { target_time }) => target_time,
+                            Some(OldTriggerConfiguration::Time { target_time }) => target_time,
                             _ => env.block.time,
                         },
                         vault.time_interval.clone(),

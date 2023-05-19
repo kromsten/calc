@@ -25,7 +25,7 @@ use crate::{
 use base::{
     events::event::{Event, EventData},
     helpers::coin_helpers::subtract,
-    vaults::vault::VaultStatus,
+    vaults::vault::OldVaultStatus,
 };
 use cosmwasm_std::{
     testing::{mock_dependencies, mock_env, mock_info},
@@ -47,7 +47,7 @@ fn when_no_fee_is_owed_returns_entire_escrow_to_owner() {
 
     let mut vault = setup_active_dca_plus_vault_with_funds(deps.as_mut(), env.clone());
 
-    vault.status = VaultStatus::Inactive;
+    vault.status = OldVaultStatus::Inactive;
     vault.dca_plus_config = Some(DcaPlusConfig {
         escrow_level: Decimal::percent(5),
         model_id: 50,
@@ -92,7 +92,7 @@ fn when_large_fee_is_owed_returns_entire_escrow_to_fee_collector() {
 
     let mut vault = setup_active_dca_plus_vault_with_funds(deps.as_mut(), env.clone());
 
-    vault.status = VaultStatus::Inactive;
+    vault.status = OldVaultStatus::Inactive;
     vault.dca_plus_config = Some(DcaPlusConfig {
         escrow_level: Decimal::percent(5),
         model_id: 50,
@@ -141,7 +141,7 @@ fn publishes_escrow_disbursed_event() {
         vault.get_receive_denom(),
     );
 
-    vault.status = VaultStatus::Inactive;
+    vault.status = OldVaultStatus::Inactive;
     vault.swapped_amount = Coin::new(TEN.into(), vault.get_swap_denom());
     vault.received_amount = Coin::new((TEN + ONE).into(), vault.get_receive_denom());
     vault.dca_plus_config = Some(DcaPlusConfig {
@@ -198,7 +198,7 @@ fn sets_escrow_balance_to_zero() {
 
     let mut vault = setup_active_dca_plus_vault_with_funds(deps.as_mut(), env.clone());
 
-    vault.status = VaultStatus::Inactive;
+    vault.status = OldVaultStatus::Inactive;
     vault.dca_plus_config = Some(DcaPlusConfig {
         escrow_level: Decimal::percent(5),
         model_id: 50,
@@ -244,7 +244,7 @@ fn deletes_disburse_escrow_task() {
 
     let mut vault = setup_active_dca_plus_vault_with_funds(deps.as_mut(), env.clone());
 
-    vault.status = VaultStatus::Inactive;
+    vault.status = OldVaultStatus::Inactive;
 
     update_vault(deps.as_mut().storage, &vault).unwrap();
 

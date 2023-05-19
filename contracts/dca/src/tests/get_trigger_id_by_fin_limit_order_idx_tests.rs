@@ -4,7 +4,7 @@ use crate::{
     msg::{ExecuteMsg, QueryMsg, TriggerIdResponse, VaultResponse},
 };
 use base::{
-    helpers::message_helpers::get_flat_map_for_event_type, triggers::trigger::TimeInterval,
+    helpers::message_helpers::get_flat_map_for_event_type, triggers::trigger::OldTimeInterval,
 };
 use cosmwasm_std::{Addr, Coin, Uint128};
 use cw_multi_test::Executor;
@@ -36,7 +36,7 @@ fn should_fetch_existing_trigger_id_by_order_idx() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_receive_amount: Some(swap_amount),
                 target_start_time_utc_seconds: None,
                 use_dca_plus: None,

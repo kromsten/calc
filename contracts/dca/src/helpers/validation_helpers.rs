@@ -1,8 +1,8 @@
 use crate::error::ContractError;
 use crate::state::config::{get_config, FeeCollector};
-use crate::types::vault::Vault;
+use crate::types::old_vault::OldVault;
 use base::pair::Pair;
-use base::vaults::vault::{Destination, PostExecutionAction, VaultStatus};
+use base::vaults::vault::{OldDestination, OldVaultStatus, PostExecutionAction};
 use cosmwasm_std::{Addr, Coin, Decimal, Deps, Env, Storage, Timestamp, Uint128};
 
 pub fn assert_exactly_one_asset(funds: Vec<Coin>) -> Result<(), ContractError> {
@@ -81,8 +81,8 @@ pub fn assert_sender_is_contract_or_admin(
     Ok(())
 }
 
-pub fn assert_vault_is_not_cancelled(vault: &Vault) -> Result<(), ContractError> {
-    if vault.status == VaultStatus::Cancelled {
+pub fn assert_vault_is_not_cancelled(vault: &OldVault) -> Result<(), ContractError> {
+    if vault.status == OldVaultStatus::Cancelled {
         return Err(ContractError::CustomError {
             val: "vault is already cancelled".to_string(),
         });
@@ -154,7 +154,7 @@ pub fn assert_target_time_is_in_past(
 }
 
 pub fn assert_destinations_limit_is_not_breached(
-    destinations: &[Destination],
+    destinations: &[OldDestination],
 ) -> Result<(), ContractError> {
     if destinations.len() > 10 {
         return Err(ContractError::CustomError {
@@ -166,7 +166,7 @@ pub fn assert_destinations_limit_is_not_breached(
 
 pub fn assert_destination_send_addresses_are_valid(
     deps: Deps,
-    destinations: &[Destination],
+    destinations: &[OldDestination],
 ) -> Result<(), ContractError> {
     for destination in destinations
         .iter()
@@ -196,7 +196,7 @@ pub fn assert_fee_collector_addresses_are_valid(
 
 pub fn assert_destination_validator_addresses_are_valid(
     deps: Deps,
-    destinations: &[Destination],
+    destinations: &[OldDestination],
 ) -> Result<(), ContractError> {
     for destination in destinations
         .iter()
@@ -208,7 +208,7 @@ pub fn assert_destination_validator_addresses_are_valid(
 }
 
 pub fn assert_delegation_denom_is_stakeable(
-    destinations: &[Destination],
+    destinations: &[OldDestination],
     receive_denom: String,
 ) -> Result<(), ContractError> {
     if destinations
@@ -245,7 +245,7 @@ pub fn assert_addresses_are_valid(
 }
 
 pub fn assert_destination_allocations_add_up_to_one(
-    destinations: &[Destination],
+    destinations: &[OldDestination],
 ) -> Result<(), ContractError> {
     if destinations
         .iter()
@@ -290,7 +290,7 @@ pub fn assert_dca_plus_escrow_level_is_less_than_100_percent(
 }
 
 pub fn assert_no_destination_allocations_are_zero(
-    destinations: &[Destination],
+    destinations: &[OldDestination],
 ) -> Result<(), ContractError> {
     if destinations.iter().any(|d| d.allocation.is_zero()) {
         return Err(ContractError::CustomError {

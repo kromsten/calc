@@ -23,12 +23,13 @@ library = []
 
 [dependencies]
 base = { path = "../../packages/base" }
+chrono = { version = "0.4.22", default-features = false }
 cosmwasm-schema = "1.1.1"
 cosmwasm-std = "1.0.0"
 cosmwasm-storage = "1.1.1"
 cw-storage-plus = "0.15.0"
 cw2 = "0.15.0"
-cw20 = "0.13.4"
+cw20 = "1.0.1"
 fin-helpers = { path = "../../packages/fin-helpers" }
 kujira = "0.7.16"
 schemars = "0.8.10"

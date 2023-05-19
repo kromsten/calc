@@ -2,7 +2,7 @@ use crate::error::ContractError;
 use crate::state::cache::CACHE;
 use crate::state::triggers::{get_trigger, save_trigger};
 use base::helpers::message_helpers::get_attribute_in_event;
-use base::triggers::trigger::{Trigger, TriggerConfiguration};
+use base::triggers::trigger::{OldTrigger, OldTriggerConfiguration};
 use cosmwasm_std::SubMsgResult;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{DepsMut, Reply, Response, Uint128};
@@ -26,12 +26,12 @@ pub fn after_fin_limit_order_submitted(
                 .expect(format!("fin limit order trigger for vault {:?}", cache.vault_id).as_str());
 
             match trigger.configuration {
-                TriggerConfiguration::FinLimitOrder { target_price, .. } => {
+                OldTriggerConfiguration::FinLimitOrder { target_price, .. } => {
                     save_trigger(
                         deps.storage,
-                        Trigger {
+                        OldTrigger {
                             vault_id: cache.vault_id,
-                            configuration: TriggerConfiguration::FinLimitOrder {
+                            configuration: OldTriggerConfiguration::FinLimitOrder {
                                 order_idx: Some(order_idx),
                                 target_price,
                             },

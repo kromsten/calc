@@ -2,7 +2,7 @@ use std::cmp::min;
 
 use crate::{
     state::config::{get_config, get_custom_fee, FeeCollector},
-    types::vault::Vault,
+    types::old_vault::OldVault,
 };
 use base::{
     helpers::{community_pool::create_fund_community_pool_msg, math_helpers::checked_mul},
@@ -81,7 +81,7 @@ pub fn get_fee_messages(
         .collect::<Vec<SubMsg>>())
 }
 
-pub fn get_delegation_fee_rate(storage: &dyn Storage, vault: &Vault) -> StdResult<Decimal> {
+pub fn get_delegation_fee_rate(storage: &dyn Storage, vault: &OldVault) -> StdResult<Decimal> {
     let config = get_config(storage)?;
 
     Ok(config.delegation_fee_percent.checked_mul(
@@ -94,7 +94,7 @@ pub fn get_delegation_fee_rate(storage: &dyn Storage, vault: &Vault) -> StdResul
     )?)
 }
 
-pub fn get_swap_fee_rate(storage: &dyn Storage, vault: &Vault) -> StdResult<Decimal> {
+pub fn get_swap_fee_rate(storage: &dyn Storage, vault: &OldVault) -> StdResult<Decimal> {
     let config = get_config(storage)?;
 
     Ok(
@@ -112,7 +112,7 @@ pub fn get_swap_fee_rate(storage: &dyn Storage, vault: &Vault) -> StdResult<Deci
     )
 }
 
-pub fn get_dca_plus_performance_fee(vault: &Vault, current_price: Decimal) -> StdResult<Coin> {
+pub fn get_dca_plus_performance_fee(vault: &OldVault, current_price: Decimal) -> StdResult<Coin> {
     let dca_plus_config = vault
         .dca_plus_config
         .clone()
@@ -148,9 +148,9 @@ mod tests {
     use crate::{
         constants::TEN,
         helpers::fee_helpers::get_dca_plus_performance_fee,
-        types::{dca_plus_config::DcaPlusConfig, vault::Vault},
+        types::{dca_plus_config::DcaPlusConfig, old_vault::OldVault},
     };
-    use base::{pair::Pair, triggers::trigger::TimeInterval, vaults::vault::VaultStatus};
+    use base::{pair::Pair, triggers::trigger::OldTimeInterval, vaults::vault::OldVaultStatus};
     use cosmwasm_std::{Addr, Coin, Decimal, Timestamp, Uint128};
     use std::str::FromStr;
 
@@ -160,10 +160,10 @@ mod tests {
         standard_dca_swapped_amount: Uint128,
         received_amount: Uint128,
         standard_dca_received_amount: Uint128,
-    ) -> Vault {
+    ) -> OldVault {
         let escrow_level = Decimal::percent(5);
 
-        Vault {
+        OldVault {
             balance: Coin {
                 denom: "swap_denom".to_string(),
                 amount: total_deposit - swapped_amount,
@@ -198,7 +198,7 @@ mod tests {
             owner: Addr::unchecked("owner"),
             label: None,
             destinations: vec![],
-            status: VaultStatus::Active,
+            status: OldVaultStatus::Active,
             pair: Pair {
                 address: Addr::unchecked("pair"),
                 base_denom: "receive_denom".to_string(),
@@ -207,7 +207,7 @@ mod tests {
             swap_amount: swapped_amount / Uint128::new(2),
             slippage_tolerance: None,
             minimum_receive_amount: None,
-            time_interval: TimeInterval::Daily,
+            time_interval: OldTimeInterval::Daily,
             started_at: None,
             trigger: None,
         }

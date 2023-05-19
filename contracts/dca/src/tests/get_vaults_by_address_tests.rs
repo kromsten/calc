@@ -4,10 +4,10 @@ use crate::tests::mocks::{
     fin_contract_filled_limit_order, fin_contract_pass_slippage_tolerance, MockApp, ADMIN,
     DENOM_UKUJI, DENOM_UTEST, USER,
 };
-use crate::types::vault::Vault;
+use crate::types::old_vault::OldVault;
 use base::pair::Pair;
-use base::triggers::trigger::{TimeInterval, TriggerConfiguration};
-use base::vaults::vault::{Destination, PostExecutionAction, VaultStatus};
+use base::triggers::trigger::{OldTimeInterval, OldTriggerConfiguration};
+use base::vaults::vault::{OldDestination, OldVaultStatus, PostExecutionAction};
 use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
 use cw_multi_test::Executor;
 
@@ -106,20 +106,20 @@ fn with_one_vault_should_return_proper_vault_data() {
 
     assert_eq!(
         vaults_response.vaults.first().unwrap(),
-        &Vault {
+        &OldVault {
             minimum_receive_amount: None,
             label: Some("label".to_string()),
             id: Uint128::new(1),
             owner: user_address.clone(),
-            destinations: vec![Destination {
+            destinations: vec![OldDestination {
                 address: user_address.clone(),
                 allocation: Decimal::percent(100),
                 action: PostExecutionAction::Send
             }],
             created_at: mock.app.block_info().time,
-            status: VaultStatus::Scheduled,
+            status: OldVaultStatus::Scheduled,
             balance: Coin::new(vault_deposit.into(), DENOM_UKUJI.to_string()),
-            time_interval: TimeInterval::Hourly,
+            time_interval: OldTimeInterval::Hourly,
             slippage_tolerance: None,
             swap_amount,
             pair: Pair {
@@ -130,7 +130,7 @@ fn with_one_vault_should_return_proper_vault_data() {
             started_at: None,
             swapped_amount: Coin::new(0, DENOM_UKUJI.to_string()),
             received_amount: Coin::new(0, DENOM_UTEST.to_string()),
-            trigger: Some(TriggerConfiguration::Time {
+            trigger: Some(OldTriggerConfiguration::Time {
                 target_time: mock
                     .app
                     .block_info()
@@ -331,7 +331,7 @@ fn with_status_filter_should_return_no_vaults() {
             &mock.dca_contract_address,
             &QueryMsg::GetVaultsByAddress {
                 address: user_address.clone(),
-                status: Some(VaultStatus::Cancelled),
+                status: Some(OldVaultStatus::Cancelled),
                 start_after: None,
                 limit: Some(10),
             },
@@ -364,7 +364,7 @@ fn with_status_filter_should_return_all_vaults_with_status() {
             &mock.dca_contract_address,
             &QueryMsg::GetVaultsByAddress {
                 address: user_address.clone(),
-                status: Some(VaultStatus::Scheduled),
+                status: Some(OldVaultStatus::Scheduled),
                 start_after: None,
                 limit: Some(10),
             },
@@ -372,7 +372,7 @@ fn with_status_filter_should_return_all_vaults_with_status() {
         .unwrap();
 
     assert_eq!(vaults_response.vaults.len(), 1);
-    assert_eq!(vaults_response.vaults[0].status, VaultStatus::Scheduled);
+    assert_eq!(vaults_response.vaults[0].status, OldVaultStatus::Scheduled);
 }
 
 #[test]
@@ -416,7 +416,7 @@ fn with_status_filter_should_exclude_vaults_without_status() {
             &mock.dca_contract_address,
             &QueryMsg::GetVaultsByAddress {
                 address: user_address.clone(),
-                status: Some(VaultStatus::Active),
+                status: Some(OldVaultStatus::Active),
                 start_after: None,
                 limit: None,
             },
@@ -424,5 +424,5 @@ fn with_status_filter_should_exclude_vaults_without_status() {
         .unwrap();
 
     assert_eq!(vaults_response.vaults.len(), 1);
-    assert_eq!(vaults_response.vaults[0].status, VaultStatus::Active);
+    assert_eq!(vaults_response.vaults[0].status, OldVaultStatus::Active);
 }

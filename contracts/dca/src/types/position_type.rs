@@ -1,7 +1,8 @@
 use cosmwasm_schema::cw_serde;
 
 #[cw_serde]
-pub enum OldPositionType {
+#[derive(Hash)]
+pub enum PositionType {
     Enter,
     Exit,
 }

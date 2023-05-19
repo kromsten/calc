@@ -7,13 +7,13 @@ use crate::tests::mocks::{
     fin_contract_unfilled_limit_order, MockApp, ADMIN, DENOM_UKUJI, DENOM_UTEST, USER,
 };
 use crate::types::dca_plus_config::DcaPlusConfig;
-use crate::types::vault::Vault;
+use crate::types::old_vault::OldVault;
 use base::events::event::{EventBuilder, EventData};
 use base::helpers::math_helpers::checked_mul;
 use base::helpers::message_helpers::get_flat_map_for_event_type;
 use base::pair::Pair;
-use base::triggers::trigger::{TimeInterval, TriggerConfiguration};
-use base::vaults::vault::{Destination, PostExecutionAction, VaultStatus};
+use base::triggers::trigger::{OldTimeInterval, OldTriggerConfiguration};
+use base::vaults::vault::{OldDestination, OldVaultStatus, PostExecutionAction};
 use cosmwasm_std::{Addr, Coin, Decimal, Decimal256, Uint128, Uint64};
 use cw_multi_test::Executor;
 use std::str::FromStr;
@@ -57,7 +57,7 @@ fn with_price_trigger_should_update_address_balances() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_receive_amount: Some(swap_amount),
                 target_start_time_utc_seconds: None,
                 use_dca_plus: None,
@@ -125,7 +125,7 @@ fn with_price_trigger_should_create_vault() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_receive_amount: Some(swap_amount),
                 target_start_time_utc_seconds: None,
                 use_dca_plus: None,
@@ -180,7 +180,7 @@ fn with_price_trigger_for_fin_buy_should_create_correct_trigger() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_receive_amount: Some(swap_amount * Uint128::new(10)),
                 target_start_time_utc_seconds: None,
                 use_dca_plus: None,
@@ -201,7 +201,7 @@ fn with_price_trigger_for_fin_buy_should_create_correct_trigger() {
         .unwrap();
 
     match vault_response.vault.trigger.unwrap() {
-        TriggerConfiguration::FinLimitOrder {
+        OldTriggerConfiguration::FinLimitOrder {
             target_price,
             order_idx,
         } => {
@@ -238,7 +238,7 @@ fn with_price_trigger_for_fin_sell_should_create_correct_trigger() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_receive_amount: Some(swap_amount * Uint128::new(10)),
                 target_start_time_utc_seconds: None,
                 use_dca_plus: None,
@@ -259,7 +259,7 @@ fn with_price_trigger_for_fin_sell_should_create_correct_trigger() {
         .unwrap();
 
     match vault_response.vault.trigger.unwrap() {
-        TriggerConfiguration::FinLimitOrder {
+        OldTriggerConfiguration::FinLimitOrder {
             target_price,
             order_idx,
         } => {
@@ -294,7 +294,7 @@ fn with_price_trigger_should_publish_vault_created_event() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: None,
                 target_receive_amount: Some(swap_amount),
                 use_dca_plus: None,
@@ -341,7 +341,7 @@ fn with_price_trigger_should_publish_funds_deposited_event() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: None,
                 target_receive_amount: Some(swap_amount),
                 use_dca_plus: None,
@@ -396,7 +396,7 @@ fn with_price_trigger_with_existing_vault_should_create_vault() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_receive_amount: Some(swap_amount),
                 target_start_time_utc_seconds: None,
                 use_dca_plus: None,
@@ -475,7 +475,7 @@ fn with_price_trigger_twice_for_user_should_succeed() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_receive_amount: Some(swap_amount),
                 target_start_time_utc_seconds: None,
                 use_dca_plus: None,
@@ -570,7 +570,7 @@ fn with_immediate_time_trigger_should_update_address_balances() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: None,
                 target_receive_amount: None,
                 use_dca_plus: None,
@@ -631,7 +631,7 @@ fn with_immediate_time_trigger_should_update_vault_balance() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: None,
                 target_receive_amount: None,
                 use_dca_plus: None,
@@ -674,7 +674,7 @@ fn with_immediate_time_trigger_should_create_active_vault() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: None,
                 target_receive_amount: None,
                 use_dca_plus: None,
@@ -693,19 +693,19 @@ fn with_immediate_time_trigger_should_create_active_vault() {
 
     assert_eq!(
         vault_response.vault,
-        Vault {
+        OldVault {
             minimum_receive_amount: None,
             label: Some("label".to_string()),
             id: vault_id,
             owner: user_address.clone(),
-            destinations: vec![Destination {
+            destinations: vec![OldDestination {
                 address: user_address.clone(),
                 allocation: Decimal::percent(100),
                 action: PostExecutionAction::Send
             }],
             created_at: mock.app.block_info().time,
-            status: VaultStatus::Active,
-            time_interval: TimeInterval::Hourly,
+            status: OldVaultStatus::Active,
+            time_interval: OldTimeInterval::Hourly,
             balance: Coin::new(
                 (vault_deposit - swap_amount).into(),
                 DENOM_UKUJI.to_string()
@@ -723,7 +723,7 @@ fn with_immediate_time_trigger_should_create_active_vault() {
                 (swap_amount - checked_mul(swap_amount, mock.fee_percent).ok().unwrap()).into(),
                 DENOM_UTEST.to_string()
             ),
-            trigger: Some(TriggerConfiguration::Time {
+            trigger: Some(OldTriggerConfiguration::Time {
                 target_time: mock
                     .app
                     .block_info()
@@ -761,7 +761,7 @@ fn with_immediate_time_trigger_should_publish_events() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: None,
                 target_receive_amount: None,
                 use_dca_plus: None,
@@ -854,7 +854,7 @@ fn with_immediate_time_trigger_and_slippage_failure_should_update_address_balanc
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: None,
                 target_receive_amount: None,
                 use_dca_plus: None,
@@ -905,7 +905,7 @@ fn with_immediate_time_trigger_and_slippage_failure_should_update_vault_balance(
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: None,
                 target_receive_amount: None,
                 use_dca_plus: None,
@@ -950,7 +950,7 @@ fn with_time_trigger_should_create_vault() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: Some(Uint64::from(target_start_time.seconds())),
                 target_receive_amount: None,
                 use_dca_plus: None,
@@ -969,19 +969,19 @@ fn with_time_trigger_should_create_vault() {
 
     assert_eq!(
         vault_response.vault,
-        Vault {
+        OldVault {
             minimum_receive_amount: None,
             label: Some("label".to_string()),
             id: Uint128::new(1),
             owner: user_address.clone(),
-            destinations: vec![Destination {
+            destinations: vec![OldDestination {
                 address: user_address.clone(),
                 allocation: Decimal::percent(100),
                 action: PostExecutionAction::Send
             }],
             created_at: mock.app.block_info().time,
-            status: VaultStatus::Scheduled,
-            time_interval: TimeInterval::Hourly,
+            status: OldVaultStatus::Scheduled,
+            time_interval: OldTimeInterval::Hourly,
             balance: Coin::new(vault_deposit.into(), DENOM_UKUJI.to_string()),
             slippage_tolerance: None,
             swap_amount,
@@ -993,7 +993,7 @@ fn with_time_trigger_should_create_vault() {
             started_at: None,
             swapped_amount: Coin::new(0, DENOM_UKUJI.to_string()),
             received_amount: Coin::new(0, DENOM_UTEST.to_string()),
-            trigger: Some(TriggerConfiguration::Time {
+            trigger: Some(OldTriggerConfiguration::Time {
                 target_time: target_start_time.minus_nanos(target_start_time.subsec_nanos()),
             }),
             dca_plus_config: None,
@@ -1040,7 +1040,7 @@ fn with_time_trigger_should_update_address_balances() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: Some(Uint64::from(target_start_time.seconds())),
                 target_receive_amount: None,
                 use_dca_plus: None,
@@ -1091,7 +1091,7 @@ fn with_time_trigger_should_publish_vault_created_event() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: None,
                 target_receive_amount: None,
                 use_dca_plus: None,
@@ -1139,7 +1139,7 @@ fn with_time_trigger_should_publish_funds_deposited_event() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: None,
                 target_receive_amount: None,
                 use_dca_plus: None,
@@ -1198,7 +1198,7 @@ fn with_time_trigger_with_existing_vault_should_create_vault() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: Some(Uint64::from(target_start_time.seconds())),
                 target_receive_amount: None,
                 use_dca_plus: None,
@@ -1220,20 +1220,20 @@ fn with_time_trigger_with_existing_vault_should_create_vault() {
 
     assert_eq!(
         vault_response.vault,
-        Vault {
+        OldVault {
             minimum_receive_amount: None,
             label: Some("label".to_string()),
             id: Uint128::new(2),
-            destinations: vec![Destination {
+            destinations: vec![OldDestination {
                 address: user_address.clone(),
                 allocation: Decimal::percent(100),
                 action: PostExecutionAction::Send
             }],
             owner: user_address.clone(),
             created_at: mock.app.block_info().time,
-            status: VaultStatus::Scheduled,
+            status: OldVaultStatus::Scheduled,
             slippage_tolerance: None,
-            time_interval: TimeInterval::Hourly,
+            time_interval: OldTimeInterval::Hourly,
             balance: Coin::new(vault_deposit.into(), DENOM_UKUJI.to_string()),
             swap_amount,
             pair: Pair {
@@ -1244,7 +1244,7 @@ fn with_time_trigger_with_existing_vault_should_create_vault() {
             started_at: None,
             swapped_amount: Coin::new(0, DENOM_UKUJI.to_string()),
             received_amount: Coin::new(0, DENOM_UTEST.to_string()),
-            trigger: Some(TriggerConfiguration::Time {
+            trigger: Some(OldTriggerConfiguration::Time {
                 target_time: target_start_time.minus_nanos(target_start_time.subsec_nanos()),
             }),
             dca_plus_config: None,
@@ -1278,7 +1278,7 @@ fn with_time_trigger_with_target_time_in_the_past_should_fail() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: Some(Uint64::from(
                     mock.app.block_info().time.seconds() - 60,
                 )),
@@ -1310,7 +1310,7 @@ fn with_multiple_destinations_should_succeed() {
     let mut destinations = vec![];
 
     for _ in 0..5 {
-        destinations.push(Destination {
+        destinations.push(OldDestination {
             address: Addr::unchecked(USER),
             allocation: Decimal::percent(20),
             action: PostExecutionAction::Send,
@@ -1330,7 +1330,7 @@ fn with_multiple_destinations_should_succeed() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: Some(
                     (mock.app.block_info().time.seconds() + 10).into(),
                 ),
@@ -1351,15 +1351,15 @@ fn with_multiple_destinations_should_succeed() {
 
     assert_eq!(
         vault_response.vault,
-        Vault {
+        OldVault {
             minimum_receive_amount: None,
             label: Some("label".to_string()),
             id: Uint128::new(1),
             owner: user_address.clone(),
             destinations,
             created_at: mock.app.block_info().time,
-            status: VaultStatus::Scheduled,
-            time_interval: TimeInterval::Hourly,
+            status: OldVaultStatus::Scheduled,
+            time_interval: OldTimeInterval::Hourly,
             balance: Coin::new(vault_deposit.into(), DENOM_UKUJI.to_string()),
             slippage_tolerance: None,
             swap_amount,
@@ -1371,7 +1371,7 @@ fn with_multiple_destinations_should_succeed() {
             started_at: None,
             swapped_amount: Coin::new(0, DENOM_UKUJI.to_string()),
             received_amount: Coin::new(0, DENOM_UTEST.to_string()),
-            trigger: Some(TriggerConfiguration::Time {
+            trigger: Some(OldTriggerConfiguration::Time {
                 target_time: mock
                     .app
                     .block_info()
@@ -1410,7 +1410,7 @@ fn with_price_and_time_trigger_should_fail() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: Some(Uint64::from(
                     mock.app.block_info().time.plus_seconds(2).seconds(),
                 )),
@@ -1452,7 +1452,7 @@ fn with_no_assets_should_fail() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: None,
                 target_receive_amount: None,
                 use_dca_plus: None,
@@ -1491,7 +1491,7 @@ fn with_multiple_assets_should_fail() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: None,
                 target_receive_amount: None,
                 use_dca_plus: None,
@@ -1535,7 +1535,7 @@ fn with_non_existent_pair_address_should_fail() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: None,
                 target_receive_amount: None,
                 use_dca_plus: None,
@@ -1571,7 +1571,7 @@ fn with_destination_allocations_less_than_100_percent_should_fail() {
                 owner: None,
                 minimum_receive_amount: None,
                 label: Some("label".to_string()),
-                destinations: Some(vec![Destination {
+                destinations: Some(vec![OldDestination {
                     address: Addr::unchecked(USER),
                     allocation: Decimal::percent(50),
                     action: PostExecutionAction::Send,
@@ -1580,7 +1580,7 @@ fn with_destination_allocations_less_than_100_percent_should_fail() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: None,
                 target_receive_amount: None,
                 use_dca_plus: None,
@@ -1617,12 +1617,12 @@ fn with_destination_allocation_equal_to_zero_should_fail() {
                 minimum_receive_amount: None,
                 label: Some("label".to_string()),
                 destinations: Some(vec![
-                    Destination {
+                    OldDestination {
                         address: Addr::unchecked(USER),
                         allocation: Decimal::percent(0),
                         action: PostExecutionAction::Send,
                     },
-                    Destination {
+                    OldDestination {
                         address: Addr::unchecked(ADMIN),
                         allocation: Decimal::percent(100),
                         action: PostExecutionAction::Send,
@@ -1632,7 +1632,7 @@ fn with_destination_allocation_equal_to_zero_should_fail() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: None,
                 target_receive_amount: None,
                 use_dca_plus: None,
@@ -1662,7 +1662,7 @@ fn with_more_than_10_destination_allocations_should_fail() {
     let mut destinations = vec![];
 
     for _ in 0..20 {
-        destinations.push(Destination {
+        destinations.push(OldDestination {
             address: Addr::unchecked(USER),
             allocation: Decimal::percent(5),
             action: PostExecutionAction::Send,
@@ -1683,7 +1683,7 @@ fn with_more_than_10_destination_allocations_should_fail() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: None,
                 target_receive_amount: None,
                 use_dca_plus: None,
@@ -1725,7 +1725,7 @@ fn with_passed_in_owner_should_succeed() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_receive_amount: Some(swap_amount),
                 target_start_time_utc_seconds: None,
                 use_dca_plus: None,
@@ -1774,7 +1774,7 @@ fn with_swap_amount_less_than_50000_should_fail() {
                 owner: None,
                 minimum_receive_amount: None,
                 label: Some("label".to_string()),
-                destinations: Some(vec![Destination {
+                destinations: Some(vec![OldDestination {
                     address: Addr::unchecked(USER),
                     allocation: Decimal::percent(50),
                     action: PostExecutionAction::Send,
@@ -1783,7 +1783,7 @@ fn with_swap_amount_less_than_50000_should_fail() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: None,
                 target_receive_amount: None,
                 use_dca_plus: None,
@@ -1854,7 +1854,7 @@ fn when_contract_is_paused_should_fail() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_receive_amount: None,
                 target_start_time_utc_seconds: None,
                 use_dca_plus: None,
@@ -1896,7 +1896,7 @@ fn with_insufficient_funds_should_create_inactive_vault() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_start_time_utc_seconds: Some(Uint64::from(target_start_time.seconds())),
                 target_receive_amount: None,
                 use_dca_plus: None,
@@ -1915,19 +1915,19 @@ fn with_insufficient_funds_should_create_inactive_vault() {
 
     assert_eq!(
         vault_response.vault,
-        Vault {
+        OldVault {
             minimum_receive_amount: None,
             label: Some("label".to_string()),
             id: Uint128::new(1),
             owner: user_address.clone(),
-            destinations: vec![Destination {
+            destinations: vec![OldDestination {
                 address: user_address.clone(),
                 allocation: Decimal::percent(100),
                 action: PostExecutionAction::Send
             }],
             created_at: mock.app.block_info().time,
-            status: VaultStatus::Inactive,
-            time_interval: TimeInterval::Hourly,
+            status: OldVaultStatus::Inactive,
+            time_interval: OldTimeInterval::Hourly,
             balance: Coin::new(vault_deposit.into(), DENOM_UKUJI.to_string()),
             slippage_tolerance: None,
             swap_amount,
@@ -1983,7 +1983,7 @@ fn with_use_dca_plus_true_should_create_dca_plus_config() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Hourly,
+                time_interval: OldTimeInterval::Hourly,
                 target_receive_amount: Some(swap_amount),
                 target_start_time_utc_seconds: None,
                 use_dca_plus: Some(true),
@@ -2056,7 +2056,7 @@ fn with_large_deposit_should_select_longer_duration_model() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Daily,
+                time_interval: OldTimeInterval::Daily,
                 target_receive_amount: Some(swap_amount),
                 target_start_time_utc_seconds: None,
                 use_dca_plus: Some(true),
@@ -2117,7 +2117,7 @@ fn with_small_deposit_should_select_shorter_duration_model() {
                 position_type: None,
                 slippage_tolerance: None,
                 swap_amount,
-                time_interval: TimeInterval::Daily,
+                time_interval: OldTimeInterval::Daily,
                 target_receive_amount: Some(swap_amount),
                 target_start_time_utc_seconds: None,
                 use_dca_plus: Some(true),

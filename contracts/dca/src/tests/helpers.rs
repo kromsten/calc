@@ -11,13 +11,13 @@ use crate::{
         triggers::save_trigger,
         vaults::{save_vault, update_vault},
     },
-    types::{dca_plus_config::DcaPlusConfig, vault::Vault, vault_builder::VaultBuilder},
+    types::{dca_plus_config::DcaPlusConfig, old_vault::OldVault, vault_builder::VaultBuilder},
 };
 use base::{
     events::event::Event,
     pair::Pair,
-    triggers::trigger::{TimeInterval, Trigger, TriggerConfiguration},
-    vaults::vault::{Destination, PostExecutionAction, VaultStatus},
+    triggers::trigger::{OldTimeInterval, OldTrigger, OldTriggerConfiguration},
+    vaults::vault::{OldDestination, OldVaultStatus, PostExecutionAction},
 };
 use cosmwasm_std::{
     from_binary,
@@ -98,19 +98,19 @@ pub fn instantiate_contract_with_multiple_fee_collectors(
     instantiate(deps, env.clone(), info.clone(), instantiate_message).unwrap();
 }
 
-impl Default for Vault {
+impl Default for OldVault {
     fn default() -> Self {
         Self {
             id: Uint128::zero(),
             created_at: Timestamp::default(),
             owner: Addr::unchecked(USER),
             label: Some("vault".to_string()),
-            destinations: vec![Destination {
+            destinations: vec![OldDestination {
                 address: Addr::unchecked(USER),
                 allocation: Decimal::percent(100),
                 action: PostExecutionAction::Send,
             }],
-            status: VaultStatus::Active,
+            status: OldVaultStatus::Active,
             balance: Coin::new(TEN.into(), DENOM_UKUJI),
             swap_amount: ONE,
             pair: Pair {
@@ -120,11 +120,11 @@ impl Default for Vault {
             },
             slippage_tolerance: None,
             minimum_receive_amount: None,
-            time_interval: TimeInterval::Daily,
+            time_interval: OldTimeInterval::Daily,
             started_at: None,
             swapped_amount: Coin::new(0, DENOM_UKUJI),
             received_amount: Coin::new(0, DENOM_UTEST),
-            trigger: Some(TriggerConfiguration::Time {
+            trigger: Some(OldTriggerConfiguration::Time {
                 target_time: Timestamp::from_seconds(0),
             }),
             dca_plus_config: None,
@@ -145,7 +145,7 @@ impl Default for DcaPlusConfig {
     }
 }
 
-pub fn setup_new_vault(deps: DepsMut, env: Env, vault: Vault) -> Vault {
+pub fn setup_new_vault(deps: DepsMut, env: Env, vault: OldVault) -> OldVault {
     PAIRS
         .save(deps.storage, vault.pair.address.clone(), &vault.pair)
         .unwrap();
@@ -155,9 +155,9 @@ pub fn setup_new_vault(deps: DepsMut, env: Env, vault: Vault) -> Vault {
     if vault.trigger.is_some() {
         save_trigger(
             deps.storage,
-            Trigger {
+            OldTrigger {
                 vault_id: vault.id,
-                configuration: TriggerConfiguration::Time {
+                configuration: OldTriggerConfiguration::Time {
                     target_time: env.block.time,
                 },
             },
@@ -173,9 +173,9 @@ pub fn setup_vault(
     env: Env,
     balance: Uint128,
     swap_amount: Uint128,
-    status: VaultStatus,
+    status: OldVaultStatus,
     is_dca_plus: bool,
-) -> Vault {
+) -> OldVault {
     let pair = Pair {
         address: Addr::unchecked("pair"),
         base_denom: DENOM_UKUJI.to_string(),
@@ -193,7 +193,7 @@ pub fn setup_vault(
         VaultBuilder {
             owner: owner.clone(),
             label: None,
-            destinations: vec![Destination {
+            destinations: vec![OldDestination {
                 address: owner,
                 allocation: Decimal::percent(100),
                 action: PostExecutionAction::ZDelegate,
@@ -206,7 +206,7 @@ pub fn setup_vault(
             slippage_tolerance: None,
             minimum_receive_amount: None,
             balance: Coin::new(balance.into(), DENOM_UKUJI),
-            time_interval: TimeInterval::Daily,
+            time_interval: OldTimeInterval::Daily,
             started_at: None,
             swapped_amount: Coin {
                 denom: DENOM_UKUJI.to_string(),
@@ -232,9 +232,9 @@ pub fn setup_vault(
 
     save_trigger(
         deps.storage,
-        Trigger {
+        OldTrigger {
             vault_id: vault.id,
-            configuration: TriggerConfiguration::Time {
+            configuration: OldTriggerConfiguration::Time {
                 target_time: env.block.time,
             },
         },
@@ -254,32 +254,32 @@ pub fn setup_vault(
     vault
 }
 
-pub fn setup_active_vault_with_funds(deps: DepsMut, env: Env) -> Vault {
-    setup_vault(deps, env, TEN, ONE, VaultStatus::Active, false)
+pub fn setup_active_vault_with_funds(deps: DepsMut, env: Env) -> OldVault {
+    setup_vault(deps, env, TEN, ONE, OldVaultStatus::Active, false)
 }
 
-pub fn setup_active_dca_plus_vault_with_funds(deps: DepsMut, env: Env) -> Vault {
-    setup_vault(deps, env, TEN, ONE, VaultStatus::Active, true)
+pub fn setup_active_dca_plus_vault_with_funds(deps: DepsMut, env: Env) -> OldVault {
+    setup_vault(deps, env, TEN, ONE, OldVaultStatus::Active, true)
 }
 
-pub fn setup_active_vault_with_slippage_funds(deps: DepsMut, env: Env) -> Vault {
+pub fn setup_active_vault_with_slippage_funds(deps: DepsMut, env: Env) -> OldVault {
     setup_vault(
         deps,
         env,
         Uint128::new(500000),
         Uint128::new(500000),
-        VaultStatus::Active,
+        OldVaultStatus::Active,
         false,
     )
 }
 
-pub fn setup_active_vault_with_low_funds(deps: DepsMut, env: Env) -> Vault {
+pub fn setup_active_vault_with_low_funds(deps: DepsMut, env: Env) -> OldVault {
     setup_vault(
         deps,
         env,
         Uint128::new(10),
         Uint128::new(100),
-        VaultStatus::Active,
+        OldVaultStatus::Active,
         false,
     )
 }
@@ -289,8 +289,15 @@ pub fn setup_active_dca_plus_vault_with_low_funds(
     env: Env,
     balance: Uint128,
     swap_amount: Uint128,
-) -> Vault {
-    setup_vault(deps, env, balance, swap_amount, VaultStatus::Active, true)
+) -> OldVault {
+    setup_vault(
+        deps,
+        env,
+        balance,
+        swap_amount,
+        OldVaultStatus::Active,
+        true,
+    )
 }
 
 pub fn assert_address_balances(mock: &MockApp, address_balances: &[(&Addr, &str, Uint128)]) {

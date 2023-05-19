@@ -3,10 +3,10 @@ use crate::contract::reply;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, VaultResponse};
 use crate::state::config::FeeCollector;
 
-use crate::types::vault::Vault;
+use crate::types::old_vault::OldVault;
 use base::helpers::message_helpers::get_flat_map_for_event_type;
-use base::triggers::trigger::TimeInterval;
-use base::vaults::vault::Destination;
+use base::triggers::trigger::OldTimeInterval;
+use base::vaults::vault::OldDestination;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_schema::serde::Serialize;
 use cosmwasm_std::{
@@ -16,7 +16,7 @@ use cosmwasm_std::{
 use cw20::Denom;
 use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
 use kujira::fin::{
-    BookResponse, ConfigResponse, ExecuteMsg as FINExecuteMsg, InstantiateMsg as FINInstantiateMsg,
+    BookResponse, ConfigResponse, ExecuteMsg as FinExecuteMsg, InstantiateMsg as FINInstantiateMsg,
     OrderResponse, PoolResponse, QueryMsg as FINQueryMsg,
 };
 use kujira::precision::Precision;
@@ -195,7 +195,7 @@ impl MockApp {
     pub fn with_vault_with_unfilled_fin_limit_price_trigger(
         mut self,
         owner: &Addr,
-        destinations: Option<Vec<Destination>>,
+        destinations: Option<Vec<OldDestination>>,
         balance: Coin,
         swap_amount: Uint128,
         label: &str,
@@ -214,7 +214,7 @@ impl MockApp {
                     position_type: None,
                     slippage_tolerance: None,
                     swap_amount,
-                    time_interval: TimeInterval::Hourly,
+                    time_interval: OldTimeInterval::Hourly,
                     target_receive_amount: Some(swap_amount),
                     target_start_time_utc_seconds: None,
                     use_dca_plus: None,
@@ -237,7 +237,7 @@ impl MockApp {
     pub fn with_vault_with_filled_fin_limit_price_trigger(
         mut self,
         owner: &Addr,
-        destinations: Option<Vec<Destination>>,
+        destinations: Option<Vec<OldDestination>>,
         balance: Coin,
         swap_amount: Uint128,
         label: &str,
@@ -256,7 +256,7 @@ impl MockApp {
                     position_type: None,
                     slippage_tolerance: None,
                     swap_amount,
-                    time_interval: TimeInterval::Hourly,
+                    time_interval: OldTimeInterval::Hourly,
                     target_receive_amount: Some(swap_amount),
                     target_start_time_utc_seconds: None,
                     use_dca_plus: None,
@@ -315,7 +315,7 @@ impl MockApp {
                     position_type: None,
                     slippage_tolerance: None,
                     swap_amount,
-                    time_interval: TimeInterval::Hourly,
+                    time_interval: OldTimeInterval::Hourly,
                     target_receive_amount: Some(swap_amount),
                     target_start_time_utc_seconds: None,
                     use_dca_plus: None,
@@ -360,7 +360,7 @@ impl MockApp {
     pub fn with_vault_with_time_trigger(
         mut self,
         owner: &Addr,
-        destinations: Option<Vec<Destination>>,
+        destinations: Option<Vec<OldDestination>>,
         balance: Coin,
         swap_amount: Uint128,
         label: &str,
@@ -382,7 +382,7 @@ impl MockApp {
                     slippage_tolerance: None,
                     swap_amount,
                     time_interval: use_dca_plus
-                        .map_or(TimeInterval::Hourly, |_| TimeInterval::Daily),
+                        .map_or(OldTimeInterval::Hourly, |_| OldTimeInterval::Daily),
                     target_start_time_utc_seconds: Some(Uint64::from(
                         self.app.block_info().time.plus_seconds(2).seconds(),
                     )),
@@ -407,7 +407,7 @@ impl MockApp {
     pub fn with_active_vault(
         mut self,
         owner: &Addr,
-        destinations: Option<Vec<Destination>>,
+        destinations: Option<Vec<OldDestination>>,
         balance: Coin,
         swap_amount: Uint128,
         label: &str,
@@ -427,7 +427,7 @@ impl MockApp {
                     position_type: None,
                     slippage_tolerance: None,
                     swap_amount,
-                    time_interval: TimeInterval::Hourly,
+                    time_interval: OldTimeInterval::Hourly,
                     target_start_time_utc_seconds: None,
                     target_receive_amount: None,
                     use_dca_plus: None,
@@ -450,7 +450,7 @@ impl MockApp {
     pub fn with_inactive_vault(
         mut self,
         owner: &Addr,
-        destinations: Option<Vec<Destination>>,
+        destinations: Option<Vec<OldDestination>>,
         label: &str,
     ) -> MockApp {
         let response = self
@@ -467,7 +467,7 @@ impl MockApp {
                     position_type: None,
                     slippage_tolerance: None,
                     swap_amount: Uint128::new(50001),
-                    time_interval: TimeInterval::Hourly,
+                    time_interval: OldTimeInterval::Hourly,
                     target_start_time_utc_seconds: None,
                     target_receive_amount: None,
                     use_dca_plus: None,
@@ -495,7 +495,7 @@ impl MockApp {
         });
     }
 
-    pub fn get_vault_by_label(&self, label: &str) -> Vault {
+    pub fn get_vault_by_label(&self, label: &str) -> OldVault {
         let vault_id = self.vault_ids.get(label).unwrap();
         let vault_response: VaultResponse = self
             .app
@@ -707,14 +707,14 @@ fn default_query_response() -> StdResult<Binary> {
 
 pub fn fin_contract_unfilled_limit_order() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
-        |_, _, info, msg: FINExecuteMsg| -> StdResult<Response> {
+        |_, _, info, msg: FinExecuteMsg| -> StdResult<Response> {
             match msg {
-                FINExecuteMsg::Swap { .. } => default_swap_handler(info),
-                FINExecuteMsg::SubmitOrder { .. } => default_submit_order_handler(),
-                FINExecuteMsg::WithdrawOrders { order_idxs } => {
+                FinExecuteMsg::Swap { .. } => default_swap_handler(info),
+                FinExecuteMsg::SubmitOrder { .. } => default_submit_order_handler(),
+                FinExecuteMsg::WithdrawOrders { order_idxs, .. } => {
                     withdraw_filled_order_handler(info, order_idxs)
                 }
-                FINExecuteMsg::RetractOrder { .. } => default_retract_order_handler(info),
+                FinExecuteMsg::RetractOrder { .. } => default_retract_order_handler(info),
                 _ => Ok(Response::default()),
             }
         },
@@ -745,11 +745,11 @@ pub fn fin_contract_unfilled_limit_order() -> Box<dyn Contract<Empty>> {
 
 pub fn fin_contract_partially_filled_order() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
-        |_, _, info, msg: FINExecuteMsg| -> StdResult<Response> {
+        |_, _, info, msg: FinExecuteMsg| -> StdResult<Response> {
             match msg {
-                FINExecuteMsg::SubmitOrder { .. } => default_submit_order_handler(),
-                FINExecuteMsg::RetractOrder { .. } => retract_partially_filled_order_handler(info),
-                FINExecuteMsg::WithdrawOrders { order_idxs } => {
+                FinExecuteMsg::SubmitOrder { .. } => default_submit_order_handler(),
+                FinExecuteMsg::RetractOrder { .. } => retract_partially_filled_order_handler(info),
+                FinExecuteMsg::WithdrawOrders { order_idxs, .. } => {
                     withdraw_partially_filled_order_handler(info, order_idxs)
                 }
                 _ => Ok(Response::default()),
@@ -782,14 +782,14 @@ pub fn fin_contract_partially_filled_order() -> Box<dyn Contract<Empty>> {
 
 pub fn fin_contract_filled_limit_order() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
-        |_, _, info, msg: FINExecuteMsg| -> StdResult<Response> {
+        |_, _, info, msg: FinExecuteMsg| -> StdResult<Response> {
             match msg {
-                FINExecuteMsg::Swap { .. } => default_swap_handler(info),
-                FINExecuteMsg::SubmitOrder { .. } => default_submit_order_handler(),
-                FINExecuteMsg::WithdrawOrders { order_idxs } => {
+                FinExecuteMsg::Swap { .. } => default_swap_handler(info),
+                FinExecuteMsg::SubmitOrder { .. } => default_submit_order_handler(),
+                FinExecuteMsg::WithdrawOrders { order_idxs, .. } => {
                     withdraw_filled_order_handler(info, order_idxs)
                 }
-                FINExecuteMsg::RetractOrder { .. } => default_retract_order_handler(info),
+                FinExecuteMsg::RetractOrder { .. } => default_retract_order_handler(info),
                 _ => Ok(Response::default()),
             }
         },
@@ -820,9 +820,9 @@ pub fn fin_contract_filled_limit_order() -> Box<dyn Contract<Empty>> {
 
 pub fn fin_contract_pass_slippage_tolerance() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
-        |_, _, info, msg: FINExecuteMsg| -> StdResult<Response> {
+        |_, _, info, msg: FinExecuteMsg| -> StdResult<Response> {
             match msg {
-                FINExecuteMsg::Swap { .. } => default_swap_handler(info),
+                FinExecuteMsg::Swap { .. } => default_swap_handler(info),
                 _ => Ok(Response::default()),
             }
         },
@@ -852,9 +852,9 @@ pub fn fin_contract_pass_slippage_tolerance() -> Box<dyn Contract<Empty>> {
 
 pub fn fin_contract_fail_slippage_tolerance() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
-        |_, _, _, msg: FINExecuteMsg| -> StdResult<Response> {
+        |_, _, _, msg: FinExecuteMsg| -> StdResult<Response> {
             match msg {
-                FINExecuteMsg::Swap { .. } => Err(StdError::GenericErr {
+                FinExecuteMsg::Swap { .. } => Err(StdError::GenericErr {
                     msg: "Max spread exceeded 0.992445703493862134".to_string(),
                 }),
                 _ => Ok(Response::default()),
@@ -886,9 +886,9 @@ pub fn fin_contract_fail_slippage_tolerance() -> Box<dyn Contract<Empty>> {
 
 pub fn fin_contract_high_swap_price() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
-        |_, _, info, msg: FINExecuteMsg| -> StdResult<Response> {
+        |_, _, info, msg: FinExecuteMsg| -> StdResult<Response> {
             match msg {
-                FINExecuteMsg::Swap { .. } => default_swap_handler(info),
+                FinExecuteMsg::Swap { .. } => default_swap_handler(info),
                 _ => Ok(Response::default()),
             }
         },
@@ -923,9 +923,9 @@ pub fn fin_contract_high_swap_price() -> Box<dyn Contract<Empty>> {
 
 pub fn fin_contract_low_swap_price() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
-        |_, _, info, msg: FINExecuteMsg| -> StdResult<Response> {
+        |_, _, info, msg: FinExecuteMsg| -> StdResult<Response> {
             match msg {
-                FINExecuteMsg::Swap { .. } => default_swap_handler(info),
+                FinExecuteMsg::Swap { .. } => default_swap_handler(info),
                 _ => Ok(Response::default()),
             }
         },

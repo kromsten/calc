@@ -1,49 +1,44 @@
-use crate::triggers::trigger::OldTimeInterval;
+use crate::types::time_interval::TimeInterval;
 use chrono::{DateTime, Datelike, Duration, TimeZone, Utc};
 use cosmwasm_std::Timestamp;
 use std::convert::TryInto;
 
 pub fn target_time_elapsed(current_time: Timestamp, target_execution_time: Timestamp) -> bool {
-    if current_time.seconds().ge(&target_execution_time.seconds()) {
-        return true;
-    } else {
-        return false;
-    }
+    current_time.seconds().ge(&target_execution_time.seconds())
 }
 
 pub fn get_next_target_time(
     current_timestamp: Timestamp,
-    last_execution_timestamp: Timestamp,
-    interval: OldTimeInterval,
+    started_at: Timestamp,
+    interval: TimeInterval,
 ) -> Timestamp {
     let current_time = Utc
         .timestamp_opt(current_timestamp.seconds().try_into().unwrap(), 0)
         .unwrap();
-    let last_execution_time = Utc
-        .timestamp_opt(last_execution_timestamp.seconds().try_into().unwrap(), 0)
+
+    let started_at_time = Utc
+        .timestamp_opt(started_at.seconds().try_into().unwrap(), 0)
         .unwrap();
 
-    let mut next_execution_time = get_next_time(last_execution_time, &interval);
+    let mut next_execution_time = get_next_time(started_at_time, &interval);
 
     match interval {
-        OldTimeInterval::Monthly => {
+        TimeInterval::Monthly => {
             while next_execution_time.le(&current_time) {
                 next_execution_time = get_next_time(next_execution_time, &interval);
             }
         }
         _ => {
-            let interval_duration_in_seconds =
-                get_duration(last_execution_time, &interval).num_seconds();
+            let interval_duration = get_duration(started_at_time, &interval);
 
-            let increments_until_future_execution_date = (current_time - last_execution_time)
+            let increments_until_future_execution_date = (current_time - started_at_time)
                 .num_seconds()
-                .checked_div(interval_duration_in_seconds)
+                .checked_div(interval_duration.num_seconds())
                 .expect("should be a valid timestamp")
                 + 1;
 
-            next_execution_time = last_execution_time
-                + get_duration(last_execution_time, &interval)
-                    * increments_until_future_execution_date as i32;
+            next_execution_time =
+                started_at_time + interval_duration * increments_until_future_execution_date as i32;
         }
     }
 
@@ -53,7 +48,7 @@ pub fn get_next_target_time(
 pub fn get_total_execution_duration(
     block_time: Timestamp,
     iterations: u128,
-    interval: &OldTimeInterval,
+    interval: &TimeInterval,
 ) -> Duration {
     let mut start_time = Utc
         .timestamp_opt(block_time.seconds().try_into().unwrap(), 0)
@@ -61,26 +56,27 @@ pub fn get_total_execution_duration(
 
     (0..iterations).fold(Duration::zero(), |acc, _| {
         let duration = get_duration(start_time, interval);
-        start_time = start_time + duration;
+        start_time += duration;
         acc + duration
     })
 }
 
-fn get_duration(previous: DateTime<Utc>, interval: &OldTimeInterval) -> Duration {
+fn get_duration(previous: DateTime<Utc>, interval: &TimeInterval) -> Duration {
     match interval {
-        OldTimeInterval::EverySecond => Duration::seconds(1),
-        OldTimeInterval::EveryMinute => Duration::minutes(1),
-        OldTimeInterval::HalfHourly => Duration::minutes(30),
-        OldTimeInterval::Hourly => Duration::hours(1),
-        OldTimeInterval::HalfDaily => Duration::hours(12),
-        OldTimeInterval::Daily => Duration::days(1),
-        OldTimeInterval::Weekly => Duration::days(7),
-        OldTimeInterval::Fortnightly => Duration::days(14),
-        OldTimeInterval::Monthly => shift_months(previous, 1) - previous,
+        TimeInterval::EverySecond => Duration::seconds(1),
+        TimeInterval::EveryMinute => Duration::minutes(1),
+        TimeInterval::HalfHourly => Duration::minutes(30),
+        TimeInterval::Hourly => Duration::hours(1),
+        TimeInterval::HalfDaily => Duration::hours(12),
+        TimeInterval::Daily => Duration::days(1),
+        TimeInterval::Weekly => Duration::days(7),
+        TimeInterval::Fortnightly => Duration::days(14),
+        TimeInterval::Monthly => shift_months(previous, 1) - previous,
+        TimeInterval::Custom { seconds } => Duration::seconds(*seconds as i64),
     }
 }
 
-fn get_next_time(previous: DateTime<Utc>, interval: &OldTimeInterval) -> DateTime<Utc> {
+fn get_next_time(previous: DateTime<Utc>, interval: &TimeInterval) -> DateTime<Utc> {
     previous + get_duration(previous, interval)
 }
 
@@ -134,14 +130,13 @@ fn normalise_day(year: i32, month: u32, day: u32) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::Uint64;
-
     use super::*;
+    use cosmwasm_std::Uint64;
 
     pub fn assert_expected_next_execution_time(
         last_execution_time: DateTime<Utc>,
         current_time: DateTime<Utc>,
-        interval: OldTimeInterval,
+        interval: TimeInterval,
         expected_next_execution_time: DateTime<Utc>,
     ) {
         let current_timestamp =
@@ -162,7 +157,7 @@ mod tests {
     }
 
     fn assert_expected_next_execution_times(
-        interval: &OldTimeInterval,
+        interval: &TimeInterval,
         last_execution_time: DateTime<Utc>,
         scenarios: Vec<(DateTime<Utc>, DateTime<Utc>)>,
     ) {
@@ -204,7 +199,7 @@ mod tests {
         ];
 
         assert_expected_next_execution_times(
-            &OldTimeInterval::Monthly,
+            &TimeInterval::Monthly,
             last_execution_time,
             scenarios,
         );
@@ -241,7 +236,7 @@ mod tests {
         ];
 
         assert_expected_next_execution_times(
-            &OldTimeInterval::Fortnightly,
+            &TimeInterval::Fortnightly,
             last_execution_time,
             scenarios,
         );
@@ -277,11 +272,7 @@ mod tests {
             ),
         ];
 
-        assert_expected_next_execution_times(
-            &OldTimeInterval::Weekly,
-            last_execution_time,
-            scenarios,
-        );
+        assert_expected_next_execution_times(&TimeInterval::Weekly, last_execution_time, scenarios);
     }
 
     #[test]
@@ -311,11 +302,7 @@ mod tests {
             ),
         ];
 
-        assert_expected_next_execution_times(
-            &OldTimeInterval::Daily,
-            last_execution_time,
-            scenarios,
-        );
+        assert_expected_next_execution_times(&TimeInterval::Daily, last_execution_time, scenarios);
     }
 
     #[test]
@@ -349,7 +336,7 @@ mod tests {
         ];
 
         assert_expected_next_execution_times(
-            &OldTimeInterval::HalfDaily,
+            &TimeInterval::HalfDaily,
             last_execution_time,
             scenarios,
         );
@@ -385,11 +372,7 @@ mod tests {
             ),
         ];
 
-        assert_expected_next_execution_times(
-            &OldTimeInterval::Hourly,
-            last_execution_time,
-            scenarios,
-        );
+        assert_expected_next_execution_times(&TimeInterval::Hourly, last_execution_time, scenarios);
     }
 
     #[test]
@@ -423,7 +406,7 @@ mod tests {
         ];
 
         assert_expected_next_execution_times(
-            &OldTimeInterval::HalfHourly,
+            &TimeInterval::HalfHourly,
             last_execution_time,
             scenarios,
         );
@@ -460,14 +443,14 @@ mod tests {
         ];
 
         assert_expected_next_execution_times(
-            &OldTimeInterval::EveryMinute,
+            &TimeInterval::EveryMinute,
             last_execution_time,
             scenarios,
         );
     }
 
     #[test]
-    fn assert_every_ten_seconds_next_execution_times() {
+    fn assert_every_second_next_execution_times() {
         let last_execution_time = Utc.with_ymd_and_hms(2022, 1, 1, 1, 0, 0).unwrap();
         let scenarios = vec![
             (
@@ -497,7 +480,43 @@ mod tests {
         ];
 
         assert_expected_next_execution_times(
-            &OldTimeInterval::EverySecond,
+            &TimeInterval::EverySecond,
+            last_execution_time,
+            scenarios,
+        );
+    }
+
+    #[test]
+    fn assert_custom_next_execution_times() {
+        let last_execution_time = Utc.with_ymd_and_hms(2022, 1, 1, 1, 0, 0).unwrap();
+        let scenarios = vec![
+            (last_execution_time, last_execution_time + Duration::days(3)),
+            (
+                last_execution_time + Duration::seconds(1),
+                last_execution_time + Duration::days(3),
+            ),
+            (
+                last_execution_time + Duration::days(3) - Duration::seconds(1),
+                last_execution_time + Duration::days(3),
+            ),
+            (
+                last_execution_time + Duration::days(3),
+                last_execution_time + Duration::days(6),
+            ),
+            (
+                last_execution_time + Duration::days(3) + Duration::seconds(1),
+                last_execution_time + Duration::days(6),
+            ),
+            (
+                last_execution_time + Duration::days(33),
+                last_execution_time + Duration::days(36),
+            ),
+        ];
+
+        assert_expected_next_execution_times(
+            &TimeInterval::Custom {
+                seconds: 60 * 60 * 24 * 3,
+            },
             last_execution_time,
             scenarios,
         );
@@ -542,7 +561,7 @@ mod tests {
 
         let expected_time = Utc.with_ymd_and_hms(2022, 6, 1, 10, 0, 0).unwrap();
 
-        let result = get_next_time(current_time, &OldTimeInterval::Monthly);
+        let result = get_next_time(current_time, &TimeInterval::Monthly);
 
         assert_eq!(result.timestamp(), expected_time.timestamp());
     }
@@ -553,7 +572,7 @@ mod tests {
 
         let expected_time = Utc.with_ymd_and_hms(2022, 5, 8, 10, 0, 0).unwrap();
 
-        let result = get_next_time(current_time, &OldTimeInterval::Weekly);
+        let result = get_next_time(current_time, &TimeInterval::Weekly);
 
         assert_eq!(result.timestamp(), expected_time.timestamp());
     }
@@ -564,7 +583,7 @@ mod tests {
 
         let expected_time = Utc.with_ymd_and_hms(2022, 10, 6, 10, 0, 0).unwrap();
 
-        let result = get_next_time(current_time, &OldTimeInterval::Weekly);
+        let result = get_next_time(current_time, &TimeInterval::Weekly);
 
         assert_eq!(result.timestamp(), expected_time.timestamp());
     }
@@ -575,7 +594,7 @@ mod tests {
 
         let expected_time = Utc.with_ymd_and_hms(2022, 9, 2, 10, 0, 0).unwrap();
 
-        let result = get_next_time(current_time, &OldTimeInterval::Daily);
+        let result = get_next_time(current_time, &TimeInterval::Daily);
 
         assert_eq!(result.timestamp(), expected_time.timestamp());
     }
@@ -586,7 +605,7 @@ mod tests {
 
         let expected_time = Utc.with_ymd_and_hms(2022, 10, 1, 10, 0, 0).unwrap();
 
-        let result = get_next_time(current_time, &OldTimeInterval::Daily);
+        let result = get_next_time(current_time, &TimeInterval::Daily);
 
         assert_eq!(result.timestamp(), expected_time.timestamp());
     }
@@ -597,7 +616,7 @@ mod tests {
 
         let expected_time = Utc.with_ymd_and_hms(2022, 10, 1, 11, 0, 0).unwrap();
 
-        let result = get_next_time(current_time, &OldTimeInterval::Hourly);
+        let result = get_next_time(current_time, &TimeInterval::Hourly);
 
         assert_eq!(result.timestamp(), expected_time.timestamp());
     }
@@ -608,7 +627,7 @@ mod tests {
 
         let expected_time = Utc.with_ymd_and_hms(2022, 10, 2, 0, 0, 0).unwrap();
 
-        let result = get_next_time(current_time, &OldTimeInterval::Hourly);
+        let result = get_next_time(current_time, &TimeInterval::Hourly);
 
         assert_eq!(result.timestamp(), expected_time.timestamp());
     }
@@ -617,14 +636,14 @@ mod tests {
 #[cfg(test)]
 mod get_total_execution_duration_tests {
     use super::{get_total_execution_duration, shift_months};
-    use crate::triggers::trigger::OldTimeInterval;
+    use crate::types::time_interval::TimeInterval;
     use chrono::{Duration, TimeZone, Utc};
     use cosmwasm_std::Timestamp;
 
     fn assert_total_execution_duration(
         block_time: Timestamp,
         iterations: u128,
-        execution_interval: OldTimeInterval,
+        execution_interval: TimeInterval,
         expected_duration: Duration,
     ) {
         let result = get_total_execution_duration(block_time, iterations, &execution_interval);
@@ -640,76 +659,61 @@ mod get_total_execution_duration_tests {
         assert_total_execution_duration(
             block_timestamp,
             1,
-            OldTimeInterval::Hourly,
+            TimeInterval::Hourly,
             Duration::hours(1),
         );
         assert_total_execution_duration(
             block_timestamp,
             2,
-            OldTimeInterval::Hourly,
+            TimeInterval::Hourly,
             Duration::hours(2),
         );
         assert_total_execution_duration(
             block_timestamp,
             3,
-            OldTimeInterval::Hourly,
+            TimeInterval::Hourly,
             Duration::hours(3),
         );
 
-        assert_total_execution_duration(
-            block_timestamp,
-            1,
-            OldTimeInterval::Daily,
-            Duration::days(1),
-        );
-        assert_total_execution_duration(
-            block_timestamp,
-            2,
-            OldTimeInterval::Daily,
-            Duration::days(2),
-        );
-        assert_total_execution_duration(
-            block_timestamp,
-            3,
-            OldTimeInterval::Daily,
-            Duration::days(3),
-        );
+        assert_total_execution_duration(block_timestamp, 1, TimeInterval::Daily, Duration::days(1));
+        assert_total_execution_duration(block_timestamp, 2, TimeInterval::Daily, Duration::days(2));
+        assert_total_execution_duration(block_timestamp, 3, TimeInterval::Daily, Duration::days(3));
 
         assert_total_execution_duration(
             block_timestamp,
             1,
-            OldTimeInterval::Weekly,
+            TimeInterval::Weekly,
             Duration::weeks(1),
         );
         assert_total_execution_duration(
             block_timestamp,
             2,
-            OldTimeInterval::Weekly,
+            TimeInterval::Weekly,
             Duration::weeks(2),
         );
         assert_total_execution_duration(
             block_timestamp,
             3,
-            OldTimeInterval::Weekly,
+            TimeInterval::Weekly,
             Duration::weeks(3),
         );
 
         assert_total_execution_duration(
             block_timestamp,
             1,
-            OldTimeInterval::Monthly,
+            TimeInterval::Monthly,
             shift_months(block_time_utc, 1) - block_time_utc,
         );
         assert_total_execution_duration(
             block_timestamp,
             2,
-            OldTimeInterval::Monthly,
+            TimeInterval::Monthly,
             shift_months(block_time_utc, 2) - block_time_utc,
         );
         assert_total_execution_duration(
             block_timestamp,
             3,
-            OldTimeInterval::Monthly,
+            TimeInterval::Monthly,
             shift_months(block_time_utc, 3) - block_time_utc,
         );
     }

@@ -1,36 +1,36 @@
 use cosmwasm_std::{Decimal, StdResult, Storage, Timestamp};
 use cw_storage_plus::{Item, Map};
-use fin_helpers::position_type::PositionType;
+use fin_helpers::position_type::OldPositionType;
 
 const BUY_ADJUSTMENTS: Map<u8, Decimal> = Map::new("buy_adjustments_v20");
 const SELL_ADJUSTMENTS: Map<u8, Decimal> = Map::new("sell_adjustments_v20");
 const BUY_ADJUSTMENTS_UPDATED_AT: Item<Timestamp> = Item::new("buy_adjustments_updated_at_v20");
 const SELL_ADJUSTMENTS_UPDATED_AT: Item<Timestamp> = Item::new("buy_adjustments_updated_at_v20");
 
-fn last_updated(storage: &dyn Storage, position_type: PositionType) -> StdResult<Timestamp> {
+fn last_updated(storage: &dyn Storage, position_type: OldPositionType) -> StdResult<Timestamp> {
     match position_type {
-        PositionType::Enter => BUY_ADJUSTMENTS_UPDATED_AT.load(storage),
-        PositionType::Exit => SELL_ADJUSTMENTS_UPDATED_AT.load(storage),
+        OldPositionType::Enter => BUY_ADJUSTMENTS_UPDATED_AT.load(storage),
+        OldPositionType::Exit => SELL_ADJUSTMENTS_UPDATED_AT.load(storage),
     }
 }
 
-fn adjustments_updated_store(position_type: PositionType) -> &'static Item<'static, Timestamp> {
+fn adjustments_updated_store(position_type: OldPositionType) -> &'static Item<'static, Timestamp> {
     match position_type {
-        PositionType::Enter => &BUY_ADJUSTMENTS_UPDATED_AT,
-        PositionType::Exit => &SELL_ADJUSTMENTS_UPDATED_AT,
+        OldPositionType::Enter => &BUY_ADJUSTMENTS_UPDATED_AT,
+        OldPositionType::Exit => &SELL_ADJUSTMENTS_UPDATED_AT,
     }
 }
 
-pub fn adjustments_store(position_type: PositionType) -> &'static Map<'static, u8, Decimal> {
+pub fn adjustments_store(position_type: OldPositionType) -> &'static Map<'static, u8, Decimal> {
     match position_type {
-        PositionType::Enter => &BUY_ADJUSTMENTS,
-        PositionType::Exit => &SELL_ADJUSTMENTS,
+        OldPositionType::Enter => &BUY_ADJUSTMENTS,
+        OldPositionType::Exit => &SELL_ADJUSTMENTS,
     }
 }
 
 pub fn update_swap_adjustments(
     storage: &mut dyn Storage,
-    position_type: PositionType,
+    position_type: OldPositionType,
     adjustments: Vec<(u8, Decimal)>,
     block_time: Timestamp,
 ) -> StdResult<()> {
@@ -42,7 +42,7 @@ pub fn update_swap_adjustments(
 
 pub fn get_swap_adjustment(
     storage: &dyn Storage,
-    position_type: PositionType,
+    position_type: OldPositionType,
     model: u8,
     block_time: Timestamp,
 ) -> StdResult<Decimal> {
@@ -61,7 +61,7 @@ mod tests {
         testing::{mock_dependencies, mock_env},
         Decimal,
     };
-    use fin_helpers::position_type::PositionType;
+    use fin_helpers::position_type::OldPositionType;
 
     #[test]
     fn gets_swap_adjustment_if_updated_within_30_hours() {
@@ -70,7 +70,7 @@ mod tests {
 
         update_swap_adjustments(
             deps.as_mut().storage,
-            PositionType::Enter,
+            OldPositionType::Enter,
             vec![(30, Decimal::percent(90))],
             env.block.time,
         )
@@ -78,7 +78,7 @@ mod tests {
 
         let adjustment = get_swap_adjustment(
             deps.as_ref().storage,
-            PositionType::Enter,
+            OldPositionType::Enter,
             30,
             env.block.time,
         )
@@ -94,7 +94,7 @@ mod tests {
 
         update_swap_adjustments(
             deps.as_mut().storage,
-            PositionType::Enter,
+            OldPositionType::Enter,
             vec![(30, Decimal::percent(90))],
             env.block.time,
         )
@@ -102,7 +102,7 @@ mod tests {
 
         let adjustment = get_swap_adjustment(
             deps.as_ref().storage,
-            PositionType::Enter,
+            OldPositionType::Enter,
             30,
             env.block.time.plus_seconds(31 * 60 * 60),
         )

@@ -11,8 +11,8 @@ use crate::state::vaults::{get_vault, update_vault};
 use crate::types::dca_plus_config::DcaPlusConfig;
 use base::events::event::{EventBuilder, EventData};
 use base::helpers::coin_helpers::add_to_coin;
-use base::triggers::trigger::{Trigger, TriggerConfiguration};
-use base::vaults::vault::VaultStatus;
+use base::triggers::trigger::{OldTrigger, OldTriggerConfiguration};
+use base::vaults::vault::OldVaultStatus;
 use cosmwasm_std::{to_binary, Addr, CosmosMsg, Env, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{DepsMut, MessageInfo, Response, Uint128};
@@ -49,7 +49,7 @@ pub fn deposit_handler(
     vault.balance.amount += info.funds[0].amount;
 
     if !vault.is_scheduled() && vault.has_sufficient_funds() {
-        vault.status = VaultStatus::Active
+        vault.status = OldVaultStatus::Active
     }
 
     vault.dca_plus_config = vault
@@ -84,9 +84,9 @@ pub fn deposit_handler(
     if vault.is_active() && vault_was_inactive && vault.trigger.is_none() {
         save_trigger(
             deps.storage,
-            Trigger {
+            OldTrigger {
                 vault_id,
-                configuration: TriggerConfiguration::Time {
+                configuration: OldTriggerConfiguration::Time {
                     target_time: env.block.time.clone(),
                 },
             },

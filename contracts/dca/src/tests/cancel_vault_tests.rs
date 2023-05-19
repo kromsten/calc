@@ -9,7 +9,7 @@ use crate::tests::mocks::{
     DENOM_UKUJI, DENOM_UTEST, USER,
 };
 use base::events::event::{EventBuilder, EventData};
-use base::vaults::vault::VaultStatus;
+use base::vaults::vault::OldVaultStatus;
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{Addr, Coin, Uint128};
 use cw_multi_test::Executor;
@@ -155,7 +155,7 @@ fn when_vault_has_unfilled_fin_limit_order_trigger_should_cancel_vault() {
         )
         .unwrap();
 
-    assert_eq!(vault_response.vault.status, VaultStatus::Cancelled);
+    assert_eq!(vault_response.vault.status, OldVaultStatus::Cancelled);
 }
 
 #[test]
@@ -380,7 +380,7 @@ fn when_vault_has_partially_filled_price_trigger_should_cancel_vault() {
         )
         .unwrap();
 
-    assert_eq!(vault_response.vault.status, VaultStatus::Cancelled);
+    assert_eq!(vault_response.vault.status, OldVaultStatus::Cancelled);
 }
 
 #[test]
@@ -518,7 +518,7 @@ fn when_vault_has_time_trigger_should_cancel_vault() {
         )
         .unwrap();
 
-    assert_eq!(vault_response.vault.status, VaultStatus::Cancelled);
+    assert_eq!(vault_response.vault.status, OldVaultStatus::Cancelled);
 }
 
 #[test]
@@ -662,7 +662,7 @@ fn when_vault_has_no_trigger_should_cancel_vault() {
         )
         .unwrap();
 
-    assert_eq!(vault_response.vault.status, VaultStatus::Cancelled);
+    assert_eq!(vault_response.vault.status, OldVaultStatus::Cancelled);
 }
 
 #[test]

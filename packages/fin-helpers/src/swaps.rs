@@ -29,6 +29,7 @@ pub fn create_fin_swap_message(
             }),
             to: None,
             offer_asset: None,
+            callback: None,
         })?,
         funds: vec![swap_amount],
     });

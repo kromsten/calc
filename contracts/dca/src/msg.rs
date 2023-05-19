@@ -1,13 +1,13 @@
 use crate::state::config::{Config, FeeCollector};
 use crate::state::data_fixes::DataFix;
-use crate::types::vault::Vault;
+use crate::types::old_vault::OldVault;
 use base::events::event::Event;
 use base::pair::Pair;
-use base::triggers::trigger::TimeInterval;
-use base::vaults::vault::{Destination, VaultStatus};
+use base::triggers::trigger::OldTimeInterval;
+use base::vaults::vault::{OldDestination, OldVaultStatus};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Coin, Decimal, Uint128, Uint64};
-use fin_helpers::position_type::PositionType;
+use fin_helpers::position_type::OldPositionType;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -48,13 +48,13 @@ pub enum ExecuteMsg {
     CreateVault {
         owner: Option<Addr>,
         label: Option<String>,
-        destinations: Option<Vec<Destination>>,
+        destinations: Option<Vec<OldDestination>>,
         pair_address: Addr,
-        position_type: Option<PositionType>,
+        position_type: Option<OldPositionType>,
         slippage_tolerance: Option<Decimal>,
         minimum_receive_amount: Option<Uint128>,
         swap_amount: Uint128,
-        time_interval: TimeInterval,
+        time_interval: OldTimeInterval,
         target_start_time_utc_seconds: Option<Uint64>,
         target_receive_amount: Option<Uint128>,
         use_dca_plus: Option<bool>,
@@ -92,7 +92,7 @@ pub enum ExecuteMsg {
         denom: String,
     },
     UpdateSwapAdjustments {
-        position_type: PositionType,
+        position_type: OldPositionType,
         adjustments: Vec<(u8, Decimal)>,
     },
     DisburseEscrow {
@@ -116,7 +116,7 @@ pub enum QueryMsg {
     #[returns(VaultsResponse)]
     GetVaultsByAddress {
         address: Addr,
-        status: Option<VaultStatus>,
+        status: Option<OldVaultStatus>,
         start_after: Option<Uint128>,
         limit: Option<u16>,
     },
@@ -172,7 +172,7 @@ pub struct TriggerIdsResponse {
 
 #[cw_serde]
 pub struct VaultResponse {
-    pub vault: Vault,
+    pub vault: OldVault,
 }
 
 #[cw_serde]
@@ -183,7 +183,7 @@ pub struct DcaPlusPerformanceResponse {
 
 #[cw_serde]
 pub struct VaultsResponse {
-    pub vaults: Vec<Vault>,
+    pub vaults: Vec<OldVault>,
 }
 
 #[cw_serde]

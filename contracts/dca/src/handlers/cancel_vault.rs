@@ -7,8 +7,8 @@ use crate::state::events::create_event;
 use crate::state::triggers::delete_trigger;
 use crate::state::vaults::{get_vault, update_vault};
 use base::events::event::{EventBuilder, EventData};
-use base::triggers::trigger::TriggerConfiguration;
-use base::vaults::vault::VaultStatus;
+use base::triggers::trigger::OldTriggerConfiguration;
+use base::vaults::vault::OldVaultStatus;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{BankMsg, DepsMut, Response, Uint128};
 use cosmwasm_std::{Coin, CosmosMsg, Env, MessageInfo};
@@ -48,14 +48,14 @@ pub fn cancel_vault(
         }));
     }
 
-    vault.status = VaultStatus::Cancelled;
+    vault.status = OldVaultStatus::Cancelled;
     vault.balance = Coin::new(0, vault.get_swap_denom());
 
     update_vault(deps.storage, &vault)?;
 
     if let Some(trigger) = vault.trigger {
         match trigger {
-            TriggerConfiguration::FinLimitOrder { order_idx, .. } => {
+            OldTriggerConfiguration::FinLimitOrder { order_idx, .. } => {
                 if let Some(order_idx) = order_idx {
                     let limit_order =
                         query_order_details(deps.querier, vault.pair.address.clone(), order_idx)

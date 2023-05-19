@@ -3,7 +3,7 @@ use cosmwasm_std::{Decimal256, Timestamp, Uint128};
 use enum_as_inner::EnumAsInner;
 
 #[cw_serde]
-pub enum TimeInterval {
+pub enum OldTimeInterval {
     EverySecond,
     EveryMinute,
     HalfHourly,
@@ -17,7 +17,7 @@ pub enum TimeInterval {
 
 #[derive(EnumAsInner)]
 #[cw_serde]
-pub enum TriggerConfiguration {
+pub enum OldTriggerConfiguration {
     Time {
         target_time: Timestamp,
     },
@@ -28,7 +28,7 @@ pub enum TriggerConfiguration {
 }
 
 #[cw_serde]
-pub struct Trigger {
+pub struct OldTrigger {
     pub vault_id: Uint128,
-    pub configuration: TriggerConfiguration,
+    pub configuration: OldTriggerConfiguration,
 }

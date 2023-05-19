@@ -1,6 +1,6 @@
 use crate::{
     msg::{FinBookResponse, FinConfigResponse, FinOrderResponseWithoutDenom},
-    position_type::PositionType,
+    position_type::OldPositionType,
 };
 use base::{pair::Pair, price_type::PriceType};
 use cosmwasm_std::{Addr, Coin, Decimal, QuerierWrapper, StdError, StdResult, Uint128};
@@ -12,8 +12,8 @@ fn query_quote_price(
     swap_denom: &str,
 ) -> StdResult<Decimal> {
     let position_type = match swap_denom == pair.quote_denom {
-        true => PositionType::Enter,
-        false => PositionType::Exit,
+        true => OldPositionType::Enter,
+        false => OldPositionType::Exit,
     };
 
     let book_response = querier.query_wasm_smart::<FinBookResponse>(
@@ -25,8 +25,8 @@ fn query_quote_price(
     )?;
 
     let book = match position_type {
-        PositionType::Enter => book_response.base,
-        PositionType::Exit => book_response.quote,
+        OldPositionType::Enter => book_response.base,
+        OldPositionType::Exit => book_response.quote,
     };
 
     if book.is_empty() {
@@ -45,15 +45,15 @@ pub fn query_belief_price(
     swap_denom: &str,
 ) -> StdResult<Decimal> {
     let position_type = match swap_denom == pair.quote_denom {
-        true => PositionType::Enter,
-        false => PositionType::Exit,
+        true => OldPositionType::Enter,
+        false => OldPositionType::Exit,
     };
 
     let book_price = query_quote_price(querier, &pair, swap_denom)?;
 
     Ok(match position_type {
-        PositionType::Enter => book_price,
-        PositionType::Exit => Decimal::one()
+        OldPositionType::Enter => book_price,
+        OldPositionType::Exit => Decimal::one()
             .checked_div(book_price)
             .expect("should return a valid inverted price for fin sell"),
     })
@@ -77,8 +77,8 @@ pub fn query_price(
     }
 
     let position_type = match swap_amount.denom == pair.quote_denom {
-        true => PositionType::Enter,
-        false => PositionType::Exit,
+        true => OldPositionType::Enter,
+        false => OldPositionType::Exit,
     };
 
     let mut spent = Uint128::zero();
@@ -96,8 +96,8 @@ pub fn query_price(
         )?;
 
         let book = match position_type {
-            PositionType::Enter => book_response.base,
-            PositionType::Exit => book_response.quote,
+            OldPositionType::Enter => book_response.base,
+            OldPositionType::Exit => book_response.quote,
         };
 
         if book.is_empty() {
@@ -106,8 +106,8 @@ pub fn query_price(
 
         book.iter().for_each(|order| {
             let price_in_swap_denom = match position_type {
-                PositionType::Enter => order.quote_price,
-                PositionType::Exit => Decimal::one()
+                OldPositionType::Enter => order.quote_price,
+                OldPositionType::Exit => Decimal::one()
                     .checked_div(order.quote_price)
                     .expect("order price in swap denom"),
             };
