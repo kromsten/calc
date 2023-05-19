@@ -9,8 +9,8 @@ use crate::helpers::vault_helpers::{
 use crate::msg::ExecuteMsg;
 use crate::state::cache::{Cache, SwapCache, CACHE, SWAP_CACHE};
 use crate::state::events::create_event;
+use crate::state::old_vaults::{get_vault, update_vault};
 use crate::state::triggers::{delete_trigger, save_trigger};
-use crate::state::vaults::{get_vault, update_vault};
 use base::events::event::{EventBuilder, EventData, ExecutionSkippedReason};
 use base::helpers::time_helpers::get_next_target_time;
 use base::triggers::trigger::{OldTrigger, OldTriggerConfiguration};

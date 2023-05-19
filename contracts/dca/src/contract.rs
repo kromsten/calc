@@ -228,7 +228,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_binary(&get_trigger_id_by_fin_limit_order_idx(deps, order_idx)?)
         }
         QueryMsg::GetVaults { start_after, limit } => {
-            to_binary(&get_vaults_handler(deps, start_after, limit)?)
+            to_binary(&get_vaults_handler(deps, env, start_after, limit)?)
         }
         QueryMsg::GetVaultsByAddress {
             address,
@@ -237,6 +237,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             limit,
         } => to_binary(&get_vaults_by_address(
             deps,
+            env,
             address,
             status,
             start_after,

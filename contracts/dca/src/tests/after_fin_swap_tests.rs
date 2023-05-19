@@ -8,8 +8,8 @@ use crate::{
     state::{
         cache::{SwapCache, SWAP_CACHE},
         config::{create_custom_fee, get_config, FeeCollector},
+        old_vaults::get_vault,
         swap_adjustments::update_swap_adjustments,
-        vaults::get_vault,
     },
     tests::{
         helpers::{

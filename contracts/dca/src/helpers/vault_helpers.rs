@@ -1,7 +1,9 @@
 use super::fee_helpers::{get_delegation_fee_rate, get_swap_fee_rate};
 use crate::{
     constants::SWAP_FEE_RATE,
-    state::{events::create_event, swap_adjustments::get_swap_adjustment, vaults::update_vault},
+    state::{
+        events::create_event, old_vaults::update_vault, swap_adjustments::get_swap_adjustment,
+    },
     types::{dca_plus_config::DcaPlusConfig, old_vault::OldVault},
 };
 use base::{

@@ -162,7 +162,7 @@ impl OldVault {
 
 #[cfg(test)]
 mod has_sufficient_funds_tests {
-    use crate::{state::vaults::save_vault, types::vault_builder::VaultBuilder};
+    use crate::{state::old_vaults::save_vault, types::vault_builder::VaultBuilder};
 
     use super::*;
     use cosmwasm_std::{coin, testing::mock_dependencies};

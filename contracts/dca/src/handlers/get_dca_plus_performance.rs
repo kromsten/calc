@@ -3,7 +3,7 @@ use crate::{
         fee_helpers::get_dca_plus_performance_fee, vault_helpers::get_dca_plus_performance_factor,
     },
     msg::DcaPlusPerformanceResponse,
-    state::vaults::get_vault,
+    state::old_vaults::get_vault,
 };
 use cosmwasm_std::{Deps, StdError, StdResult, Uint128};
 use fin_helpers::queries::query_belief_price;

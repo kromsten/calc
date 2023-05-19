@@ -8,7 +8,7 @@ use crate::{
     state::{
         disburse_escrow_tasks::delete_disburse_escrow_task,
         events::create_event,
-        vaults::{get_vault, update_vault},
+        old_vaults::{get_vault, update_vault},
     },
     types::dca_plus_config::DcaPlusConfig,
 };

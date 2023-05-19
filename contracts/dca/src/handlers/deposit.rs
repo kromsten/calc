@@ -6,8 +6,8 @@ use crate::helpers::validation_helpers::{
 use crate::helpers::vault_helpers::get_dca_plus_model_id;
 use crate::msg::ExecuteMsg;
 use crate::state::events::create_event;
+use crate::state::old_vaults::{get_vault, update_vault};
 use crate::state::triggers::save_trigger;
-use crate::state::vaults::{get_vault, update_vault};
 use crate::types::dca_plus_config::DcaPlusConfig;
 use base::events::event::{EventBuilder, EventData};
 use base::helpers::coin_helpers::add_to_coin;

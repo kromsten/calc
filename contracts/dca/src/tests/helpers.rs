@@ -7,9 +7,9 @@ use crate::{
     state::{
         cache::{Cache, CACHE},
         config::FeeCollector,
+        old_vaults::{save_vault, update_vault},
         pairs::PAIRS,
         triggers::save_trigger,
-        vaults::{save_vault, update_vault},
     },
     types::{dca_plus_config::DcaPlusConfig, old_vault::OldVault, vault_builder::VaultBuilder},
 };

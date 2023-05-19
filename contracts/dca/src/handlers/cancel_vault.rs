@@ -4,8 +4,8 @@ use crate::helpers::validation_helpers::{
 };
 use crate::state::disburse_escrow_tasks::save_disburse_escrow_task;
 use crate::state::events::create_event;
+use crate::state::old_vaults::{get_vault, update_vault};
 use crate::state::triggers::delete_trigger;
-use crate::state::vaults::{get_vault, update_vault};
 use base::events::event::{EventBuilder, EventData};
 use base::triggers::trigger::OldTriggerConfiguration;
 use base::vaults::vault::OldVaultStatus;

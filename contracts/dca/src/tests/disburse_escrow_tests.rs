@@ -14,7 +14,7 @@ use crate::{
     },
     state::{
         disburse_escrow_tasks::{get_disburse_escrow_tasks, save_disburse_escrow_task},
-        vaults::{get_vault, update_vault},
+        old_vaults::{get_vault, update_vault},
     },
     tests::{
         helpers::{set_fin_price, setup_active_vault_with_funds},
