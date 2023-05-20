@@ -5,7 +5,7 @@ use crate::helpers::vault_helpers::get_swap_amount;
 use crate::msg::ExecuteMsg;
 use crate::state::cache::{CACHE, SWAP_CACHE};
 use crate::state::events::create_event;
-use crate::state::old_vaults::{get_vault, update_vault};
+use crate::state::old_vaults::{get_old_vault, update_old_vault};
 use crate::state::triggers::delete_trigger;
 use crate::types::dca_plus_config::DcaPlusConfig;
 use base::events::event::{EventBuilder, EventData, ExecutionSkippedReason};
@@ -18,7 +18,7 @@ use cosmwasm_std::{Attribute, Coin, DepsMut, Env, Reply, Response};
 
 pub fn after_fin_swap(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, ContractError> {
     let cache = CACHE.load(deps.storage)?;
-    let mut vault = get_vault(deps.storage, cache.vault_id.into())?;
+    let mut vault = get_old_vault(deps.storage, cache.vault_id.into())?;
 
     let mut attributes: Vec<Attribute> = Vec::new();
     let mut sub_msgs: Vec<SubMsg> = Vec::new();
@@ -134,7 +134,7 @@ pub fn after_fin_swap(deps: DepsMut, env: Env, reply: Reply) -> Result<Response,
         }
     }
 
-    update_vault(deps.storage, &vault)?;
+    update_old_vault(deps.storage, &vault)?;
 
     if vault.is_finished_dca_plus_vault() {
         sub_msgs.push(SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {

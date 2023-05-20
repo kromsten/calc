@@ -14,7 +14,7 @@ use crate::{
     },
     state::{
         disburse_escrow_tasks::{get_disburse_escrow_tasks, save_disburse_escrow_task},
-        old_vaults::{get_vault, update_vault},
+        old_vaults::{get_old_vault, update_old_vault},
     },
     tests::{
         helpers::{set_fin_price, setup_active_vault_with_funds},
@@ -63,7 +63,7 @@ fn when_no_fee_is_owed_returns_entire_escrow_to_owner() {
         ),
     });
 
-    update_vault(deps.as_mut().storage, &vault).unwrap();
+    update_old_vault(deps.as_mut().storage, &vault).unwrap();
 
     let response = disburse_escrow_handler(deps.as_mut(), env, info, vault.id).unwrap();
 
@@ -108,7 +108,7 @@ fn when_large_fee_is_owed_returns_entire_escrow_to_fee_collector() {
         ),
     });
 
-    update_vault(deps.as_mut().storage, &vault).unwrap();
+    update_old_vault(deps.as_mut().storage, &vault).unwrap();
 
     let response = disburse_escrow_handler(deps.as_mut(), env, info, vault.id).unwrap();
 
@@ -153,7 +153,7 @@ fn publishes_escrow_disbursed_event() {
         escrowed_balance: escrowed_balance.clone(),
     });
 
-    update_vault(deps.as_mut().storage, &vault).unwrap();
+    update_old_vault(deps.as_mut().storage, &vault).unwrap();
 
     disburse_escrow_handler(deps.as_mut(), env.clone(), info, vault.id).unwrap();
 
@@ -214,11 +214,11 @@ fn sets_escrow_balance_to_zero() {
         ),
     });
 
-    update_vault(deps.as_mut().storage, &vault).unwrap();
+    update_old_vault(deps.as_mut().storage, &vault).unwrap();
 
     disburse_escrow_handler(deps.as_mut(), env, info, vault.id).unwrap();
 
-    let dca_plus_config = get_vault(deps.as_ref().storage, vault.id)
+    let dca_plus_config = get_old_vault(deps.as_ref().storage, vault.id)
         .unwrap()
         .dca_plus_config
         .unwrap();
@@ -246,7 +246,7 @@ fn deletes_disburse_escrow_task() {
 
     vault.status = OldVaultStatus::Inactive;
 
-    update_vault(deps.as_mut().storage, &vault).unwrap();
+    update_old_vault(deps.as_mut().storage, &vault).unwrap();
 
     save_disburse_escrow_task(
         deps.as_mut().storage,

@@ -1,10 +1,7 @@
 use super::{pairs::PAIRS, state_helpers::fetch_and_increment_counter, triggers::get_trigger};
-use crate::{
-    mappers::vault::vault_from,
-    types::{
-        dca_plus_config::DcaPlusConfig, old_vault::OldVault, price_delta_limit::PriceDeltaLimit,
-        vault::Vault, vault_builder::VaultBuilder,
-    },
+use crate::types::{
+    dca_plus_config::DcaPlusConfig, old_vault::OldVault, price_delta_limit::PriceDeltaLimit,
+    vault_builder::VaultBuilder,
 };
 use base::{
     pair::Pair,
@@ -13,8 +10,7 @@ use base::{
 };
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Binary, Coin, Decimal, Env, StdResult, Storage, Timestamp,
-    Uint128,
+    from_binary, to_binary, Addr, Binary, Coin, Decimal, StdResult, Storage, Timestamp, Uint128,
 };
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, UniqueIndex};
 
@@ -140,7 +136,7 @@ fn vault_store<'a>() -> IndexedMap<'a, u128, VaultDTO, VaultIndexes<'a>> {
     IndexedMap::new("vaults_v20", indexes)
 }
 
-pub fn save_vault(store: &mut dyn Storage, vault_builder: VaultBuilder) -> StdResult<OldVault> {
+pub fn save_old_vault(store: &mut dyn Storage, vault_builder: VaultBuilder) -> StdResult<OldVault> {
     let vault = vault_builder.build(fetch_and_increment_counter(store, VAULT_COUNTER)?.into());
     DESTINATIONS.save(
         store,
@@ -154,7 +150,7 @@ pub fn save_vault(store: &mut dyn Storage, vault_builder: VaultBuilder) -> StdRe
     Ok(vault)
 }
 
-pub fn get_vault(store: &dyn Storage, vault_id: Uint128) -> StdResult<OldVault> {
+pub fn get_old_vault(store: &dyn Storage, vault_id: Uint128) -> StdResult<OldVault> {
     let data = vault_store().load(store, vault_id.into())?;
     Ok(old_vault_from(
         &data,
@@ -165,14 +161,13 @@ pub fn get_vault(store: &dyn Storage, vault_id: Uint128) -> StdResult<OldVault> 
     ))
 }
 
-pub fn get_vaults_by_address(
+pub fn get_old_vaults_by_address(
     store: &dyn Storage,
-    env: Env,
     address: Addr,
     status: Option<OldVaultStatus>,
     start_after: Option<Uint128>,
     limit: Option<u16>,
-) -> StdResult<Vec<Vault>> {
+) -> StdResult<Vec<OldVault>> {
     let partition = match status {
         Some(status) => vault_store()
             .idx
@@ -192,30 +187,26 @@ pub fn get_vaults_by_address(
         .map(|result| {
             let (_, vault_data) =
                 result.expect(format!("a vault with id after {:?}", start_after).as_str());
-            vault_from(
-                env.clone(),
-                old_vault_from(
-                    &vault_data,
-                    PAIRS.load(store, vault_data.pair_address.clone()).expect(
-                        format!("a pair for pair address {:?}", vault_data.pair_address).as_str(),
-                    ),
-                    get_trigger(store, vault_data.id.into())
-                        .expect(format!("a trigger for vault id {}", vault_data.id).as_str())
-                        .map(|trigger| trigger.configuration),
-                    &mut get_destinations(store, vault_data.id).expect("vault destinations"),
-                    get_dca_plus_config(store, vault_data.id),
+            old_vault_from(
+                &vault_data,
+                PAIRS.load(store, vault_data.pair_address.clone()).expect(
+                    format!("a pair for pair address {:?}", vault_data.pair_address).as_str(),
                 ),
+                get_trigger(store, vault_data.id.into())
+                    .expect(format!("a trigger for vault id {}", vault_data.id).as_str())
+                    .map(|trigger| trigger.configuration),
+                &mut get_destinations(store, vault_data.id).expect("vault destinations"),
+                get_dca_plus_config(store, vault_data.id),
             )
         })
-        .collect::<Vec<Vault>>())
+        .collect::<Vec<OldVault>>())
 }
 
-pub fn get_vaults(
+pub fn get_old_vaults(
     store: &dyn Storage,
-    env: Env,
     start_after: Option<Uint128>,
     limit: Option<u16>,
-) -> StdResult<Vec<Vault>> {
+) -> StdResult<Vec<OldVault>> {
     Ok(vault_store()
         .range(
             store,
@@ -227,25 +218,22 @@ pub fn get_vaults(
         .map(|result| {
             let (_, vault_data) =
                 result.expect(format!("a vault with id after {:?}", start_after).as_str());
-            vault_from(
-                env.clone(),
-                old_vault_from(
-                    &vault_data,
-                    PAIRS.load(store, vault_data.pair_address.clone()).expect(
-                        format!("a pair for pair address {:?}", vault_data.pair_address).as_str(),
-                    ),
-                    get_trigger(store, vault_data.id.into())
-                        .expect(format!("a trigger for vault id {}", vault_data.id).as_str())
-                        .map(|trigger| trigger.configuration),
-                    &mut get_destinations(store, vault_data.id).expect("vault destinations"),
-                    get_dca_plus_config(store, vault_data.id),
+            old_vault_from(
+                &vault_data,
+                PAIRS.load(store, vault_data.pair_address.clone()).expect(
+                    format!("a pair for pair address {:?}", vault_data.pair_address).as_str(),
                 ),
+                get_trigger(store, vault_data.id.into())
+                    .expect(format!("a trigger for vault id {}", vault_data.id).as_str())
+                    .map(|trigger| trigger.configuration),
+                &mut get_destinations(store, vault_data.id).expect("vault destinations"),
+                get_dca_plus_config(store, vault_data.id),
             )
         })
-        .collect::<Vec<Vault>>())
+        .collect::<Vec<OldVault>>())
 }
 
-pub fn update_vault(store: &mut dyn Storage, vault: &OldVault) -> StdResult<()> {
+pub fn update_old_vault(store: &mut dyn Storage, vault: &OldVault) -> StdResult<()> {
     DESTINATIONS.save(
         store,
         vault.id.into(),
@@ -255,11 +243,6 @@ pub fn update_vault(store: &mut dyn Storage, vault: &OldVault) -> StdResult<()> 
         DCA_PLUS_CONFIGS.save(store, vault.id.into(), dca_plus_config)?;
     }
     vault_store().save(store, vault.id.into(), &vault.clone().into())
-}
-
-pub fn clear_vaults(store: &mut dyn Storage) {
-    vault_store().clear(store);
-    VAULT_COUNTER.remove(store)
 }
 
 #[cfg(test)]
@@ -318,7 +301,7 @@ mod destination_store_tests {
         let store = deps.as_mut().storage;
 
         let vault_builder = create_vault_builder(env);
-        let vault = save_vault(store, vault_builder).unwrap();
+        let vault = save_old_vault(store, vault_builder).unwrap();
 
         let destinations: Vec<OldDestination> =
             from_binary(&DESTINATIONS.load(store, vault.id.into()).unwrap()).unwrap();
@@ -343,8 +326,8 @@ mod destination_store_tests {
             .unwrap();
 
         let vault_builder = create_vault_builder(env);
-        let vault = save_vault(store, vault_builder).unwrap();
-        let fetched_vault = get_vault(store, vault.id).unwrap();
+        let vault = save_old_vault(store, vault_builder).unwrap();
+        let fetched_vault = get_old_vault(store, vault.id).unwrap();
 
         assert_eq!(fetched_vault.destinations, vault.destinations);
         assert!(!fetched_vault.destinations.is_empty());
@@ -367,12 +350,12 @@ mod destination_store_tests {
             .unwrap();
 
         let vault_builder = create_vault_builder(env);
-        let mut vault = save_vault(store, vault_builder).unwrap();
+        let mut vault = save_old_vault(store, vault_builder).unwrap();
 
         vault.status = OldVaultStatus::Inactive;
-        update_vault(store, &vault).unwrap();
+        update_old_vault(store, &vault).unwrap();
 
-        let fetched_vault = get_vault(store, vault.id).unwrap();
+        let fetched_vault = get_old_vault(store, vault.id).unwrap();
         assert_eq!(fetched_vault.destinations, vault.destinations);
         assert!(!fetched_vault.destinations.is_empty());
     }
@@ -408,7 +391,7 @@ mod destination_store_tests {
             .save(store, vault.id.into(), &vault_dto)
             .unwrap();
 
-        let fetched_vault = get_vault(store, vault.id).unwrap();
+        let fetched_vault = get_old_vault(store, vault.id).unwrap();
         assert_eq!(fetched_vault.destinations, vault.destinations);
         assert!(!fetched_vault.destinations.is_empty());
     }
@@ -445,7 +428,7 @@ mod destination_store_tests {
             .unwrap();
 
         vault.status = OldVaultStatus::Inactive;
-        update_vault(store, &vault).unwrap();
+        update_old_vault(store, &vault).unwrap();
 
         let destinations: Vec<OldDestination> =
             from_binary(&DESTINATIONS.load(store, vault.id.into()).unwrap()).unwrap();
@@ -485,9 +468,9 @@ mod destination_store_tests {
             .unwrap();
 
         vault.status = OldVaultStatus::Inactive;
-        update_vault(store, &vault).unwrap();
+        update_old_vault(store, &vault).unwrap();
 
-        let fetched_vault = get_vault(store, vault.id).unwrap();
+        let fetched_vault = get_old_vault(store, vault.id).unwrap();
         assert_eq!(fetched_vault.destinations, vault.destinations);
         assert!(!fetched_vault.destinations.is_empty());
     }

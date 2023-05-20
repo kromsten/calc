@@ -28,7 +28,8 @@ pub fn update_config_handler(
         admin: existing_config.admin,
         executors: executors.unwrap_or(existing_config.executors),
         fee_collectors: fee_collectors.unwrap_or(existing_config.fee_collectors),
-        swap_fee_percent: swap_fee_percent.unwrap_or(existing_config.swap_fee_percent),
+        default_swap_fee_percent: swap_fee_percent
+            .unwrap_or(existing_config.default_swap_fee_percent),
         delegation_fee_percent: delegation_fee_percent
             .unwrap_or(existing_config.delegation_fee_percent),
         staking_router_address: deps.api.addr_validate(
@@ -36,22 +37,27 @@ pub fn update_config_handler(
                 .unwrap_or(existing_config.staking_router_address)
                 .to_string(),
         )?,
-        page_limit: page_limit.unwrap_or(existing_config.page_limit),
+        default_page_limit: page_limit.unwrap_or(existing_config.default_page_limit),
         paused: paused.unwrap_or(existing_config.paused),
-        dca_plus_escrow_level: dca_plus_escrow_level
-            .unwrap_or(existing_config.dca_plus_escrow_level),
+        risk_weighted_average_escrow_level: dca_plus_escrow_level
+            .unwrap_or(existing_config.risk_weighted_average_escrow_level),
     };
 
     assert_addresses_are_valid(deps.as_ref(), &config.executors, "executor")?;
     assert_fee_collector_addresses_are_valid(deps.as_ref(), &config.fee_collectors)?;
     assert_fee_collector_allocations_add_up_to_one(&config.fee_collectors)?;
-    assert_dca_plus_escrow_level_is_less_than_100_percent(config.dca_plus_escrow_level)?;
+    assert_dca_plus_escrow_level_is_less_than_100_percent(
+        config.risk_weighted_average_escrow_level,
+    )?;
 
     let config = update_config(deps.storage, config)?;
 
     Ok(Response::default()
         .add_attribute("method", "update_config")
-        .add_attribute("swap_fee_percent", config.swap_fee_percent.to_string())
+        .add_attribute(
+            "swap_fee_percent",
+            config.default_swap_fee_percent.to_string(),
+        )
         .add_attribute("fee_collector", format!("{:?}", config.fee_collectors))
         .add_attribute(
             "delegation_fee_percent",

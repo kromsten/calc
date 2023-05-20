@@ -162,7 +162,7 @@ impl OldVault {
 
 #[cfg(test)]
 mod has_sufficient_funds_tests {
-    use crate::{state::old_vaults::save_vault, types::vault_builder::VaultBuilder};
+    use crate::{state::old_vaults::save_old_vault, types::vault_builder::VaultBuilder};
 
     use super::*;
     use cosmwasm_std::{coin, testing::mock_dependencies};
@@ -171,7 +171,7 @@ mod has_sufficient_funds_tests {
     fn should_return_false_when_vault_has_insufficient_swap_amount() {
         let mut deps = mock_dependencies();
         let vault_builder = vault_with(100000, Uint128::new(50000));
-        let vault = save_vault(deps.as_mut().storage, vault_builder).unwrap();
+        let vault = save_old_vault(deps.as_mut().storage, vault_builder).unwrap();
         assert!(!vault.has_sufficient_funds());
     }
 
@@ -179,7 +179,7 @@ mod has_sufficient_funds_tests {
     fn should_return_false_when_vault_has_insufficient_balance() {
         let mut deps = mock_dependencies();
         let vault_builder = vault_with(50000, Uint128::new(50001));
-        let vault = save_vault(deps.as_mut().storage, vault_builder).unwrap();
+        let vault = save_old_vault(deps.as_mut().storage, vault_builder).unwrap();
         assert!(!vault.has_sufficient_funds());
     }
 
@@ -187,7 +187,7 @@ mod has_sufficient_funds_tests {
     fn should_return_true_when_vault_has_sufficient_swap_amount() {
         let mut deps = mock_dependencies();
         let vault_builder = vault_with(100000, Uint128::new(50001));
-        let vault = save_vault(deps.as_mut().storage, vault_builder).unwrap();
+        let vault = save_old_vault(deps.as_mut().storage, vault_builder).unwrap();
         assert!(vault.has_sufficient_funds());
     }
 
@@ -195,7 +195,7 @@ mod has_sufficient_funds_tests {
     fn should_return_true_when_vault_has_sufficient_balance() {
         let mut deps = mock_dependencies();
         let vault_builder = vault_with(50001, Uint128::new(50002));
-        let vault = save_vault(deps.as_mut().storage, vault_builder).unwrap();
+        let vault = save_old_vault(deps.as_mut().storage, vault_builder).unwrap();
         assert!(vault.has_sufficient_funds());
     }
 

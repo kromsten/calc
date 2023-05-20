@@ -7,12 +7,12 @@ pub struct Config {
     pub admin: Addr,
     pub executors: Vec<Addr>,
     pub fee_collectors: Vec<FeeCollector>,
-    pub swap_fee_percent: Decimal,
+    pub default_swap_fee_percent: Decimal,
     pub delegation_fee_percent: Decimal,
     pub staking_router_address: Addr,
-    pub page_limit: u16,
+    pub default_page_limit: u16,
     pub paused: bool,
-    pub dca_plus_escrow_level: Decimal,
+    pub risk_weighted_average_escrow_level: Decimal,
 }
 
 #[cw_serde]
@@ -28,7 +28,7 @@ pub fn get_config(store: &dyn Storage) -> StdResult<Config> {
 }
 
 pub fn update_config(store: &mut dyn Storage, config: Config) -> StdResult<Config> {
-    if config.swap_fee_percent > Decimal::percent(100) {
+    if config.default_swap_fee_percent > Decimal::percent(100) {
         return Err(StdError::generic_err(
             "swap_fee_percent must be less than 100%, and expressed as a ratio out of 1 (i.e. use 0.015 to represent a fee of 1.5%)",
         ));

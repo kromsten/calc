@@ -1,7 +1,7 @@
 use crate::error::ContractError;
 use crate::state::cache::CACHE;
 use crate::state::events::create_event;
-use crate::state::old_vaults::get_vault;
+use crate::state::old_vaults::get_old_vault;
 use base::events::event::{EventBuilder, EventData};
 use base::helpers::message_helpers::{
     get_attribute_in_event, get_coin_from_display_formatted_coin,
@@ -16,7 +16,7 @@ pub fn after_z_delegation(
     reply: Reply,
 ) -> Result<Response, ContractError> {
     let cache = CACHE.load(deps.storage)?;
-    let vault = get_vault(deps.storage, cache.vault_id.into())?;
+    let vault = get_old_vault(deps.storage, cache.vault_id.into())?;
 
     match reply.result {
         SubMsgResult::Ok(_) => {

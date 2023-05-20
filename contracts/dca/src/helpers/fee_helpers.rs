@@ -107,7 +107,7 @@ pub fn get_swap_fee_rate(storage: &dyn Storage, vault: &OldVault) -> StdResult<D
             }
             (Some(swap_denom_fee_percent), None) => swap_denom_fee_percent,
             (None, Some(receive_denom_fee_percent)) => receive_denom_fee_percent,
-            (None, None) => config.swap_fee_percent,
+            (None, None) => config.default_swap_fee_percent,
         },
     )
 }

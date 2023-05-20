@@ -63,12 +63,12 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
             admin: msg.admin.clone(),
             executors: msg.executors,
             fee_collectors: msg.fee_collectors,
-            swap_fee_percent: msg.swap_fee_percent,
+            default_swap_fee_percent: msg.swap_fee_percent,
             delegation_fee_percent: msg.delegation_fee_percent,
             staking_router_address: msg.staking_router_address,
-            page_limit: msg.page_limit,
+            default_page_limit: msg.page_limit,
             paused: msg.paused,
-            dca_plus_escrow_level: msg.dca_plus_escrow_level,
+            risk_weighted_average_escrow_level: msg.dca_plus_escrow_level,
         },
     )?;
 
@@ -98,12 +98,12 @@ pub fn instantiate(
             admin: msg.admin.clone(),
             executors: msg.executors,
             fee_collectors: msg.fee_collectors,
-            swap_fee_percent: msg.swap_fee_percent,
+            default_swap_fee_percent: msg.swap_fee_percent,
             delegation_fee_percent: msg.delegation_fee_percent,
             staking_router_address: msg.staking_router_address,
-            page_limit: msg.page_limit,
+            default_page_limit: msg.page_limit,
             paused: msg.paused,
-            dca_plus_escrow_level: msg.dca_plus_escrow_level,
+            risk_weighted_average_escrow_level: msg.dca_plus_escrow_level,
         },
     )?;
 
@@ -228,7 +228,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_binary(&get_trigger_id_by_fin_limit_order_idx(deps, order_idx)?)
         }
         QueryMsg::GetVaults { start_after, limit } => {
-            to_binary(&get_vaults_handler(deps, env, start_after, limit)?)
+            to_binary(&get_vaults_handler(deps, start_after, limit)?)
         }
         QueryMsg::GetVaultsByAddress {
             address,
@@ -237,7 +237,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             limit,
         } => to_binary(&get_vaults_by_address(
             deps,
-            env,
             address,
             status,
             start_after,

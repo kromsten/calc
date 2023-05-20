@@ -7,7 +7,7 @@ use crate::{
     state::{
         cache::{Cache, CACHE},
         config::FeeCollector,
-        old_vaults::{save_vault, update_vault},
+        old_vaults::{save_old_vault, update_old_vault},
         pairs::PAIRS,
         triggers::save_trigger,
     },
@@ -150,7 +150,7 @@ pub fn setup_new_vault(deps: DepsMut, env: Env, vault: OldVault) -> OldVault {
         .save(deps.storage, vault.pair.address.clone(), &vault.pair)
         .unwrap();
 
-    update_vault(deps.storage, &vault).unwrap();
+    update_old_vault(deps.storage, &vault).unwrap();
 
     if vault.trigger.is_some() {
         save_trigger(
@@ -188,7 +188,7 @@ pub fn setup_vault(
 
     let owner = Addr::unchecked("owner");
 
-    let vault = save_vault(
+    let vault = save_old_vault(
         deps.storage,
         VaultBuilder {
             owner: owner.clone(),

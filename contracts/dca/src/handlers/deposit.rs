@@ -6,7 +6,7 @@ use crate::helpers::validation_helpers::{
 use crate::helpers::vault_helpers::get_dca_plus_model_id;
 use crate::msg::ExecuteMsg;
 use crate::state::events::create_event;
-use crate::state::old_vaults::{get_vault, update_vault};
+use crate::state::old_vaults::{get_old_vault, update_old_vault};
 use crate::state::triggers::save_trigger;
 use crate::types::dca_plus_config::DcaPlusConfig;
 use base::events::event::{EventBuilder, EventData};
@@ -28,7 +28,7 @@ pub fn deposit_handler(
     deps.api.addr_validate(address.as_str())?;
     assert_exactly_one_asset(info.funds.clone())?;
 
-    let mut vault = get_vault(deps.storage, vault_id.into())?;
+    let mut vault = get_old_vault(deps.storage, vault_id.into())?;
     let vault_was_inactive = vault.is_inactive();
 
     if address != vault.owner {
@@ -66,7 +66,7 @@ pub fn deposit_handler(
             ..dca_plus_config
         });
 
-    update_vault(deps.storage, &vault)?;
+    update_old_vault(deps.storage, &vault)?;
 
     create_event(
         deps.storage,

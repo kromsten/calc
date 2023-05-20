@@ -305,9 +305,12 @@ pub fn assert_page_limit_is_valid(
     limit: Option<u16>,
 ) -> Result<(), ContractError> {
     let config = get_config(storage)?;
-    if limit.unwrap_or(30) > config.page_limit {
+    if limit.unwrap_or(30) > config.default_page_limit {
         return Err(ContractError::CustomError {
-            val: format!("limit cannot be greater than {}.", config.page_limit),
+            val: format!(
+                "limit cannot be greater than {}.",
+                config.default_page_limit
+            ),
         });
     }
     Ok(())

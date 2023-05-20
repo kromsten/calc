@@ -51,7 +51,7 @@ fn get_config_should_succeed() {
         Addr::unchecked("fee-collector")
     );
     assert_eq!(
-        response.config.swap_fee_percent,
+        response.config.default_swap_fee_percent,
         Decimal::from_str("0.015").unwrap()
     );
     assert_eq!(
@@ -62,6 +62,6 @@ fn get_config_should_succeed() {
         response.config.staking_router_address,
         Addr::unchecked("staking-router")
     );
-    assert_eq!(response.config.page_limit, 1000);
+    assert_eq!(response.config.default_page_limit, 1000);
     assert_eq!(response.config.paused, false);
 }

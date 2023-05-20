@@ -9,7 +9,7 @@ use crate::helpers::vault_helpers::{
 use crate::msg::ExecuteMsg;
 use crate::state::cache::{Cache, SwapCache, CACHE, SWAP_CACHE};
 use crate::state::events::create_event;
-use crate::state::old_vaults::{get_vault, update_vault};
+use crate::state::old_vaults::{get_old_vault, update_old_vault};
 use crate::state::triggers::{delete_trigger, save_trigger};
 use base::events::event::{EventBuilder, EventData, ExecutionSkippedReason};
 use base::helpers::time_helpers::get_next_target_time;
@@ -29,7 +29,7 @@ pub fn execute_trigger_handler(
 ) -> Result<Response, ContractError> {
     assert_contract_is_not_paused(deps.storage)?;
     let mut response = Response::new().add_attribute("method", "execute_trigger");
-    let mut vault = get_vault(deps.storage, trigger_id.into())?;
+    let mut vault = get_old_vault(deps.storage, trigger_id.into())?;
 
     delete_trigger(deps.storage, vault.id)?;
 
@@ -89,7 +89,7 @@ pub fn execute_trigger_handler(
         vault.started_at = Some(env.block.time);
     }
 
-    update_vault(deps.storage, &vault)?;
+    update_old_vault(deps.storage, &vault)?;
 
     let belief_price = query_belief_price(&deps.querier, &vault.pair, &vault.get_swap_denom())?;
 

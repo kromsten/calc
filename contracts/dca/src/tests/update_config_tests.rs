@@ -260,7 +260,7 @@ fn update_dca_plus_escrow_level_with_valid_value_should_succeed() {
         .unwrap();
 
     assert_eq!(
-        config_response.config.dca_plus_escrow_level,
+        config_response.config.risk_weighted_average_escrow_level,
         Decimal::percent(19)
     );
 }

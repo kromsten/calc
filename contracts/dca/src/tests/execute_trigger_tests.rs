@@ -11,7 +11,7 @@ use crate::handlers::execute_trigger::execute_trigger_handler;
 use crate::handlers::get_events_by_resource_id::get_events_by_resource_id;
 use crate::msg::{ExecuteMsg, QueryMsg, TriggerIdsResponse, VaultResponse};
 use crate::state::config::get_config;
-use crate::state::old_vaults::{get_vault, update_vault};
+use crate::state::old_vaults::{get_old_vault, update_old_vault};
 use crate::tests::helpers::{
     assert_address_balances, assert_events_published, assert_vault_balance, set_fin_price,
     setup_new_vault,
@@ -2374,7 +2374,7 @@ fn for_active_vault_creates_new_trigger() {
 
     execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
 
-    let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
+    let updated_vault = get_old_vault(deps.as_ref().storage, vault.id).unwrap();
 
     assert_eq!(
         updated_vault.trigger,
@@ -2404,7 +2404,7 @@ fn for_active_vault_with_dca_plus_updates_standard_performance_data() {
 
     execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap();
 
-    let updated_dca_plus_config = get_vault(deps.as_ref().storage, vault.id)
+    let updated_dca_plus_config = get_old_vault(deps.as_ref().storage, vault.id)
         .unwrap()
         .dca_plus_config
         .unwrap();
@@ -2419,7 +2419,7 @@ fn for_active_vault_with_dca_plus_updates_standard_performance_data() {
 
     let config = get_config(deps.as_ref().storage).unwrap();
 
-    let fee_rate = config.swap_fee_percent
+    let fee_rate = config.default_swap_fee_percent
         + config.delegation_fee_percent
         + Decimal::from_str(SWAP_FEE_RATE).unwrap();
 
@@ -2457,14 +2457,14 @@ fn for_active_vault_with_dca_plus_publishes_execution_simulated_event() {
         .unwrap()
         .events;
 
-    let dca_plus_config = get_vault(deps.as_ref().storage, vault.id)
+    let dca_plus_config = get_old_vault(deps.as_ref().storage, vault.id)
         .unwrap()
         .dca_plus_config
         .unwrap();
 
     let config = get_config(deps.as_ref().storage).unwrap();
 
-    let fee_rate = config.swap_fee_percent
+    let fee_rate = config.default_swap_fee_percent
         + config.delegation_fee_percent
         + Decimal::from_str(SWAP_FEE_RATE).unwrap();
 
@@ -2551,11 +2551,11 @@ fn for_active_dca_plus_vault_with_finished_standard_dca_does_not_update_stats() 
             ..dca_plus_config
         });
 
-    update_vault(deps.as_mut().storage, &vault).unwrap();
+    update_old_vault(deps.as_mut().storage, &vault).unwrap();
 
     execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
 
-    let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
+    let updated_vault = get_old_vault(deps.as_ref().storage, vault.id).unwrap();
 
     assert_eq!(
         DcaPlusConfig {
@@ -2662,7 +2662,7 @@ fn for_scheduled_vault_updates_status_to_active() {
 
     execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
 
-    let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
+    let updated_vault = get_old_vault(deps.as_ref().storage, vault.id).unwrap();
 
     assert_eq!(updated_vault.status, OldVaultStatus::Active);
 }
@@ -2687,7 +2687,7 @@ fn for_scheduled_vault_creates_new_trigger() {
 
     execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
 
-    let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
+    let updated_vault = get_old_vault(deps.as_ref().storage, vault.id).unwrap();
 
     assert_eq!(
         updated_vault.trigger,
@@ -2754,7 +2754,7 @@ fn for_inactive_vault_does_not_create_a_new_trigger() {
 
     execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
 
-    let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
+    let updated_vault = get_old_vault(deps.as_ref().storage, vault.id).unwrap();
 
     assert_eq!(updated_vault.trigger, None);
 }
@@ -2779,7 +2779,7 @@ fn for_inactive_vault_with_dca_plus_creates_new_trigger() {
 
     execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
 
-    let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
+    let updated_vault = get_old_vault(deps.as_ref().storage, vault.id).unwrap();
 
     assert_eq!(
         updated_vault.trigger,
@@ -2809,7 +2809,7 @@ fn for_inactive_vault_with_dca_plus_and_finished_standard_dca_does_not_create_ne
 
     execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
 
-    let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
+    let updated_vault = get_old_vault(deps.as_ref().storage, vault.id).unwrap();
 
     assert_eq!(updated_vault.trigger, None);
 }
@@ -2901,7 +2901,7 @@ fn for_inactive_vault_with_dca_plus_updates_standard_performance_data() {
 
     execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap();
 
-    let updated_dca_plus_config = get_vault(deps.as_ref().storage, vault.id)
+    let updated_dca_plus_config = get_old_vault(deps.as_ref().storage, vault.id)
         .unwrap()
         .dca_plus_config
         .unwrap();
@@ -2916,7 +2916,7 @@ fn for_inactive_vault_with_dca_plus_updates_standard_performance_data() {
 
     let config = get_config(deps.as_ref().storage).unwrap();
 
-    let fee_rate = config.swap_fee_percent
+    let fee_rate = config.default_swap_fee_percent
         + config.delegation_fee_percent
         + Decimal::from_str(SWAP_FEE_RATE).unwrap();
 
@@ -2977,11 +2977,11 @@ fn for_cancelled_vault_deletes_trigger() {
         true,
     );
 
-    let vault = get_vault(deps.as_ref().storage, Uint128::one()).unwrap();
+    let vault = get_old_vault(deps.as_ref().storage, Uint128::one()).unwrap();
 
     execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap_err();
 
-    let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
+    let updated_vault = get_old_vault(deps.as_ref().storage, vault.id).unwrap();
 
     assert_eq!(
         vault.trigger,

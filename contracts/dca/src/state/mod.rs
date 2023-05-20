@@ -8,3 +8,4 @@ pub mod pairs;
 pub mod state_helpers;
 pub mod swap_adjustments;
 pub mod triggers;
+pub mod vaults;

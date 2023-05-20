@@ -8,7 +8,7 @@ use crate::{
     state::{
         disburse_escrow_tasks::delete_disburse_escrow_task,
         events::create_event,
-        old_vaults::{get_vault, update_vault},
+        old_vaults::{get_old_vault, update_old_vault},
     },
     types::dca_plus_config::DcaPlusConfig,
 };
@@ -27,7 +27,7 @@ pub fn disburse_escrow_handler(
 ) -> Result<Response, ContractError> {
     assert_sender_is_executor(deps.storage, &env, &info.sender)?;
 
-    let mut vault = get_vault(deps.storage, vault_id)?;
+    let mut vault = get_old_vault(deps.storage, vault_id)?;
 
     if vault.dca_plus_config.is_none() {
         return Err(ContractError::CustomError {
@@ -47,7 +47,7 @@ pub fn disburse_escrow_handler(
         ..dca_plus_config
     });
 
-    update_vault(deps.storage, &vault)?;
+    update_old_vault(deps.storage, &vault)?;
 
     create_event(
         deps.storage,

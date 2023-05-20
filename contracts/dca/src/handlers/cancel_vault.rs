@@ -4,7 +4,7 @@ use crate::helpers::validation_helpers::{
 };
 use crate::state::disburse_escrow_tasks::save_disburse_escrow_task;
 use crate::state::events::create_event;
-use crate::state::old_vaults::{get_vault, update_vault};
+use crate::state::old_vaults::{get_old_vault, update_old_vault};
 use crate::state::triggers::delete_trigger;
 use base::events::event::{EventBuilder, EventData};
 use base::triggers::trigger::OldTriggerConfiguration;
@@ -21,7 +21,7 @@ pub fn cancel_vault(
     info: MessageInfo,
     vault_id: Uint128,
 ) -> Result<Response, ContractError> {
-    let mut vault = get_vault(deps.storage, vault_id)?;
+    let mut vault = get_old_vault(deps.storage, vault_id)?;
 
     assert_sender_is_admin_or_vault_owner(deps.storage, vault.owner.clone(), info.sender.clone())?;
     assert_vault_is_not_cancelled(&vault)?;
@@ -51,7 +51,7 @@ pub fn cancel_vault(
     vault.status = OldVaultStatus::Cancelled;
     vault.balance = Coin::new(0, vault.get_swap_denom());
 
-    update_vault(deps.storage, &vault)?;
+    update_old_vault(deps.storage, &vault)?;
 
     if let Some(trigger) = vault.trigger {
         match trigger {

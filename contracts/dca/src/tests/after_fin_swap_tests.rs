@@ -8,7 +8,7 @@ use crate::{
     state::{
         cache::{SwapCache, SWAP_CACHE},
         config::{create_custom_fee, get_config, FeeCollector},
-        old_vaults::get_vault,
+        old_vaults::get_old_vault,
         swap_adjustments::update_swap_adjustments,
     },
     tests::{
@@ -72,7 +72,7 @@ fn with_succcesful_swap_returns_funds_to_destination() {
     )
     .unwrap();
 
-    let fee = get_config(&deps.storage).unwrap().swap_fee_percent * receive_amount;
+    let fee = get_config(&deps.storage).unwrap().default_swap_fee_percent * receive_amount;
 
     let automation_fee = get_config(&deps.storage).unwrap().delegation_fee_percent;
 
@@ -142,7 +142,7 @@ fn with_succcesful_swap_returns_fee_to_fee_collector() {
     .unwrap();
 
     let config = get_config(&deps.storage).unwrap();
-    let swap_fee = config.swap_fee_percent * receive_amount;
+    let swap_fee = config.default_swap_fee_percent * receive_amount;
     let total_after_swap_fee = receive_amount - swap_fee;
 
     let automation_fee = vault
@@ -222,7 +222,7 @@ fn with_succcesful_swap_returns_fee_to_multiple_fee_collectors() {
     .unwrap();
 
     let config = get_config(&deps.storage).unwrap();
-    let swap_fee = config.swap_fee_percent * receive_amount;
+    let swap_fee = config.default_swap_fee_percent * receive_amount;
     let total_after_swap_fee = receive_amount - swap_fee;
 
     let automation_fee = vault
@@ -307,7 +307,7 @@ fn with_succcesful_swap_adjusts_vault_balance() {
     )
     .unwrap();
 
-    let updated_vault = get_vault(&deps.storage, vault.id).unwrap();
+    let updated_vault = get_old_vault(&deps.storage, vault.id).unwrap();
 
     assert_eq!(
         updated_vault.balance.amount,
@@ -365,7 +365,7 @@ fn with_succcesful_swap_adjusts_swapped_amount_stat() {
     )
     .unwrap();
 
-    let updated_vault = get_vault(&deps.storage, vault.id).unwrap();
+    let updated_vault = get_old_vault(&deps.storage, vault.id).unwrap();
 
     assert_eq!(
         updated_vault.swapped_amount.amount,
@@ -412,10 +412,10 @@ fn with_succcesful_swap_adjusts_received_amount_stat() {
     )
     .unwrap();
 
-    let updated_vault = get_vault(&deps.storage, vault.id).unwrap();
+    let updated_vault = get_old_vault(&deps.storage, vault.id).unwrap();
     let config = get_config(&deps.storage).unwrap();
 
-    let mut fee = config.swap_fee_percent * receive_amount;
+    let mut fee = config.default_swap_fee_percent * receive_amount;
 
     vault
         .destinations
@@ -488,7 +488,7 @@ fn with_succcesful_swap_with_dca_plus_escrows_funds() {
     )
     .unwrap();
 
-    let updated_vault = get_vault(&deps.storage, vault.id).unwrap();
+    let updated_vault = get_old_vault(&deps.storage, vault.id).unwrap();
 
     let escrow_level = updated_vault.dca_plus_config.clone().unwrap().escrow_level;
     let escrow_amount = escrow_level * receive_amount;
@@ -577,7 +577,7 @@ fn with_succcesful_swap_publishes_dca_execution_completed_event() {
     )
     .unwrap();
 
-    let updated_vault = get_vault(&deps.storage, vault.id).unwrap();
+    let updated_vault = get_old_vault(&deps.storage, vault.id).unwrap();
 
     let events = get_events_by_resource_id(deps.as_ref(), vault.id, None, None)
         .unwrap()
@@ -586,7 +586,7 @@ fn with_succcesful_swap_publishes_dca_execution_completed_event() {
     let config = get_config(deps.as_ref().storage).unwrap();
 
     let inverted_fee_rate =
-        Decimal::one() - (config.swap_fee_percent + config.delegation_fee_percent);
+        Decimal::one() - (config.default_swap_fee_percent + config.delegation_fee_percent);
     let received_amount =
         updated_vault.received_amount.amount * (Decimal::one() / inverted_fee_rate);
     let fee = received_amount - updated_vault.received_amount.amount - Uint128::new(2); // rounding
@@ -660,7 +660,7 @@ fn with_succcesful_swap_with_dca_plus_publishes_execution_completed_event() {
     )
     .unwrap();
 
-    let updated_vault = get_vault(&deps.storage, vault.id).unwrap();
+    let updated_vault = get_old_vault(&deps.storage, vault.id).unwrap();
 
     let events = get_events_by_resource_id(deps.as_ref(), vault.id, None, None)
         .unwrap()
@@ -694,7 +694,7 @@ fn with_failed_swap_and_insufficient_funds_does_not_reduce_vault_balance() {
 
     after_fin_swap(deps.as_mut(), env.clone(), reply).unwrap();
 
-    let vault = get_vault(&mut deps.storage, vault_id).unwrap();
+    let vault = get_old_vault(&mut deps.storage, vault_id).unwrap();
 
     assert_eq!(
         vault.balance,
@@ -782,7 +782,7 @@ fn with_failed_swap_leaves_vault_active() {
 
     after_fin_swap(deps.as_mut(), env.clone(), reply).unwrap();
 
-    let vault = get_vault(&mut deps.storage, vault_id).unwrap();
+    let vault = get_old_vault(&mut deps.storage, vault_id).unwrap();
 
     assert_eq!(vault.status, OldVaultStatus::Active);
 }
@@ -802,7 +802,7 @@ fn with_failed_swap_does_not_reduce_vault_balance() {
 
     after_fin_swap(deps.as_mut(), env.clone(), reply).unwrap();
 
-    let vault = get_vault(&mut deps.storage, vault_id).unwrap();
+    let vault = get_old_vault(&mut deps.storage, vault_id).unwrap();
 
     assert_eq!(vault.balance, Coin::new(TEN.into(), vault.get_swap_denom()));
 }
@@ -1080,7 +1080,7 @@ fn with_insufficient_remaining_funds_sets_vault_to_inactive() {
     )
     .unwrap();
 
-    let vault = get_vault(&deps.storage, vault.id).unwrap();
+    let vault = get_old_vault(&deps.storage, vault.id).unwrap();
     assert_eq!(vault.status, OldVaultStatus::Inactive);
 }
 
@@ -1237,6 +1237,6 @@ fn for_dca_plus_vault_with_insufficient_remaining_funds_sets_vault_to_inactive()
     )
     .unwrap();
 
-    let vault = get_vault(&deps.storage, vault.id).unwrap();
+    let vault = get_old_vault(&deps.storage, vault.id).unwrap();
     assert_eq!(vault.status, OldVaultStatus::Inactive);
 }

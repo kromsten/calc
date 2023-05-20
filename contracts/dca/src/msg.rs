@@ -1,7 +1,6 @@
 use crate::state::config::{Config, FeeCollector};
 use crate::state::data_fixes::DataFix;
 use crate::types::old_vault::OldVault;
-use crate::types::vault::Vault;
 use base::events::event::Event;
 use base::pair::Pair;
 use base::triggers::trigger::OldTimeInterval;
@@ -184,7 +183,7 @@ pub struct DcaPlusPerformanceResponse {
 
 #[cw_serde]
 pub struct VaultsResponse {
-    pub vaults: Vec<Vault>,
+    pub vaults: Vec<OldVault>,
 }
 
 #[cw_serde]

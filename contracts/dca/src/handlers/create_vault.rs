@@ -14,7 +14,7 @@ use crate::msg::ExecuteMsg;
 use crate::state::cache::{Cache, CACHE};
 use crate::state::config::get_config;
 use crate::state::events::create_event;
-use crate::state::old_vaults::{save_vault, update_vault};
+use crate::state::old_vaults::{save_old_vault, update_old_vault};
 use crate::state::pairs::PAIRS;
 use crate::state::triggers::save_trigger;
 use crate::types::dca_plus_config::DcaPlusConfig;
@@ -96,7 +96,7 @@ pub fn create_vault(
         }
 
         Some(DcaPlusConfig::new(
-            config.dca_plus_escrow_level,
+            config.risk_weighted_average_escrow_level,
             get_dca_plus_model_id(
                 &env.block.time,
                 &info.funds[0],
@@ -137,7 +137,7 @@ pub fn create_vault(
         dca_plus_config,
     };
 
-    let vault = save_vault(deps.storage, vault_builder)?;
+    let vault = save_old_vault(deps.storage, vault_builder)?;
 
     CACHE.save(
         deps.storage,
@@ -256,7 +256,7 @@ fn create_fin_limit_order_trigger(
     )?;
 
     vault.balance.amount -= TWO_MICRONS;
-    update_vault(deps.storage, &vault)?;
+    update_old_vault(deps.storage, &vault)?;
 
     let fin_limit_order_sub_msg = create_submit_order_sub_msg(
         vault.pair.address.clone(),

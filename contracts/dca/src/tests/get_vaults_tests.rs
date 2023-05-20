@@ -1,5 +1,4 @@
 use crate::constants::{ONE, TEN};
-use crate::mappers::vault::vault_from;
 use crate::msg::{QueryMsg, VaultsResponse};
 use crate::tests::mocks::{
     fin_contract_filled_limit_order, fin_contract_pass_slippage_tolerance, MockApp, DENOM_UKUJI,
@@ -9,7 +8,6 @@ use crate::types::old_vault::OldVault;
 use base::pair::Pair;
 use base::triggers::trigger::{OldTimeInterval, OldTriggerConfiguration};
 use base::vaults::vault::{OldDestination, OldVaultStatus, PostExecutionAction};
-use cosmwasm_std::testing::mock_env;
 use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
 
 #[test]
@@ -101,43 +99,40 @@ fn with_one_vault_should_return_proper_vault_data() {
 
     assert_eq!(
         vaults_response.vaults.first().unwrap(),
-        &vault_from(
-            mock_env(),
-            OldVault {
-                minimum_receive_amount: None,
-                label: Some("label".to_string()),
-                id: Uint128::new(1),
-                owner: user_address.clone(),
-                destinations: vec![OldDestination {
-                    address: user_address.clone(),
-                    allocation: Decimal::percent(100),
-                    action: PostExecutionAction::Send
-                }],
-                created_at: mock.app.block_info().time,
-                status: OldVaultStatus::Scheduled,
-                balance: Coin::new(vault_deposit.into(), DENOM_UKUJI.to_string()),
-                time_interval: OldTimeInterval::Hourly,
-                slippage_tolerance: None,
-                swap_amount,
-                pair: Pair {
-                    address: mock.fin_contract_address.clone(),
-                    base_denom: DENOM_UTEST.to_string(),
-                    quote_denom: DENOM_UKUJI.to_string(),
-                },
-                started_at: None,
-                swapped_amount: Coin::new(0, DENOM_UKUJI.to_string()),
-                received_amount: Coin::new(0, DENOM_UTEST.to_string()),
-                trigger: Some(OldTriggerConfiguration::Time {
-                    target_time: mock
-                        .app
-                        .block_info()
-                        .time
-                        .plus_seconds(2)
-                        .minus_nanos(mock.app.block_info().time.subsec_nanos())
-                }),
-                dca_plus_config: None,
-            }
-        )
+        &OldVault {
+            minimum_receive_amount: None,
+            label: Some("label".to_string()),
+            id: Uint128::new(1),
+            owner: user_address.clone(),
+            destinations: vec![OldDestination {
+                address: user_address.clone(),
+                allocation: Decimal::percent(100),
+                action: PostExecutionAction::Send
+            }],
+            created_at: mock.app.block_info().time,
+            status: OldVaultStatus::Scheduled,
+            balance: Coin::new(vault_deposit.into(), DENOM_UKUJI.to_string()),
+            time_interval: OldTimeInterval::Hourly,
+            slippage_tolerance: None,
+            swap_amount,
+            pair: Pair {
+                address: mock.fin_contract_address.clone(),
+                base_denom: DENOM_UTEST.to_string(),
+                quote_denom: DENOM_UKUJI.to_string(),
+            },
+            started_at: None,
+            swapped_amount: Coin::new(0, DENOM_UKUJI.to_string()),
+            received_amount: Coin::new(0, DENOM_UTEST.to_string()),
+            trigger: Some(OldTriggerConfiguration::Time {
+                target_time: mock
+                    .app
+                    .block_info()
+                    .time
+                    .plus_seconds(2)
+                    .minus_nanos(mock.app.block_info().time.subsec_nanos())
+            }),
+            dca_plus_config: None,
+        }
     );
 }
 
