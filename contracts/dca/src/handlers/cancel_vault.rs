@@ -4,8 +4,8 @@ use crate::helpers::validation_helpers::{
 };
 use crate::state::disburse_escrow_tasks::save_disburse_escrow_task;
 use crate::state::events::create_event;
+use crate::state::old_triggers::delete_old_trigger;
 use crate::state::old_vaults::{get_old_vault, update_old_vault};
-use crate::state::triggers::delete_trigger;
 use base::events::event::{EventBuilder, EventData};
 use base::triggers::trigger::OldTriggerConfiguration;
 use base::vaults::vault::OldVaultStatus;
@@ -82,7 +82,7 @@ pub fn cancel_vault(
             _ => {}
         }
 
-        delete_trigger(deps.storage, vault.id)?;
+        delete_old_trigger(deps.storage, vault.id)?;
     }
 
     Ok(Response::new()

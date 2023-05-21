@@ -1,4 +1,6 @@
-use super::{pairs::PAIRS, state_helpers::fetch_and_increment_counter, triggers::get_trigger};
+use super::{
+    old_pairs::PAIRS, old_triggers::get_old_trigger, state_helpers::fetch_and_increment_counter,
+};
 use crate::types::{
     dca_plus_config::DcaPlusConfig, old_vault::OldVault, price_delta_limit::PriceDeltaLimit,
     vault_builder::VaultBuilder,
@@ -155,7 +157,7 @@ pub fn get_old_vault(store: &dyn Storage, vault_id: Uint128) -> StdResult<OldVau
     Ok(old_vault_from(
         &data,
         PAIRS.load(store, data.pair_address.clone())?,
-        get_trigger(store, vault_id)?.map(|t| t.configuration),
+        get_old_trigger(store, vault_id)?.map(|t| t.configuration),
         &mut get_destinations(store, vault_id)?,
         get_dca_plus_config(store, vault_id),
     ))
@@ -192,7 +194,7 @@ pub fn get_old_vaults_by_address(
                 PAIRS.load(store, vault_data.pair_address.clone()).expect(
                     format!("a pair for pair address {:?}", vault_data.pair_address).as_str(),
                 ),
-                get_trigger(store, vault_data.id.into())
+                get_old_trigger(store, vault_data.id.into())
                     .expect(format!("a trigger for vault id {}", vault_data.id).as_str())
                     .map(|trigger| trigger.configuration),
                 &mut get_destinations(store, vault_data.id).expect("vault destinations"),
@@ -223,7 +225,7 @@ pub fn get_old_vaults(
                 PAIRS.load(store, vault_data.pair_address.clone()).expect(
                     format!("a pair for pair address {:?}", vault_data.pair_address).as_str(),
                 ),
-                get_trigger(store, vault_data.id.into())
+                get_old_trigger(store, vault_data.id.into())
                     .expect(format!("a trigger for vault id {}", vault_data.id).as_str())
                     .map(|trigger| trigger.configuration),
                 &mut get_destinations(store, vault_data.id).expect("vault destinations"),

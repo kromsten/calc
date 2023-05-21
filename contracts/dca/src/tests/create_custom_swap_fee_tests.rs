@@ -1,9 +1,9 @@
-use super::mocks::ADMIN;
+use super::old_mocks::ADMIN;
 use crate::{
     handlers::{
         create_custom_swap_fee::create_custom_swap_fee, get_custom_swap_fees::get_custom_swap_fees,
     },
-    tests::helpers::instantiate_contract,
+    tests::old_helpers::instantiate_contract,
 };
 use cosmwasm_std::{
     testing::{mock_dependencies, mock_env, mock_info},

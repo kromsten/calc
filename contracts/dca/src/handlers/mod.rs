@@ -25,3 +25,4 @@ pub mod remove_custom_swap_fee;
 pub mod update_config;
 pub mod update_swap_adjustments_handler;
 pub mod update_vault;
+pub mod migrate_vaults;

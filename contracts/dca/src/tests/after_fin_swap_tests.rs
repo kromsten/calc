@@ -6,18 +6,18 @@ use crate::{
     },
     helpers::vault_helpers::get_swap_amount,
     state::{
-        cache::{SwapCache, SWAP_CACHE},
         config::{create_custom_fee, get_config, FeeCollector},
+        old_cache::{SwapCache, OLD_SWAP_CACHE},
         old_vaults::get_old_vault,
         swap_adjustments::update_swap_adjustments,
     },
     tests::{
-        helpers::{
+        old_helpers::{
             instantiate_contract, instantiate_contract_with_multiple_fee_collectors,
             setup_active_dca_plus_vault_with_funds, setup_active_vault_with_funds,
             setup_active_vault_with_low_funds, setup_active_vault_with_slippage_funds, setup_vault,
         },
-        mocks::ADMIN,
+        old_mocks::ADMIN,
     },
 };
 use base::{
@@ -44,7 +44,7 @@ fn with_succcesful_swap_returns_funds_to_destination() {
     let vault = setup_active_vault_with_funds(deps.as_mut(), env.clone());
     let receive_amount = Uint128::new(10000);
 
-    SWAP_CACHE
+    OLD_SWAP_CACHE
         .save(
             deps.as_mut().storage,
             &SwapCache {
@@ -113,7 +113,7 @@ fn with_succcesful_swap_returns_fee_to_fee_collector() {
     let vault = setup_active_vault_with_funds(deps.as_mut(), env.clone());
     let receive_amount = Uint128::new(234312312);
 
-    SWAP_CACHE
+    OLD_SWAP_CACHE
         .save(
             deps.as_mut().storage,
             &SwapCache {
@@ -193,7 +193,7 @@ fn with_succcesful_swap_returns_fee_to_multiple_fee_collectors() {
     let vault = setup_active_vault_with_funds(deps.as_mut(), env.clone());
     let receive_amount = Uint128::new(234312312);
 
-    SWAP_CACHE
+    OLD_SWAP_CACHE
         .save(
             deps.as_mut().storage,
             &SwapCache {
@@ -279,7 +279,7 @@ fn with_succcesful_swap_adjusts_vault_balance() {
     let vault = setup_active_vault_with_funds(deps.as_mut(), env.clone());
     let receive_amount = Uint128::new(234312312);
 
-    SWAP_CACHE
+    OLD_SWAP_CACHE
         .save(
             deps.as_mut().storage,
             &SwapCache {
@@ -327,7 +327,7 @@ fn with_succcesful_swap_adjusts_swapped_amount_stat() {
     let vault = setup_active_vault_with_funds(deps.as_mut(), env.clone());
     let receive_amount = Uint128::new(234312312);
 
-    SWAP_CACHE
+    OLD_SWAP_CACHE
         .save(
             deps.as_mut().storage,
             &SwapCache {
@@ -384,7 +384,7 @@ fn with_succcesful_swap_adjusts_received_amount_stat() {
     let vault = setup_active_vault_with_funds(deps.as_mut(), env.clone());
     let receive_amount = Uint128::new(234312312);
 
-    SWAP_CACHE
+    OLD_SWAP_CACHE
         .save(
             deps.as_mut().storage,
             &SwapCache {
@@ -441,7 +441,7 @@ fn with_succcesful_swap_with_dca_plus_escrows_funds() {
     let vault = setup_active_dca_plus_vault_with_funds(deps.as_mut(), env.clone());
     let receive_amount = Uint128::new(10000);
 
-    SWAP_CACHE
+    OLD_SWAP_CACHE
         .save(
             deps.as_mut().storage,
             &SwapCache {
@@ -530,7 +530,7 @@ fn with_succcesful_swap_publishes_dca_execution_completed_event() {
     let vault = setup_active_vault_with_funds(deps.as_mut(), env.clone());
     let receive_amount = Uint128::new(10000);
 
-    SWAP_CACHE
+    OLD_SWAP_CACHE
         .save(
             deps.as_mut().storage,
             &SwapCache {
@@ -613,7 +613,7 @@ fn with_succcesful_swap_with_dca_plus_publishes_execution_completed_event() {
     let vault = setup_active_dca_plus_vault_with_funds(deps.as_mut(), env.clone());
     let receive_amount = Uint128::new(10000);
 
-    SWAP_CACHE
+    OLD_SWAP_CACHE
         .save(
             deps.as_mut().storage,
             &SwapCache {
@@ -826,7 +826,7 @@ fn with_custom_fee_for_base_denom_takes_custom_fee() {
 
     let receive_amount = Uint128::new(234312312);
 
-    SWAP_CACHE
+    OLD_SWAP_CACHE
         .save(
             deps.as_mut().storage,
             &SwapCache {
@@ -900,7 +900,7 @@ fn with_custom_fee_for_quote_denom_takes_custom_fee() {
 
     let receive_amount = Uint128::new(234312312);
 
-    SWAP_CACHE
+    OLD_SWAP_CACHE
         .save(
             deps.as_mut().storage,
             &SwapCache {
@@ -982,7 +982,7 @@ fn with_custom_fee_for_both_denoms_takes_lower_fee() {
 
     let receive_amount = Uint128::new(234312312);
 
-    SWAP_CACHE
+    OLD_SWAP_CACHE
         .save(
             deps.as_mut().storage,
             &SwapCache {
@@ -1052,7 +1052,7 @@ fn with_insufficient_remaining_funds_sets_vault_to_inactive() {
         false,
     );
 
-    SWAP_CACHE
+    OLD_SWAP_CACHE
         .save(
             deps.as_mut().storage,
             &SwapCache {
@@ -1099,7 +1099,7 @@ fn for_dca_plus_vault_with_failed_swap_publishes_slippage_tolerance_exceeded_eve
         true,
     );
 
-    SWAP_CACHE
+    OLD_SWAP_CACHE
         .save(
             deps.as_mut().storage,
             &SwapCache {
@@ -1154,7 +1154,7 @@ fn for_dca_plus_vault_with_low_funds_and_failed_swap_publishes_unknown_failure_e
         true,
     );
 
-    SWAP_CACHE
+    OLD_SWAP_CACHE
         .save(
             deps.as_mut().storage,
             &SwapCache {
@@ -1209,7 +1209,7 @@ fn for_dca_plus_vault_with_insufficient_remaining_funds_sets_vault_to_inactive()
         true,
     );
 
-    SWAP_CACHE
+    OLD_SWAP_CACHE
         .save(
             deps.as_mut().storage,
             &SwapCache {

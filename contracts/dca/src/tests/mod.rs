@@ -1,8 +1,8 @@
 #[cfg(test)]
-pub mod mocks;
+pub mod old_mocks;
 
 #[cfg(test)]
-pub mod helpers;
+pub mod old_helpers;
 
 #[cfg(test)]
 pub mod contract_tests;
@@ -55,5 +55,7 @@ pub mod get_config_tests;
 #[cfg(test)]
 pub mod disburse_escrow_tests;
 
+pub mod helpers;
+mod mocks;
 #[cfg(test)]
 pub mod update_swap_adjustments_tests;

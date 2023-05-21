@@ -1,6 +1,6 @@
 use crate::constants::{ONE, TEN};
 use crate::msg::{ExecuteMsg, QueryMsg, VaultsResponse};
-use crate::tests::mocks::{
+use crate::tests::old_mocks::{
     fin_contract_filled_limit_order, fin_contract_pass_slippage_tolerance, MockApp, ADMIN,
     DENOM_UKUJI, DENOM_UTEST, USER,
 };

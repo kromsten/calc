@@ -1,9 +1,9 @@
 use crate::constants::{ONE, ONE_THOUSAND, TEN, TWO_MICRONS};
 use crate::msg::{ExecuteMsg, QueryMsg, VaultResponse};
-use crate::tests::helpers::{
+use crate::tests::old_helpers::{
     assert_address_balances, assert_events_published, assert_vault_balance,
 };
-use crate::tests::mocks::{
+use crate::tests::old_mocks::{
     fin_contract_unfilled_limit_order, MockApp, ADMIN, DENOM_UKUJI, DENOM_UTEST, USER,
 };
 use crate::types::dca_plus_config::DcaPlusConfig;
@@ -18,7 +18,9 @@ use cosmwasm_std::{Addr, Coin, Decimal, Decimal256, Uint128, Uint64};
 use cw_multi_test::Executor;
 use std::str::FromStr;
 
-use super::mocks::{fin_contract_fail_slippage_tolerance, fin_contract_pass_slippage_tolerance};
+use super::old_mocks::{
+    fin_contract_fail_slippage_tolerance, fin_contract_pass_slippage_tolerance,
+};
 
 #[test]
 fn with_price_trigger_should_update_address_balances() {

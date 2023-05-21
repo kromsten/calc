@@ -98,6 +98,13 @@ pub enum ExecuteMsg {
     DisburseEscrow {
         vault_id: Uint128,
     },
+    ZDelegate {
+        delegator_address: Addr,
+        validator_address: Addr,
+    },
+    MigrateVaults {
+        limit: u16,
+    },
 }
 
 #[cw_serde]

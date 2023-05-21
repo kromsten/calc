@@ -10,7 +10,7 @@ use crate::{
     contract::{instantiate, query},
     msg::{ConfigResponse, InstantiateMsg, QueryMsg},
     state::config::FeeCollector,
-    tests::mocks::ADMIN,
+    tests::old_mocks::ADMIN,
 };
 
 #[test]

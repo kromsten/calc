@@ -6,8 +6,8 @@ use crate::helpers::validation_helpers::{
 use crate::helpers::vault_helpers::get_dca_plus_model_id;
 use crate::msg::ExecuteMsg;
 use crate::state::events::create_event;
+use crate::state::old_triggers::save_old_trigger;
 use crate::state::old_vaults::{get_old_vault, update_old_vault};
-use crate::state::triggers::save_trigger;
 use crate::types::dca_plus_config::DcaPlusConfig;
 use base::events::event::{EventBuilder, EventData};
 use base::helpers::coin_helpers::add_to_coin;
@@ -82,7 +82,7 @@ pub fn deposit_handler(
     let mut response = Response::new().add_attribute("method", "deposit");
 
     if vault.is_active() && vault_was_inactive && vault.trigger.is_none() {
-        save_trigger(
+        save_old_trigger(
             deps.storage,
             OldTrigger {
                 vault_id,

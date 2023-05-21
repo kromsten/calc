@@ -1,9 +1,9 @@
 use super::{
-    helpers::{
+    old_helpers::{
         instantiate_contract_with_community_pool_fee_collector,
         setup_active_dca_plus_vault_with_funds,
     },
-    mocks::ADMIN,
+    old_mocks::ADMIN,
 };
 use crate::{
     constants::{ONE, ONE_DECIMAL, TEN, TEN_MICRONS},
@@ -17,8 +17,8 @@ use crate::{
         old_vaults::{get_old_vault, update_old_vault},
     },
     tests::{
-        helpers::{set_fin_price, setup_active_vault_with_funds},
-        mocks::FEE_COLLECTOR,
+        old_helpers::{set_fin_price, setup_active_vault_with_funds},
+        old_mocks::FEE_COLLECTOR,
     },
     types::dca_plus_config::DcaPlusConfig,
 };

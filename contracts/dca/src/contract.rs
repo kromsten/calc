@@ -19,9 +19,10 @@ use crate::handlers::get_events_by_resource_id::get_events_by_resource_id;
 use crate::handlers::get_pairs::get_pairs;
 use crate::handlers::get_time_trigger_ids::get_time_trigger_ids;
 use crate::handlers::get_trigger_id_by_fin_limit_order_idx::get_trigger_id_by_fin_limit_order_idx;
-use crate::handlers::get_vault::get_vault;
+use crate::handlers::get_vault::get_old_vault_handler;
 use crate::handlers::get_vaults::get_vaults_handler;
 use crate::handlers::get_vaults_by_address::get_vaults_by_address;
+use crate::handlers::migrate_vaults::migrate_vaults_handler;
 use crate::handlers::remove_custom_swap_fee::remove_custom_swap_fee;
 use crate::handlers::update_config::update_config_handler;
 use crate::handlers::update_swap_adjustments_handler::update_swap_adjustments_handler;
@@ -201,6 +202,8 @@ pub fn execute(
         ExecuteMsg::DisburseEscrow { vault_id } => {
             disburse_escrow_handler(deps, env, info, vault_id)
         }
+        ExecuteMsg::ZDelegate { .. } => unimplemented!("ZDelegate"),
+        ExecuteMsg::MigrateVaults { limit } => migrate_vaults_handler(deps, env, limit),
     }
 }
 
@@ -242,7 +245,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             start_after,
             limit,
         )?),
-        QueryMsg::GetVault { vault_id } => to_binary(&get_vault(deps, vault_id)?),
+        QueryMsg::GetVault { vault_id } => to_binary(&get_old_vault_handler(deps, vault_id)?),
         QueryMsg::GetEventsByResourceId {
             resource_id,
             start_after,

@@ -10,7 +10,7 @@ use crate::{
     state::swap_adjustments::get_swap_adjustment,
 };
 
-use super::{helpers::instantiate_contract, mocks::ADMIN};
+use super::{old_helpers::instantiate_contract, old_mocks::ADMIN};
 
 #[test]
 fn updates_swap_adjustments() {

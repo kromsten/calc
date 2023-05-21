@@ -9,7 +9,7 @@ use cw_multi_test::Executor;
 use crate::{
     constants::{ONE, TEN},
     msg::{ExecuteMsg, QueryMsg, VaultResponse},
-    tests::mocks::{fin_contract_unfilled_limit_order, MockApp, DENOM_UKUJI, USER},
+    tests::old_mocks::{fin_contract_unfilled_limit_order, MockApp, DENOM_UKUJI, USER},
 };
 
 #[test]

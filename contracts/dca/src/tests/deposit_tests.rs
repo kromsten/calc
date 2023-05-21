@@ -1,7 +1,9 @@
 use crate::constants::{ONE, ONE_HUNDRED, ONE_THOUSAND, TEN};
 use crate::handlers::deposit::deposit_handler;
 use crate::msg::{ExecuteMsg, QueryMsg, VaultResponse};
-use crate::tests::mocks::{fin_contract_unfilled_limit_order, MockApp, ADMIN, DENOM_UKUJI, USER};
+use crate::tests::old_mocks::{
+    fin_contract_unfilled_limit_order, MockApp, ADMIN, DENOM_UKUJI, USER,
+};
 use crate::types::old_vault::OldVault;
 use base::events::event::EventBuilder;
 use base::vaults::vault::OldVaultStatus;
@@ -9,11 +11,11 @@ use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{to_binary, Addr, Coin, CosmosMsg, SubMsg, Uint128, WasmMsg};
 use cw_multi_test::Executor;
 
-use super::helpers::{
+use super::old_helpers::{
     assert_address_balances, assert_events_published, assert_vault_balance, instantiate_contract,
-    setup_new_vault,
+    setup_old_vault,
 };
-use super::mocks::DENOM_UTEST;
+use super::old_mocks::DENOM_UTEST;
 
 #[test]
 fn should_update_address_balances() {
@@ -318,7 +320,7 @@ fn when_vault_is_inactive_without_a_trigger_should_execute_vault() {
 
     instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
 
-    let vault = setup_new_vault(
+    let vault = setup_old_vault(
         deps.as_mut(),
         env.clone(),
         OldVault {
@@ -356,7 +358,7 @@ fn when_vault_is_inactive_with_a_trigger_should_not_execute_vault() {
 
     instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
 
-    let vault = setup_new_vault(
+    let vault = setup_old_vault(
         deps.as_mut(),
         env.clone(),
         OldVault {

@@ -7,10 +7,10 @@ use crate::helpers::vault_helpers::{
     get_swap_amount, price_threshold_exceeded, simulate_standard_dca_execution,
 };
 use crate::msg::ExecuteMsg;
-use crate::state::cache::{Cache, SwapCache, CACHE, SWAP_CACHE};
 use crate::state::events::create_event;
+use crate::state::old_cache::{Cache, SwapCache, OLD_CACHE, OLD_SWAP_CACHE};
+use crate::state::old_triggers::{delete_old_trigger, save_old_trigger};
 use crate::state::old_vaults::{get_old_vault, update_old_vault};
-use crate::state::triggers::{delete_trigger, save_trigger};
 use base::events::event::{EventBuilder, EventData, ExecutionSkippedReason};
 use base::helpers::time_helpers::get_next_target_time;
 use base::triggers::trigger::{OldTrigger, OldTriggerConfiguration};
@@ -31,7 +31,7 @@ pub fn execute_trigger_handler(
     let mut response = Response::new().add_attribute("method", "execute_trigger");
     let mut vault = get_old_vault(deps.storage, trigger_id.into())?;
 
-    delete_trigger(deps.storage, vault.id)?;
+    delete_old_trigger(deps.storage, vault.id)?;
 
     if vault.is_cancelled() {
         return Err(ContractError::CustomError {
@@ -125,7 +125,7 @@ pub fn execute_trigger_handler(
             });
 
     if should_execute_again {
-        save_trigger(
+        save_old_trigger(
             deps.storage,
             OldTrigger {
                 vault_id: vault.id,
@@ -180,7 +180,7 @@ pub fn execute_trigger_handler(
         return Ok(response.to_owned());
     };
 
-    CACHE.save(
+    OLD_CACHE.save(
         deps.storage,
         &Cache {
             vault_id: vault.id,
@@ -188,7 +188,7 @@ pub fn execute_trigger_handler(
         },
     )?;
 
-    SWAP_CACHE.save(
+    OLD_SWAP_CACHE.save(
         deps.storage,
         &SwapCache {
             swap_denom_balance: deps

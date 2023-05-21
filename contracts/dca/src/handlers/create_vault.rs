@@ -11,12 +11,12 @@ use crate::helpers::validation_helpers::{
 };
 use crate::helpers::vault_helpers::get_dca_plus_model_id;
 use crate::msg::ExecuteMsg;
-use crate::state::cache::{Cache, CACHE};
 use crate::state::config::get_config;
 use crate::state::events::create_event;
+use crate::state::old_cache::{Cache, OLD_CACHE};
+use crate::state::old_pairs::PAIRS;
+use crate::state::old_triggers::save_old_trigger;
 use crate::state::old_vaults::{save_old_vault, update_old_vault};
-use crate::state::pairs::PAIRS;
-use crate::state::triggers::save_trigger;
 use crate::types::dca_plus_config::DcaPlusConfig;
 use crate::types::old_vault::OldVault;
 use crate::types::vault_builder::VaultBuilder;
@@ -139,7 +139,7 @@ pub fn create_vault(
 
     let vault = save_old_vault(deps.storage, vault_builder)?;
 
-    CACHE.save(
+    OLD_CACHE.save(
         deps.storage,
         &Cache {
             vault_id: vault.id.clone(),
@@ -219,7 +219,7 @@ fn create_time_trigger(
         None => env.block.time,
     };
 
-    save_trigger(
+    save_old_trigger(
         deps.storage,
         OldTrigger {
             vault_id: vault.id,
@@ -244,7 +244,7 @@ fn create_fin_limit_order_trigger(
         pair_config.price_precision,
     )?;
 
-    save_trigger(
+    save_old_trigger(
         deps.storage,
         OldTrigger {
             vault_id: vault.id,

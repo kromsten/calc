@@ -3,10 +3,10 @@ use crate::helpers::disbursement_helpers::get_disbursement_messages;
 use crate::helpers::fee_helpers::{get_delegation_fee_rate, get_fee_messages, get_swap_fee_rate};
 use crate::helpers::vault_helpers::get_swap_amount;
 use crate::msg::ExecuteMsg;
-use crate::state::cache::{CACHE, SWAP_CACHE};
 use crate::state::events::create_event;
+use crate::state::old_cache::{OLD_CACHE, OLD_SWAP_CACHE};
+use crate::state::old_triggers::delete_old_trigger;
 use crate::state::old_vaults::{get_old_vault, update_old_vault};
-use crate::state::triggers::delete_trigger;
 use crate::types::dca_plus_config::DcaPlusConfig;
 use base::events::event::{EventBuilder, EventData, ExecutionSkippedReason};
 use base::helpers::coin_helpers::add_to_coin;
@@ -17,7 +17,7 @@ use cosmwasm_std::{to_binary, CosmosMsg, Decimal, SubMsg, SubMsgResult, WasmMsg}
 use cosmwasm_std::{Attribute, Coin, DepsMut, Env, Reply, Response};
 
 pub fn after_fin_swap(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, ContractError> {
-    let cache = CACHE.load(deps.storage)?;
+    let cache = OLD_CACHE.load(deps.storage)?;
     let mut vault = get_old_vault(deps.storage, cache.vault_id.into())?;
 
     let mut attributes: Vec<Attribute> = Vec::new();
@@ -25,7 +25,7 @@ pub fn after_fin_swap(deps: DepsMut, env: Env, reply: Reply) -> Result<Response,
 
     match reply.result {
         SubMsgResult::Ok(_) => {
-            let swap_cache = SWAP_CACHE.load(deps.storage)?;
+            let swap_cache = OLD_SWAP_CACHE.load(deps.storage)?;
 
             let swap_denom_balance = &deps
                 .querier
@@ -143,7 +143,7 @@ pub fn after_fin_swap(deps: DepsMut, env: Env, reply: Reply) -> Result<Response,
             funds: vec![],
         })));
 
-        delete_trigger(deps.storage, vault.id)?;
+        delete_old_trigger(deps.storage, vault.id)?;
     }
 
     Ok(Response::new()

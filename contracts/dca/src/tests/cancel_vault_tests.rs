@@ -1,10 +1,10 @@
-use super::helpers::{instantiate_contract, setup_active_dca_plus_vault_with_funds};
+use super::old_helpers::{instantiate_contract, setup_active_dca_plus_vault_with_funds};
 use crate::constants::{ONE, ONE_THOUSAND, TEN, TWO_MICRONS};
 use crate::handlers::cancel_vault::cancel_vault;
 use crate::msg::{ExecuteMsg, QueryMsg, VaultResponse};
 use crate::state::disburse_escrow_tasks::get_disburse_escrow_tasks;
-use crate::tests::helpers::{assert_address_balances, assert_events_published};
-use crate::tests::mocks::{
+use crate::tests::old_helpers::{assert_address_balances, assert_events_published};
+use crate::tests::old_mocks::{
     fin_contract_partially_filled_order, fin_contract_unfilled_limit_order, MockApp, ADMIN,
     DENOM_UKUJI, DENOM_UTEST, USER,
 };

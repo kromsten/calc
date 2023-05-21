@@ -1,28 +1,9 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Coin, Decimal256, Timestamp, Uint128};
-use cw_storage_plus::Item;
+use cosmwasm_std::{Coin, SubMsg, Uint128};
+use cw_storage_plus::{Item, Map};
+use std::collections::VecDeque;
 
-#[cw_serde]
-pub struct Cache {
-    pub vault_id: Uint128,
-    pub owner: Addr,
-}
-
-#[cw_serde]
-pub struct LimitOrderCache {
-    pub order_idx: Uint128,
-    pub offer_amount: Uint128,
-    pub original_offer_amount: Uint128,
-    pub filled: Uint128,
-    pub quote_price: Decimal256,
-    pub created_at: Timestamp,
-    pub swap_denom_balance: Coin,
-    pub receive_denom_balance: Coin,
-}
-
-pub const CACHE: Item<Cache> = Item::new("cache_v20");
-
-pub const LIMIT_ORDER_CACHE: Item<LimitOrderCache> = Item::new("limit_order_cache_v20");
+pub const VAULT_ID_CACHE: Item<Uint128> = Item::new("vault_cache_v8");
 
 #[cw_serde]
 pub struct SwapCache {
@@ -30,4 +11,13 @@ pub struct SwapCache {
     pub receive_denom_balance: Coin,
 }
 
-pub const SWAP_CACHE: Item<SwapCache> = Item::new("swap_cache_v20");
+pub const SWAP_CACHE: Item<SwapCache> = Item::new("swap_cache_v8");
+
+#[cw_serde]
+pub struct PostExecutionActionCacheEntry {
+    pub msg: SubMsg,
+    pub funds: Vec<Coin>,
+}
+
+pub const POST_EXECUTION_ACTION_CACHE: Map<u128, VecDeque<PostExecutionActionCacheEntry>> =
+    Map::new("post_execution_action_cache_v8");

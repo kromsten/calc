@@ -10,10 +10,10 @@ use crate::{
     handlers::update_config::update_config_handler,
     msg::{ConfigResponse, ExecuteMsg, QueryMsg},
     state::config::{get_config, FeeCollector},
-    tests::helpers::instantiate_contract,
+    tests::old_helpers::instantiate_contract,
 };
 
-use super::mocks::{fin_contract_unfilled_limit_order, MockApp, ADMIN};
+use super::old_mocks::{fin_contract_unfilled_limit_order, MockApp, ADMIN};
 
 #[test]
 fn update_executors_with_no_value_should_not_change_value() {

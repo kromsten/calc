@@ -1,5 +1,5 @@
-use super::helpers::{instantiate_contract, setup_vault};
-use super::mocks::{
+use super::old_helpers::{instantiate_contract, setup_vault};
+use super::old_mocks::{
     fin_contract_fail_slippage_tolerance, fin_contract_filled_limit_order,
     fin_contract_high_swap_price, fin_contract_partially_filled_order,
 };
@@ -12,11 +12,11 @@ use crate::handlers::get_events_by_resource_id::get_events_by_resource_id;
 use crate::msg::{ExecuteMsg, QueryMsg, TriggerIdsResponse, VaultResponse};
 use crate::state::config::get_config;
 use crate::state::old_vaults::{get_old_vault, update_old_vault};
-use crate::tests::helpers::{
+use crate::tests::old_helpers::{
     assert_address_balances, assert_events_published, assert_vault_balance, set_fin_price,
-    setup_new_vault,
+    setup_old_vault,
 };
-use crate::tests::mocks::{
+use crate::tests::old_mocks::{
     fin_contract_low_swap_price, fin_contract_pass_slippage_tolerance,
     fin_contract_unfilled_limit_order, MockApp, ADMIN, DENOM_UKUJI, DENOM_UTEST, USER,
 };
@@ -2576,7 +2576,7 @@ fn for_active_vault_with_slippage_exceeded_publishes_standard_dca_execution_skip
     instantiate_contract(deps.as_mut(), env.clone(), info);
     set_fin_price(&mut deps, &ONE_DECIMAL, &ONE, &TEN_MICRONS);
 
-    let vault = setup_new_vault(
+    let vault = setup_old_vault(
         deps.as_mut(),
         env.clone(),
         OldVault {
@@ -2615,7 +2615,7 @@ fn for_active_vault_with_price_threshold_exceeded_publishes_simulated_dca_execut
 
     set_fin_price(&mut deps, &ONE_DECIMAL, &ONE, &TEN_MICRONS);
 
-    let vault = setup_new_vault(
+    let vault = setup_old_vault(
         deps.as_mut(),
         env.clone(),
         OldVault {
@@ -2824,7 +2824,7 @@ fn for_inactive_vault_with_dca_plus_and_finished_standard_dca_does_not_create_sw
 
     set_fin_price(&mut deps, &ONE_DECIMAL, &TEN, &TEN_MICRONS);
 
-    let vault = setup_new_vault(
+    let vault = setup_old_vault(
         deps.as_mut(),
         env.clone(),
         OldVault {
@@ -2861,7 +2861,7 @@ fn for_inactive_vault_with_dca_plus_and_unfinished_standard_dca_does_not_disburs
 
     set_fin_price(&mut deps, &ONE_DECIMAL, &TEN, &TEN_MICRONS);
 
-    let vault = setup_new_vault(
+    let vault = setup_old_vault(
         deps.as_mut(),
         env.clone(),
         OldVault {

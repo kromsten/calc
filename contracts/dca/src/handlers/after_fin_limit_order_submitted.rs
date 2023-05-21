@@ -1,6 +1,6 @@
 use crate::error::ContractError;
-use crate::state::cache::CACHE;
-use crate::state::triggers::{get_trigger, save_trigger};
+use crate::state::old_cache::OLD_CACHE;
+use crate::state::old_triggers::{get_old_trigger, save_old_trigger};
 use base::helpers::message_helpers::get_attribute_in_event;
 use base::triggers::trigger::{OldTrigger, OldTriggerConfiguration};
 use cosmwasm_std::SubMsgResult;
@@ -20,14 +20,14 @@ pub fn after_fin_limit_order_submitted(
                     .parse::<Uint128>()
                     .expect("returned order_idx should be a valid Uint128");
 
-            let cache = CACHE.load(deps.storage)?;
+            let cache = OLD_CACHE.load(deps.storage)?;
 
-            let trigger = get_trigger(deps.storage, cache.vault_id)?
+            let trigger = get_old_trigger(deps.storage, cache.vault_id)?
                 .expect(format!("fin limit order trigger for vault {:?}", cache.vault_id).as_str());
 
             match trigger.configuration {
                 OldTriggerConfiguration::FinLimitOrder { target_price, .. } => {
-                    save_trigger(
+                    save_old_trigger(
                         deps.storage,
                         OldTrigger {
                             vault_id: cache.vault_id,

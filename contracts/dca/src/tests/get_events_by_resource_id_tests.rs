@@ -1,4 +1,4 @@
-use super::{helpers::instantiate_contract, mocks::ADMIN};
+use super::{old_helpers::instantiate_contract, old_mocks::ADMIN};
 use crate::{
     handlers::get_events_by_resource_id::get_events_by_resource_id,
     state::events::{create_event, create_events},

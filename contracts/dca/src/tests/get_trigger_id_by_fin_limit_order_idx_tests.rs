@@ -1,4 +1,4 @@
-use super::mocks::{fin_contract_unfilled_limit_order, MockApp, DENOM_UKUJI, USER};
+use super::old_mocks::{fin_contract_unfilled_limit_order, MockApp, DENOM_UKUJI, USER};
 use crate::{
     constants::{ONE, TEN},
     msg::{ExecuteMsg, QueryMsg, TriggerIdResponse, VaultResponse},

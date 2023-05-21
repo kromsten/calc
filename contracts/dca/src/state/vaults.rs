@@ -1,4 +1,4 @@
-use super::{config::get_config, triggers::get_trigger};
+use super::{config::get_config, old_triggers::get_old_trigger};
 use crate::{
     helpers::state::fetch_and_increment_counter,
     types::{
@@ -36,6 +36,10 @@ fn vault_store<'a>() -> IndexedMap<'a, u128, VaultData, VaultIndexes<'a>> {
         ),
     };
     IndexedMap::new("vaults_v8", indexes)
+}
+
+pub fn migrate_vault(store: &mut dyn Storage, vault: Vault) -> StdResult<()> {
+    vault_store().save(store, vault.id.into(), &vault.into())
 }
 
 pub fn save_vault(store: &mut dyn Storage, vault_builder: VaultBuilder) -> StdResult<Vault> {
@@ -155,7 +159,7 @@ impl From<Vault> for VaultData {
 }
 
 fn vault_from(store: &dyn Storage, data: &VaultData) -> StdResult<Vault> {
-    let trigger = get_trigger(store, data.id)?.map(|t| t.configuration);
+    let trigger = get_old_trigger(store, data.id)?.map(|t| t.configuration);
 
     Ok(Vault {
         id: data.id,

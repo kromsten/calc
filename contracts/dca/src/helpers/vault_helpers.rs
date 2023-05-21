@@ -843,8 +843,8 @@ mod simulate_standard_dca_execution_tests {
         handlers::get_events_by_resource_id::get_events_by_resource_id,
         helpers::fee_helpers::{get_delegation_fee_rate, get_swap_fee_rate},
         tests::{
-            helpers::{instantiate_contract, set_fin_price},
-            mocks::{ADMIN, DENOM_UKUJI},
+            old_helpers::{instantiate_contract, set_fin_price},
+            old_mocks::{ADMIN, DENOM_UKUJI},
         },
         types::{dca_plus_config::DcaPlusConfig, old_vault::OldVault},
     };

@@ -1,109 +1,240 @@
-use base::triggers::trigger::{OldTrigger, OldTriggerConfiguration};
-use cosmwasm_std::{StdResult, Storage, Uint128};
-use cw_storage_plus::Map;
+use crate::types::trigger::{Trigger, TriggerConfiguration};
+use cosmwasm_std::{Order, StdResult, Storage, Timestamp, Uint128};
+use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, MultiIndex, UniqueIndex};
+use std::marker::PhantomData;
 
-pub const TRIGGERS: Map<u128, OldTrigger> = Map::new("triggers_v20");
-
-pub const TRIGGER_ID_BY_FIN_LIMIT_ORDER_IDX: Map<u128, u128> =
-    Map::new("trigger_id_by_fin_limit_order_idx_v20");
-
-pub const TRIGGER_IDS_BY_TARGET_TIME: Map<u64, Vec<u128>> =
-    Map::new("trigger_ids_by_target_time_v20");
-
-pub fn save_trigger(store: &mut dyn Storage, trigger: OldTrigger) -> StdResult<Uint128> {
-    TRIGGERS.save(store, trigger.vault_id.into(), &trigger)?;
-    match trigger.configuration {
-        OldTriggerConfiguration::Time { target_time } => {
-            let existing_triggers_at_time =
-                TRIGGER_IDS_BY_TARGET_TIME.may_load(store, target_time.seconds())?;
-
-            match existing_triggers_at_time {
-                Some(_) => {
-                    let mut triggers = existing_triggers_at_time.unwrap();
-                    triggers.push(trigger.vault_id.into());
-                    TRIGGER_IDS_BY_TARGET_TIME.save(store, target_time.seconds(), &triggers)?;
-                }
-                None => {
-                    let mut triggers = Vec::new();
-                    triggers.push(trigger.vault_id.into());
-                    TRIGGER_IDS_BY_TARGET_TIME.save(store, target_time.seconds(), &triggers)?;
-                }
-            }
-        }
-        OldTriggerConfiguration::FinLimitOrder { order_idx, .. } => {
-            if order_idx.is_some() {
-                TRIGGER_ID_BY_FIN_LIMIT_ORDER_IDX.save(
-                    store,
-                    order_idx.unwrap().u128(),
-                    &trigger.vault_id.into(),
-                )?;
-            }
-        }
-    }
-    Ok(trigger.vault_id)
+struct TriggerIndexes<'a> {
+    pub due_date: MultiIndex<'a, u64, Trigger, u128>,
+    pub order_idx: UniqueIndex<'a, u128, Trigger, u128>,
 }
 
-pub fn get_trigger(store: &dyn Storage, vault_id: Uint128) -> StdResult<Option<OldTrigger>> {
-    TRIGGERS.may_load(store, vault_id.into())
+impl<'a> IndexList<Trigger> for TriggerIndexes<'a> {
+    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Trigger>> + '_> {
+        let v: Vec<&dyn Index<Trigger>> = vec![&self.due_date, &self.order_idx];
+        Box::new(v.into_iter())
+    }
 }
 
-pub fn delete_trigger(store: &mut dyn Storage, vault_id: Uint128) -> StdResult<Uint128> {
-    let trigger = TRIGGERS.load(store, vault_id.into())?;
-    TRIGGERS.remove(store, trigger.vault_id.into());
-    match trigger.configuration {
-        OldTriggerConfiguration::Time { target_time } => {
-            let existing_triggers_at_time =
-                TRIGGER_IDS_BY_TARGET_TIME.may_load(store, target_time.seconds())?;
-
-            if existing_triggers_at_time.is_some() {
-                let mut triggers = existing_triggers_at_time.unwrap();
-                triggers.retain(|&t| t != vault_id.into());
-                if triggers.is_empty() {
-                    TRIGGER_IDS_BY_TARGET_TIME.remove(store, target_time.seconds());
-                } else {
-                    TRIGGER_IDS_BY_TARGET_TIME.save(store, target_time.seconds(), &triggers)?;
+fn trigger_store<'a>() -> IndexedMap<'a, u128, Trigger, TriggerIndexes<'a>> {
+    let indexes = TriggerIndexes {
+        due_date: MultiIndex::new(
+            |_, trigger| match trigger.configuration {
+                TriggerConfiguration::Time { target_time } => target_time.seconds(),
+                _ => u64::MAX,
+            },
+            "triggers_v30",
+            "triggers_v30__due_date",
+        ),
+        order_idx: UniqueIndex::new(
+            |trigger| match trigger.configuration {
+                TriggerConfiguration::FinLimitOrder { order_idx, .. } => {
+                    order_idx.unwrap_or_default().into()
                 }
-            }
-        }
-        OldTriggerConfiguration::FinLimitOrder { order_idx, .. } => {
-            if order_idx.is_some() {
-                TRIGGER_ID_BY_FIN_LIMIT_ORDER_IDX.remove(store, order_idx.unwrap().u128());
-            }
-        }
-    }
-    Ok(trigger.vault_id)
+                _ => u128::MAX - trigger.vault_id.u128(), // allows a unique entry that will never be found via an order_idx
+            },
+            "triggers_v30__order_idx",
+        ),
+    };
+    IndexedMap::new("triggers_v30", indexes)
+}
+
+pub fn save_trigger(store: &mut dyn Storage, trigger: Trigger) -> StdResult<()> {
+    trigger_store().save(store, trigger.vault_id.into(), &trigger)
+}
+
+pub fn get_trigger(store: &dyn Storage, vault_id: Uint128) -> StdResult<Option<Trigger>> {
+    trigger_store().may_load(store, vault_id.into())
+}
+
+pub fn delete_trigger(store: &mut dyn Storage, vault_id: Uint128) -> StdResult<()> {
+    trigger_store().remove(store, vault_id.into())
+}
+
+pub fn get_time_triggers(
+    store: &dyn Storage,
+    due_before: Timestamp,
+    limit: Option<u16>,
+) -> StdResult<Vec<Uint128>> {
+    Ok(trigger_store()
+        .idx
+        .due_date
+        .range(
+            store,
+            None,
+            Some(Bound::Inclusive((
+                (due_before.seconds(), u128::MAX),
+                PhantomData,
+            ))),
+            Order::Ascending,
+        )
+        .take(limit.unwrap_or(30) as usize)
+        .flat_map(|result| result.map(|(_, trigger)| trigger.vault_id))
+        .collect::<Vec<Uint128>>())
+}
+
+pub fn get_trigger_by_order_idx(
+    store: &dyn Storage,
+    order_idx: Uint128,
+) -> StdResult<Option<Trigger>> {
+    trigger_store()
+        .idx
+        .order_idx
+        .item(store, order_idx.into())
+        .map(|result| result.map(|(_, trigger)| trigger))
 }
 
 #[cfg(test)]
-mod remove_trigger_tests {
-    use cosmwasm_std::{testing::MockStorage, Timestamp};
-
+mod tests {
     use super::*;
+    use crate::types::trigger::TriggerConfiguration;
+    use cosmwasm_std::testing::{mock_dependencies, mock_env};
+    use cosmwasm_std::{Decimal, Uint128};
 
     #[test]
-    fn removes_timestamp_from_index_if_no_triggers_at_time() {
-        let mut store = MockStorage::new();
-        let target_time = Timestamp::from_seconds(100);
+    fn fetches_trigger_ids_for_time_triggers_that_are_due() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
 
-        let trigger = OldTrigger {
+        let trigger = Trigger {
             vault_id: Uint128::from(1u128),
-            configuration: OldTriggerConfiguration::Time { target_time },
+            configuration: TriggerConfiguration::Time {
+                target_time: env.block.time,
+            },
         };
 
-        save_trigger(&mut store, trigger.clone()).unwrap();
+        save_trigger(&mut deps.storage, trigger.clone()).unwrap();
 
-        let triggers_at_time = TRIGGER_IDS_BY_TARGET_TIME
-            .may_load(&store, target_time.seconds())
-            .unwrap();
+        let trigger_ids =
+            get_time_triggers(&deps.storage, env.block.time.plus_seconds(10), Some(100)).unwrap();
 
-        assert_eq!(triggers_at_time.unwrap().len(), 1);
+        assert_eq!(trigger_ids, vec![trigger.vault_id]);
+    }
 
-        delete_trigger(&mut store, trigger.vault_id).unwrap();
+    #[test]
+    fn does_not_fetch_trigger_ids_for_time_triggers_that_are_not_due() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
 
-        let triggers_at_time = TRIGGER_IDS_BY_TARGET_TIME
-            .may_load(&store, target_time.seconds())
-            .unwrap();
+        let trigger = Trigger {
+            vault_id: Uint128::from(1u128),
+            configuration: TriggerConfiguration::Time {
+                target_time: env.block.time.plus_seconds(10),
+            },
+        };
 
-        assert!(triggers_at_time.is_none());
+        save_trigger(&mut deps.storage, trigger.clone()).unwrap();
+
+        let trigger_ids = get_time_triggers(&deps.storage, env.block.time, Some(100)).unwrap();
+
+        assert!(trigger_ids.is_empty());
+    }
+
+    #[test]
+    fn stores_and_fetches_separate_time_triggers_with_the_same_target_time() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+        let trigger_1 = Trigger {
+            vault_id: Uint128::from(1u128),
+            configuration: TriggerConfiguration::Time {
+                target_time: env.block.time,
+            },
+        };
+        let trigger_2 = Trigger {
+            vault_id: Uint128::from(2u128),
+            configuration: TriggerConfiguration::Time {
+                target_time: env.block.time,
+            },
+        };
+
+        save_trigger(&mut deps.storage, trigger_1.clone()).unwrap();
+        save_trigger(&mut deps.storage, trigger_2.clone()).unwrap();
+
+        let trigger_ids = get_time_triggers(&deps.storage, env.block.time, Some(100)).unwrap();
+
+        assert_eq!(trigger_ids, vec![trigger_1.vault_id, trigger_2.vault_id]);
+    }
+
+    #[test]
+    fn deletes_trigger_by_vault_id() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+        let trigger = Trigger {
+            vault_id: Uint128::from(1u128),
+            configuration: TriggerConfiguration::Time {
+                target_time: env.block.time,
+            },
+        };
+
+        save_trigger(&mut deps.storage, trigger.clone()).unwrap();
+
+        let trigger_ids_before_delete =
+            get_time_triggers(&deps.storage, env.block.time, Some(100)).unwrap();
+
+        delete_trigger(&mut deps.storage, trigger.vault_id).unwrap();
+
+        let trigger_ids_after_delete =
+            get_time_triggers(&deps.storage, env.block.time, Some(100)).unwrap();
+
+        assert_eq!(trigger_ids_before_delete, vec![trigger.vault_id]);
+        assert!(trigger_ids_after_delete.is_empty());
+    }
+
+    #[test]
+    fn keeps_other_triggers_when_deleting_trigger_by_vault_id() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+        let trigger_1 = Trigger {
+            vault_id: Uint128::from(1u128),
+            configuration: TriggerConfiguration::Time {
+                target_time: env.block.time,
+            },
+        };
+        let trigger_2 = Trigger {
+            vault_id: Uint128::from(2u128),
+            configuration: TriggerConfiguration::Time {
+                target_time: env.block.time,
+            },
+        };
+
+        save_trigger(&mut deps.storage, trigger_1.clone()).unwrap();
+        save_trigger(&mut deps.storage, trigger_2.clone()).unwrap();
+
+        let trigger_ids_before_delete =
+            get_time_triggers(&deps.storage, env.block.time, Some(100)).unwrap();
+
+        delete_trigger(&mut deps.storage, trigger_1.vault_id).unwrap();
+
+        let trigger_ids_after_delete =
+            get_time_triggers(&deps.storage, env.block.time, Some(100)).unwrap();
+
+        assert_eq!(
+            trigger_ids_before_delete,
+            vec![trigger_1.vault_id, trigger_2.vault_id]
+        );
+        assert_eq!(trigger_ids_after_delete, vec![trigger_2.vault_id]);
+    }
+
+    #[test]
+    fn fetches_price_trigger_by_order_id() {
+        let mut deps = mock_dependencies();
+
+        let order_idx = Uint128::new(17);
+
+        let trigger = Trigger {
+            vault_id: Uint128::from(1u128),
+            configuration: TriggerConfiguration::FinLimitOrder {
+                target_price: Decimal::percent(120),
+                order_idx: Some(order_idx),
+            },
+        };
+
+        save_trigger(&mut deps.storage, trigger.clone()).unwrap();
+
+        let fetched_trigger = get_trigger_by_order_idx(&deps.storage, order_idx).unwrap();
+
+        assert_eq!(fetched_trigger, Some(trigger));
     }
 }
