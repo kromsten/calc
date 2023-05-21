@@ -22,17 +22,18 @@ use crate::handlers::get_trigger_id_by_fin_limit_order_idx::get_trigger_id_by_fi
 use crate::handlers::get_vault::get_old_vault_handler;
 use crate::handlers::get_vaults::get_vaults_handler;
 use crate::handlers::get_vaults_by_address::get_vaults_by_address;
+use crate::handlers::migrate::migrate_handler;
 use crate::handlers::migrate_vaults::migrate_vaults_handler;
 use crate::handlers::remove_custom_swap_fee::remove_custom_swap_fee;
 use crate::handlers::update_config::update_config_handler;
 use crate::handlers::update_swap_adjustments_handler::update_swap_adjustments_handler;
 use crate::handlers::update_vault::update_vault_handler;
-use crate::helpers::validation_helpers::{
-    assert_addresses_are_valid, assert_dca_plus_escrow_level_is_less_than_100_percent,
+use crate::helpers::validation::{
+    assert_dca_plus_escrow_level_is_less_than_100_percent,
     assert_fee_collector_addresses_are_valid, assert_fee_collector_allocations_add_up_to_one,
 };
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use crate::state::config::{get_config, update_config, Config};
+use crate::state::old_config::{get_old_config, update_old_config, OldConfig};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{
     entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
@@ -49,33 +50,7 @@ pub const AFTER_BANK_SWAP_REPLY_ID: u64 = 4;
 
 #[entry_point]
 pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
-    deps.api.addr_validate(&msg.admin.to_string())?;
-    deps.api
-        .addr_validate(&msg.staking_router_address.to_string())?;
-
-    assert_addresses_are_valid(deps.as_ref(), &msg.executors, "executor")?;
-    assert_fee_collector_addresses_are_valid(deps.as_ref(), &msg.fee_collectors)?;
-    assert_fee_collector_allocations_add_up_to_one(&msg.fee_collectors)?;
-    assert_dca_plus_escrow_level_is_less_than_100_percent(msg.dca_plus_escrow_level)?;
-
-    update_config(
-        deps.storage,
-        Config {
-            admin: msg.admin.clone(),
-            executors: msg.executors,
-            fee_collectors: msg.fee_collectors,
-            default_swap_fee_percent: msg.swap_fee_percent,
-            delegation_fee_percent: msg.delegation_fee_percent,
-            staking_router_address: msg.staking_router_address,
-            default_page_limit: msg.page_limit,
-            paused: msg.paused,
-            risk_weighted_average_escrow_level: msg.dca_plus_escrow_level,
-        },
-    )?;
-
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-
-    Ok(Response::new().add_attribute("method", "migrate"))
+    migrate_handler(deps, msg)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -93,9 +68,9 @@ pub fn instantiate(
     assert_fee_collector_allocations_add_up_to_one(&msg.fee_collectors)?;
     assert_dca_plus_escrow_level_is_less_than_100_percent(msg.dca_plus_escrow_level)?;
 
-    update_config(
+    update_old_config(
         deps.storage,
-        Config {
+        OldConfig {
             admin: msg.admin.clone(),
             executors: msg.executors,
             fee_collectors: msg.fee_collectors,
@@ -271,7 +246,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             limit,
         )?),
         QueryMsg::GetConfig {} => to_binary(&ConfigResponse {
-            config: get_config(deps.storage)?,
+            config: get_old_config(deps.storage)?,
         }),
         QueryMsg::GetDcaPlusPerformance { vault_id } => {
             to_binary(&get_dca_plus_performance_handler(deps, vault_id)?)

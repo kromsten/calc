@@ -5,13 +5,15 @@ use crate::{
     handlers::get_vault::get_old_vault_handler,
     msg::{EventsResponse, InstantiateMsg, QueryMsg, VaultResponse},
     state::{
-        config::FeeCollector,
         old_cache::{Cache, OLD_CACHE},
         old_pairs::PAIRS,
         old_triggers::save_old_trigger,
         old_vaults::{save_old_vault, update_old_vault},
     },
-    types::{dca_plus_config::DcaPlusConfig, old_vault::OldVault, vault_builder::VaultBuilder},
+    types::{
+        dca_plus_config::DcaPlusConfig, fee_collector::FeeCollector, old_vault::OldVault,
+        vault_builder::VaultBuilder,
+    },
 };
 use base::{
     events::event::Event,

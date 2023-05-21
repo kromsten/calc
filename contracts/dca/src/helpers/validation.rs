@@ -1,5 +1,6 @@
 use crate::error::ContractError;
-use crate::state::config::{get_config, FeeCollector};
+use crate::state::old_config::get_old_config;
+use crate::types::fee_collector::FeeCollector;
 use crate::types::old_vault::OldVault;
 use base::pair::Pair;
 use base::vaults::vault::{OldDestination, OldVaultStatus, PostExecutionAction};
@@ -15,7 +16,7 @@ pub fn assert_exactly_one_asset(funds: Vec<Coin>) -> Result<(), ContractError> {
 }
 
 pub fn assert_contract_is_not_paused(storage: &mut dyn Storage) -> Result<(), ContractError> {
-    let config = get_config(storage)?;
+    let config = get_old_config(storage)?;
     if config.paused {
         return Err(ContractError::CustomError {
             val: "contract is paused".to_string(),
@@ -28,7 +29,7 @@ pub fn assert_sender_is_admin(
     storage: &mut dyn Storage,
     sender: Addr,
 ) -> Result<(), ContractError> {
-    let config = get_config(storage)?;
+    let config = get_old_config(storage)?;
     if sender != config.admin {
         return Err(ContractError::Unauthorized {});
     }
@@ -40,7 +41,7 @@ pub fn assert_sender_is_executor(
     env: &Env,
     sender: &Addr,
 ) -> Result<(), ContractError> {
-    let config = get_config(storage)?;
+    let config = get_old_config(storage)?;
     if !config.executors.contains(&sender)
         && sender != &config.admin
         && sender != &env.contract.address
@@ -62,7 +63,7 @@ pub fn assert_sender_is_admin_or_vault_owner(
     vault_owner: Addr,
     sender: Addr,
 ) -> Result<(), ContractError> {
-    let config = get_config(storage)?;
+    let config = get_old_config(storage)?;
     if sender != config.admin && sender != vault_owner {
         return Err(ContractError::Unauthorized {});
     }
@@ -74,7 +75,7 @@ pub fn assert_sender_is_contract_or_admin(
     sender: &Addr,
     env: &Env,
 ) -> Result<(), ContractError> {
-    let config = get_config(storage)?;
+    let config = get_old_config(storage)?;
     if sender != &config.admin && sender != &env.contract.address {
         return Err(ContractError::Unauthorized {});
     }
@@ -194,6 +195,57 @@ pub fn assert_fee_collector_addresses_are_valid(
     Ok(())
 }
 
+pub fn assert_fee_level_is_valid(swap_fee_percent: &Decimal) -> Result<(), ContractError> {
+    if swap_fee_percent > &Decimal::percent(5) {
+        return Err(ContractError::CustomError {
+            val: "fee level cannot be larger than 5%".to_string(),
+        });
+    }
+    Ok(())
+}
+
+pub fn assert_risk_weighted_average_escrow_level_is_no_greater_than_100_percent(
+    risk_weighted_average_escrow_level: Decimal,
+) -> Result<(), ContractError> {
+    if risk_weighted_average_escrow_level > Decimal::percent(100) {
+        return Err(ContractError::CustomError {
+            val: "risk_weighted_average_escrow_level cannot be greater than 100%".to_string(),
+        });
+    }
+    Ok(())
+}
+
+pub fn assert_twap_period_is_valid(twap_period: u64) -> Result<(), ContractError> {
+    if !(30..=3600).contains(&twap_period) {
+        return Err(ContractError::CustomError {
+            val: "twap_period must be between 30 and 3600".to_string(),
+        });
+    }
+    Ok(())
+}
+
+pub fn assert_slippage_tolerance_is_less_than_or_equal_to_one(
+    slippage_tolerance: Decimal,
+) -> Result<(), ContractError> {
+    if slippage_tolerance > Decimal::percent(100) {
+        return Err(ContractError::CustomError {
+            val: "default slippage tolerance must be less than or equal to 1".to_string(),
+        });
+    }
+    Ok(())
+}
+
+pub fn assert_no_more_than_10_fee_collectors(
+    fee_collectors: &[FeeCollector],
+) -> Result<(), ContractError> {
+    if fee_collectors.len() > 10 {
+        return Err(ContractError::CustomError {
+            val: String::from("no more than 10 fee collectors are allowed"),
+        });
+    }
+    Ok(())
+}
+
 pub fn assert_destination_validator_addresses_are_valid(
     deps: Deps,
     destinations: &[OldDestination],
@@ -300,18 +352,17 @@ pub fn assert_no_destination_allocations_are_zero(
     Ok(())
 }
 
-pub fn assert_page_limit_is_valid(
-    storage: &dyn Storage,
-    limit: Option<u16>,
-) -> Result<(), ContractError> {
-    let config = get_config(storage)?;
-    if limit.unwrap_or(30) > config.default_page_limit {
-        return Err(ContractError::CustomError {
-            val: format!(
-                "limit cannot be greater than {}.",
-                config.default_page_limit
-            ),
-        });
+pub fn assert_page_limit_is_valid(limit: Option<u16>) -> Result<(), ContractError> {
+    if let Some(limit) = limit {
+        if limit < 30 {
+            return Err(ContractError::CustomError {
+                val: "limit cannot be less than 30.".to_string(),
+            });
+        } else if limit > 1000 {
+            return Err(ContractError::CustomError {
+                val: "limit cannot be greater than 1000.".to_string(),
+            });
+        }
     }
     Ok(())
 }

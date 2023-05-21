@@ -1,6 +1,6 @@
 use crate::{
     contract::{AFTER_BANK_SWAP_REPLY_ID, AFTER_Z_DELEGATION_REPLY_ID},
-    state::config::get_config,
+    state::old_config::get_old_config,
     types::old_vault::OldVault,
 };
 use base::{helpers::math_helpers::checked_mul, vaults::vault::PostExecutionAction};
@@ -14,7 +14,7 @@ pub fn get_disbursement_messages(
     vault: &OldVault,
     amount_to_disburse: Uint128,
 ) -> StdResult<Vec<SubMsg>> {
-    let config = get_config(deps.storage)?;
+    let config = get_old_config(deps.storage)?;
 
     Ok(vault
         .destinations

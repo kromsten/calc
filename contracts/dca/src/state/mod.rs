@@ -1,9 +1,11 @@
 pub mod cache;
 pub mod config;
+pub mod custom_fees;
 pub mod data_fixes;
 pub mod disburse_escrow_tasks;
 pub mod events;
 pub mod old_cache;
+pub mod old_config;
 pub mod old_pairs;
 pub mod old_triggers;
 pub mod old_vaults;

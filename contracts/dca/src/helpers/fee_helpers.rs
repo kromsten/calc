@@ -1,8 +1,8 @@
 use std::cmp::min;
 
 use crate::{
-    state::config::{get_config, get_custom_fee, FeeCollector},
-    types::old_vault::OldVault,
+    state::{custom_fees::get_custom_fee, old_config::get_old_config},
+    types::{fee_collector::FeeCollector, old_vault::OldVault},
 };
 use base::{
     helpers::{community_pool::create_fund_community_pool_msg, math_helpers::checked_mul},
@@ -19,7 +19,7 @@ pub fn get_fee_messages(
     denom: String,
     skip_community_pool: bool,
 ) -> StdResult<Vec<SubMsg>> {
-    let config = get_config(deps.storage)?;
+    let config = get_old_config(deps.storage)?;
 
     let fee_collectors = config
         .fee_collectors
@@ -82,7 +82,7 @@ pub fn get_fee_messages(
 }
 
 pub fn get_delegation_fee_rate(storage: &dyn Storage, vault: &OldVault) -> StdResult<Decimal> {
-    let config = get_config(storage)?;
+    let config = get_old_config(storage)?;
 
     Ok(config.delegation_fee_percent.checked_mul(
         vault
@@ -95,12 +95,12 @@ pub fn get_delegation_fee_rate(storage: &dyn Storage, vault: &OldVault) -> StdRe
 }
 
 pub fn get_swap_fee_rate(storage: &dyn Storage, vault: &OldVault) -> StdResult<Decimal> {
-    let config = get_config(storage)?;
+    let config = get_old_config(storage)?;
 
     Ok(
         match (
-            get_custom_fee(storage, vault.get_swap_denom()),
-            get_custom_fee(storage, vault.get_receive_denom()),
+            get_custom_fee(storage, vault.get_swap_denom())?,
+            get_custom_fee(storage, vault.get_receive_denom())?,
         ) {
             (Some(swap_denom_fee_percent), Some(receive_denom_fee_percent)) => {
                 min(swap_denom_fee_percent, receive_denom_fee_percent)

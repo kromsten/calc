@@ -1,4 +1,4 @@
-use crate::helpers::validation_helpers::assert_page_limit_is_valid;
+use crate::helpers::validation::assert_page_limit_is_valid;
 use crate::msg::DataFixesResponse;
 use crate::state::data_fixes::{data_fix_store, DataFix};
 use cosmwasm_std::{from_binary, Deps, Order, StdResult, Uint128};
@@ -10,7 +10,7 @@ pub fn get_data_fixes_by_resource_id(
     start_after: Option<u64>,
     limit: Option<u16>,
 ) -> StdResult<DataFixesResponse> {
-    assert_page_limit_is_valid(deps.storage, limit)?;
+    assert_page_limit_is_valid(limit)?;
 
     let fixes = data_fix_store()
         .idx

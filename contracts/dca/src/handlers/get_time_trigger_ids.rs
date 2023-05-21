@@ -1,5 +1,5 @@
 use crate::{
-    helpers::validation_helpers::assert_page_limit_is_valid, msg::TriggerIdsResponse,
+    helpers::validation::assert_page_limit_is_valid, msg::TriggerIdsResponse,
     state::old_triggers::TRIGGER_IDS_BY_TARGET_TIME,
 };
 use cosmwasm_std::{Deps, Env, Order, StdResult, Uint128};
@@ -10,7 +10,7 @@ pub fn get_time_trigger_ids(
     env: Env,
     limit: Option<u16>,
 ) -> StdResult<TriggerIdsResponse> {
-    assert_page_limit_is_valid(deps.storage, limit)?;
+    assert_page_limit_is_valid(limit)?;
 
     Ok(TriggerIdsResponse {
         trigger_ids: TRIGGER_IDS_BY_TARGET_TIME

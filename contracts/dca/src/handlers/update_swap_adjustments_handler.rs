@@ -1,5 +1,5 @@
 use crate::{
-    error::ContractError, helpers::validation_helpers::assert_sender_is_executor,
+    error::ContractError, helpers::validation::assert_sender_is_executor,
     state::swap_adjustments::update_swap_adjustments,
 };
 use cosmwasm_std::{Decimal, DepsMut, Env, MessageInfo, Response};

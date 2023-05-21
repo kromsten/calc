@@ -1,5 +1,5 @@
 use crate::state::events::event_store;
-use crate::{helpers::validation_helpers::assert_page_limit_is_valid, msg::EventsResponse};
+use crate::{helpers::validation::assert_page_limit_is_valid, msg::EventsResponse};
 use base::events::event::Event;
 use cosmwasm_std::{from_binary, Deps, Order, StdResult, Uint128};
 use cw_storage_plus::Bound;
@@ -10,7 +10,7 @@ pub fn get_events_by_resource_id(
     start_after: Option<u64>,
     limit: Option<u16>,
 ) -> StdResult<EventsResponse> {
-    assert_page_limit_is_valid(deps.storage, limit)?;
+    assert_page_limit_is_valid(limit)?;
 
     let events = event_store()
         .idx

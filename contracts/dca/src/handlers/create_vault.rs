@@ -1,7 +1,7 @@
 use crate::constants::TWO_MICRONS;
 use crate::contract::AFTER_FIN_LIMIT_ORDER_SUBMITTED_REPLY_ID;
 use crate::error::ContractError;
-use crate::helpers::validation_helpers::{
+use crate::helpers::validation::{
     assert_address_is_valid, assert_contract_is_not_paused, assert_delegation_denom_is_stakeable,
     assert_destination_allocations_add_up_to_one, assert_destination_send_addresses_are_valid,
     assert_destination_validator_addresses_are_valid, assert_destinations_limit_is_not_breached,
@@ -11,9 +11,9 @@ use crate::helpers::validation_helpers::{
 };
 use crate::helpers::vault_helpers::get_dca_plus_model_id;
 use crate::msg::ExecuteMsg;
-use crate::state::config::get_config;
 use crate::state::events::create_event;
 use crate::state::old_cache::{Cache, OLD_CACHE};
+use crate::state::old_config::get_old_config;
 use crate::state::old_pairs::PAIRS;
 use crate::state::old_triggers::save_old_trigger;
 use crate::state::old_vaults::{save_old_vault, update_old_vault};
@@ -88,7 +88,7 @@ pub fn create_vault(
 
     assert_delegation_denom_is_stakeable(&destinations, receive_denom.clone())?;
 
-    let config = get_config(deps.storage)?;
+    let config = get_old_config(deps.storage)?;
 
     let dca_plus_config = use_dca_plus.map_or(None, |use_dca_plus| {
         if !use_dca_plus {

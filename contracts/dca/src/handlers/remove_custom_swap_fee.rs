@@ -1,5 +1,5 @@
-use crate::helpers::validation_helpers::assert_sender_is_admin;
-use crate::{error::ContractError, state::config::remove_custom_fee};
+use crate::helpers::validation::assert_sender_is_admin;
+use crate::{error::ContractError, state::custom_fees::remove_custom_fee};
 use cosmwasm_std::DepsMut;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{MessageInfo, Response};

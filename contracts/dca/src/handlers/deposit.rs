@@ -1,5 +1,5 @@
 use crate::error::ContractError;
-use crate::helpers::validation_helpers::{
+use crate::helpers::validation::{
     assert_contract_is_not_paused, assert_deposited_denom_matches_send_denom,
     assert_exactly_one_asset, assert_vault_is_not_cancelled,
 };

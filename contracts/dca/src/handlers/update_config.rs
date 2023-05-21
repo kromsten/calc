@@ -1,11 +1,12 @@
 use crate::{
     error::ContractError,
-    helpers::validation_helpers::{
+    helpers::validation::{
         assert_addresses_are_valid, assert_dca_plus_escrow_level_is_less_than_100_percent,
         assert_fee_collector_addresses_are_valid, assert_fee_collector_allocations_add_up_to_one,
         assert_sender_is_admin,
     },
-    state::config::{get_config, update_config, Config, FeeCollector},
+    state::old_config::{get_old_config, update_old_config, OldConfig},
+    types::fee_collector::FeeCollector,
 };
 use cosmwasm_std::{Addr, Decimal, DepsMut, MessageInfo, Response};
 
@@ -22,9 +23,9 @@ pub fn update_config_handler(
     dca_plus_escrow_level: Option<Decimal>,
 ) -> Result<Response, ContractError> {
     assert_sender_is_admin(deps.storage, info.sender)?;
-    let existing_config = get_config(deps.storage)?;
+    let existing_config = get_old_config(deps.storage)?;
 
-    let config = Config {
+    let config = OldConfig {
         admin: existing_config.admin,
         executors: executors.unwrap_or(existing_config.executors),
         fee_collectors: fee_collectors.unwrap_or(existing_config.fee_collectors),
@@ -50,7 +51,7 @@ pub fn update_config_handler(
         config.risk_weighted_average_escrow_level,
     )?;
 
-    let config = update_config(deps.storage, config)?;
+    let config = update_old_config(deps.storage, config)?;
 
     Ok(Response::default()
         .add_attribute("method", "update_config")

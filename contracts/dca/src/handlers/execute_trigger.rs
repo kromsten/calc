@@ -1,8 +1,6 @@
 use crate::contract::AFTER_FIN_SWAP_REPLY_ID;
 use crate::error::ContractError;
-use crate::helpers::validation_helpers::{
-    assert_contract_is_not_paused, assert_target_time_is_in_past,
-};
+use crate::helpers::validation::{assert_contract_is_not_paused, assert_target_time_is_in_past};
 use crate::helpers::vault_helpers::{
     get_swap_amount, price_threshold_exceeded, simulate_standard_dca_execution,
 };

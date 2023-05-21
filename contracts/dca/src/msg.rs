@@ -1,5 +1,6 @@
-use crate::state::config::{Config, FeeCollector};
 use crate::state::data_fixes::DataFix;
+use crate::state::old_config::OldConfig;
+use crate::types::fee_collector::FeeCollector;
 use crate::types::old_vault::OldVault;
 use base::events::event::Event;
 use base::pair::Pair;
@@ -24,17 +25,17 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub struct MigrateMsg {
-    pub admin: Addr,
     pub executors: Vec<Addr>,
     pub fee_collectors: Vec<FeeCollector>,
-    pub swap_fee_percent: Decimal,
-    pub delegation_fee_percent: Decimal,
-    pub staking_router_address: Addr,
-    pub page_limit: u16,
+    pub default_swap_fee_percent: Decimal,
+    pub weighted_scale_swap_fee_percent: Decimal,
+    pub automation_fee_percent: Decimal,
+    pub default_page_limit: u16,
     pub paused: bool,
-    pub dca_plus_escrow_level: Decimal,
+    pub risk_weighted_average_escrow_level: Decimal,
+    pub twap_period: u64,
+    pub default_slippage_tolerance: Decimal,
 }
-
 #[cw_serde]
 pub enum ExecuteMsg {
     CreatePair {
@@ -159,7 +160,7 @@ pub enum QueryMsg {
 
 #[cw_serde]
 pub struct ConfigResponse {
-    pub config: Config,
+    pub config: OldConfig,
 }
 
 #[cw_serde]
