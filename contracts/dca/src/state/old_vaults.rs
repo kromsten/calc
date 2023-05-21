@@ -6,7 +6,7 @@ use crate::types::{
     vault_builder::VaultBuilder,
 };
 use base::{
-    pair::Pair,
+    pair::OldPair,
     triggers::trigger::{OldTimeInterval, OldTriggerConfiguration},
     vaults::vault::{DestinationDeprecated, OldDestination, OldVaultStatus},
 };
@@ -63,7 +63,7 @@ impl From<OldVault> for VaultDTO {
 
 fn old_vault_from(
     data: &VaultDTO,
-    pair: Pair,
+    pair: OldPair,
     trigger: Option<OldTriggerConfiguration>,
     destinations: &mut Vec<OldDestination>,
     dca_plus_config: Option<DcaPlusConfig>,
@@ -252,7 +252,7 @@ mod destination_store_tests {
     use super::*;
     use crate::types::vault_builder::VaultBuilder;
     use base::{
-        pair::Pair,
+        pair::OldPair,
         triggers::trigger::OldTimeInterval,
         vaults::vault::{OldDestination, OldVaultStatus, PostExecutionAction},
     };
@@ -273,7 +273,7 @@ mod destination_store_tests {
             }],
             OldVaultStatus::Active,
             Coin::new(1000u128, "ukuji".to_string()),
-            Pair {
+            OldPair {
                 address: Addr::unchecked("pair"),
                 base_denom: "demo".to_string(),
                 quote_denom: "ukuji".to_string(),
@@ -317,7 +317,7 @@ mod destination_store_tests {
         let env = mock_env();
         let store = deps.as_mut().storage;
 
-        let pair = Pair {
+        let pair = OldPair {
             address: Addr::unchecked("pair"),
             base_denom: "demo".to_string(),
             quote_denom: "ukuji".to_string(),
@@ -341,7 +341,7 @@ mod destination_store_tests {
         let env = mock_env();
         let store = deps.as_mut().storage;
 
-        let pair = Pair {
+        let pair = OldPair {
             address: Addr::unchecked("pair"),
             base_denom: "demo".to_string(),
             quote_denom: "ukuji".to_string(),
@@ -368,7 +368,7 @@ mod destination_store_tests {
         let env = mock_env();
         let store = deps.as_mut().storage;
 
-        let pair = Pair {
+        let pair = OldPair {
             address: Addr::unchecked("pair"),
             base_denom: "demo".to_string(),
             quote_denom: "ukuji".to_string(),
@@ -404,7 +404,7 @@ mod destination_store_tests {
         let env = mock_env();
         let store = deps.as_mut().storage;
 
-        let pair = Pair {
+        let pair = OldPair {
             address: Addr::unchecked("pair"),
             base_denom: "demo".to_string(),
             quote_denom: "ukuji".to_string(),
@@ -444,7 +444,7 @@ mod destination_store_tests {
         let env = mock_env();
         let store = deps.as_mut().storage;
 
-        let pair = Pair {
+        let pair = OldPair {
             address: Addr::unchecked("pair"),
             base_denom: "demo".to_string(),
             quote_denom: "ukuji".to_string(),

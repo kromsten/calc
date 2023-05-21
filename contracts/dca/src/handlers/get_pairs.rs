@@ -1,5 +1,5 @@
 use crate::{msg::PairsResponse, state::old_pairs::PAIRS};
-use base::pair::Pair;
+use base::pair::OldPair;
 use cosmwasm_std::{Deps, Order, StdResult};
 
 pub fn get_pairs(deps: Deps) -> StdResult<PairsResponse> {
@@ -7,7 +7,7 @@ pub fn get_pairs(deps: Deps) -> StdResult<PairsResponse> {
         .range(deps.storage, None, None, Order::Ascending)
         .collect();
 
-    let pairs: Vec<Pair> = all_pairs_on_heap
+    let pairs: Vec<OldPair> = all_pairs_on_heap
         .unwrap()
         .iter()
         .map(|p| p.1.clone())

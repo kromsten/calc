@@ -1,7 +1,7 @@
 use crate::error::ContractError;
 use crate::helpers::validation::assert_sender_is_admin;
 use crate::state::old_pairs::PAIRS;
-use base::pair::Pair;
+use base::pair::OldPair;
 use cosmwasm_std::{Addr, DepsMut};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{Env, MessageInfo, Response};
@@ -18,7 +18,7 @@ pub fn create_pair(
 
     deps.api.addr_validate(&address.to_string())?;
 
-    let pair: Pair = Pair {
+    let pair: OldPair = OldPair {
         address: address.clone(),
         base_denom: base_denom.clone(),
         quote_denom: quote_denom.clone(),

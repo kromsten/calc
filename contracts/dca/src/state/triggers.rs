@@ -3,7 +3,7 @@ use cosmwasm_std::{Order, StdResult, Storage, Timestamp, Uint128};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, MultiIndex, UniqueIndex};
 use std::marker::PhantomData;
 
-struct TriggerIndexes<'a> {
+pub(crate) struct TriggerIndexes<'a> {
     pub due_date: MultiIndex<'a, u64, Trigger, u128>,
     pub order_idx: UniqueIndex<'a, u128, Trigger, u128>,
 }
@@ -15,7 +15,7 @@ impl<'a> IndexList<Trigger> for TriggerIndexes<'a> {
     }
 }
 
-fn trigger_store<'a>() -> IndexedMap<'a, u128, Trigger, TriggerIndexes<'a>> {
+pub(crate) fn trigger_store<'a>() -> IndexedMap<'a, u128, Trigger, TriggerIndexes<'a>> {
     let indexes = TriggerIndexes {
         due_date: MultiIndex::new(
             |_, trigger| match trigger.configuration {

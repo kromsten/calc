@@ -227,7 +227,7 @@ mod get_swap_amount_tests {
     };
 
     use super::*;
-    use base::{pair::Pair, vaults::vault::OldVaultStatus};
+    use base::{pair::OldPair, vaults::vault::OldVaultStatus};
     use cosmwasm_std::{
         coin,
         testing::{mock_dependencies, mock_env},
@@ -283,7 +283,7 @@ mod get_swap_amount_tests {
             destinations: vec![],
             status: OldVaultStatus::Active,
             balance: coin(balance.into(), "base"),
-            pair: Pair {
+            pair: OldPair {
                 address: Addr::unchecked("pair"),
                 base_denom: "base".to_string(),
                 quote_denom: "quote".to_string(),
@@ -341,7 +341,7 @@ mod get_swap_amount_tests {
             destinations: vec![],
             status: OldVaultStatus::Active,
             balance: coin(balance.into(), "base"),
-            pair: Pair {
+            pair: OldPair {
                 address: Addr::unchecked("pair"),
                 base_denom: "base".to_string(),
                 quote_denom: "quote".to_string(),
@@ -398,7 +398,7 @@ mod get_swap_amount_tests {
             destinations: vec![],
             status: OldVaultStatus::Active,
             balance: coin(balance.into(), "base"),
-            pair: Pair {
+            pair: OldPair {
                 address: Addr::unchecked("pair"),
                 base_denom: "base".to_string(),
                 quote_denom: "quote".to_string(),
@@ -455,7 +455,7 @@ mod get_swap_amount_tests {
             destinations: vec![],
             status: OldVaultStatus::Active,
             balance: coin(balance.into(), "base"),
-            pair: Pair {
+            pair: OldPair {
                 address: Addr::unchecked("pair"),
                 base_denom: "base".to_string(),
                 quote_denom: "quote".to_string(),
@@ -505,7 +505,7 @@ mod get_swap_amount_tests {
             destinations: vec![],
             status: OldVaultStatus::Active,
             balance: coin(balance.into(), "base"),
-            pair: Pair {
+            pair: OldPair {
                 address: Addr::unchecked("pair"),
                 base_denom: "base".to_string(),
                 quote_denom: "quote".to_string(),
@@ -645,7 +645,7 @@ mod get_dca_plus_performance_factor_tests {
         helpers::vault_helpers::get_dca_plus_performance_factor,
         types::{dca_plus_config::DcaPlusConfig, old_vault::OldVault},
     };
-    use base::{pair::Pair, triggers::trigger::OldTimeInterval, vaults::vault::OldVaultStatus};
+    use base::{pair::OldPair, triggers::trigger::OldTimeInterval, vaults::vault::OldVaultStatus};
     use cosmwasm_std::{Addr, Coin, Decimal, Timestamp, Uint128};
     use std::str::FromStr;
 
@@ -694,7 +694,7 @@ mod get_dca_plus_performance_factor_tests {
             label: None,
             destinations: vec![],
             status: OldVaultStatus::Active,
-            pair: Pair {
+            pair: OldPair {
                 address: Addr::unchecked("pair"),
                 base_denom: "receive_denom".to_string(),
                 quote_denom: "swap_denom".to_string(),

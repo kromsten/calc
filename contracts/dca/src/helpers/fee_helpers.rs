@@ -150,7 +150,7 @@ mod tests {
         helpers::fee_helpers::get_dca_plus_performance_fee,
         types::{dca_plus_config::DcaPlusConfig, old_vault::OldVault},
     };
-    use base::{pair::Pair, triggers::trigger::OldTimeInterval, vaults::vault::OldVaultStatus};
+    use base::{pair::OldPair, triggers::trigger::OldTimeInterval, vaults::vault::OldVaultStatus};
     use cosmwasm_std::{Addr, Coin, Decimal, Timestamp, Uint128};
     use std::str::FromStr;
 
@@ -199,7 +199,7 @@ mod tests {
             label: None,
             destinations: vec![],
             status: OldVaultStatus::Active,
-            pair: Pair {
+            pair: OldPair {
                 address: Addr::unchecked("pair"),
                 base_denom: "receive_denom".to_string(),
                 quote_denom: "swap_denom".to_string(),

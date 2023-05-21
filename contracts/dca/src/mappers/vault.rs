@@ -1,15 +1,17 @@
 use super::destination::destination_from;
 use crate::types::{
     old_vault::OldVault,
+    pair::Pair,
     performance_assessment_strategy::PerformanceAssessmentStrategy,
     position_type::PositionType,
     swap_adjustment_strategy::{BaseDenom, SwapAdjustmentStrategy},
     time_interval::TimeInterval,
-    trigger::TriggerConfiguration,
+    trigger::{Trigger, TriggerConfiguration},
     vault::{Vault, VaultStatus},
 };
 use base::{
-    triggers::trigger::{OldTimeInterval, OldTriggerConfiguration},
+    pair::OldPair,
+    triggers::trigger::{OldTimeInterval, OldTrigger, OldTriggerConfiguration},
     vaults::vault::OldVaultStatus,
 };
 use cosmwasm_std::{Coin, Decimal, Env};
@@ -119,6 +121,25 @@ impl From<OldTriggerConfiguration> for TriggerConfiguration {
             OldTriggerConfiguration::Time { target_time } => {
                 TriggerConfiguration::Time { target_time }
             }
+        }
+    }
+}
+
+impl From<OldTrigger> for Trigger {
+    fn from(old_trigger: OldTrigger) -> Self {
+        Trigger {
+            vault_id: old_trigger.vault_id,
+            configuration: old_trigger.configuration.into(),
+        }
+    }
+}
+
+impl From<OldPair> for Pair {
+    fn from(old_pair: OldPair) -> Self {
+        Pair {
+            base_denom: old_pair.base_denom,
+            quote_denom: old_pair.quote_denom,
+            address: old_pair.address,
         }
     }
 }

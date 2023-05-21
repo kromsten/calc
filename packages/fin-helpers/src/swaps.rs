@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use crate::queries::query_belief_price;
-use base::pair::Pair;
+use base::pair::OldPair;
 use cosmwasm_std::{
     to_binary, Coin, CosmosMsg, Decimal, Decimal256, QuerierWrapper, ReplyOn, StdResult, SubMsg,
     WasmMsg,
@@ -10,7 +10,7 @@ use kujira::fin::ExecuteMsg;
 
 pub fn create_fin_swap_message(
     querier: &QuerierWrapper,
-    pair: Pair,
+    pair: OldPair,
     swap_amount: Coin,
     slippage_tolerance: Option<Decimal>,
     reply_id: Option<u64>,

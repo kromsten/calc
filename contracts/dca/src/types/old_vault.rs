@@ -1,7 +1,7 @@
 use super::dca_plus_config::DcaPlusConfig;
 use base::{
     helpers::time_helpers::get_total_execution_duration,
-    pair::Pair,
+    pair::OldPair,
     triggers::trigger::{OldTimeInterval, OldTriggerConfiguration},
     vaults::vault::{OldDestination, OldVaultStatus},
 };
@@ -20,7 +20,7 @@ pub struct OldVault {
     pub destinations: Vec<OldDestination>,
     pub status: OldVaultStatus,
     pub balance: Coin,
-    pub pair: Pair,
+    pub pair: OldPair,
     pub swap_amount: Uint128,
     pub slippage_tolerance: Option<Decimal>,
     pub minimum_receive_amount: Option<Uint128>,
@@ -207,7 +207,7 @@ mod has_sufficient_funds_tests {
             vec![],
             OldVaultStatus::Active,
             coin(balance, "quote"),
-            Pair {
+            OldPair {
                 address: Addr::unchecked("pair"),
                 base_denom: "base".to_string(),
                 quote_denom: "quote".to_string(),
@@ -329,7 +329,7 @@ mod get_target_price_tests {
                     OldPositionType::Exit => "base",
                 },
             ),
-            pair: Pair {
+            pair: OldPair {
                 address: Addr::unchecked("pair"),
                 base_denom: "base".to_string(),
                 quote_denom: "quote".to_string(),
@@ -368,7 +368,7 @@ mod get_expected_execution_completed_date_tests {
     };
 
     use super::OldVault;
-    use base::{pair::Pair, triggers::trigger::OldTimeInterval, vaults::vault::OldVaultStatus};
+    use base::{pair::OldPair, triggers::trigger::OldTimeInterval, vaults::vault::OldVaultStatus};
     use cosmwasm_std::{coin, testing::mock_env, Addr, Coin, Decimal, Timestamp, Uint128};
 
     #[test]
@@ -458,7 +458,7 @@ mod get_expected_execution_completed_date_tests {
             destinations: vec![],
             status: OldVaultStatus::Active,
             balance: Coin::new(balance.into(), "quote"),
-            pair: Pair {
+            pair: OldPair {
                 address: Addr::unchecked("pair"),
                 base_denom: "base".to_string(),
                 quote_denom: "quote".to_string(),

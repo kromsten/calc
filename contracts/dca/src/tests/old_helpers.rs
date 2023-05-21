@@ -17,7 +17,7 @@ use crate::{
 };
 use base::{
     events::event::Event,
-    pair::Pair,
+    pair::OldPair,
     triggers::trigger::{OldTimeInterval, OldTrigger, OldTriggerConfiguration},
     vaults::vault::{OldDestination, OldVaultStatus, PostExecutionAction},
 };
@@ -115,7 +115,7 @@ impl Default for OldVault {
             status: OldVaultStatus::Active,
             balance: Coin::new(TEN.into(), DENOM_UKUJI),
             swap_amount: ONE,
-            pair: Pair {
+            pair: OldPair {
                 address: Addr::unchecked("pair"),
                 base_denom: DENOM_UKUJI.to_string(),
                 quote_denom: DENOM_UTEST.to_string(),
@@ -180,7 +180,7 @@ pub fn setup_vault(
     status: OldVaultStatus,
     is_dca_plus: bool,
 ) -> OldVault {
-    let pair = Pair {
+    let pair = OldPair {
         address: Addr::unchecked("pair"),
         base_denom: DENOM_UKUJI.to_string(),
         quote_denom: DENOM_UTEST.to_string(),

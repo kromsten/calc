@@ -2,13 +2,13 @@ use crate::{
     msg::{FinBookResponse, FinConfigResponse, FinOrderResponseWithoutDenom},
     position_type::OldPositionType,
 };
-use base::{pair::Pair, price_type::PriceType};
+use base::{pair::OldPair, price_type::PriceType};
 use cosmwasm_std::{Addr, Coin, Decimal, QuerierWrapper, StdError, StdResult, Uint128};
 use kujira::fin::QueryMsg as FinQueryMsg;
 
 fn query_quote_price(
     querier: &QuerierWrapper,
-    pair: &Pair,
+    pair: &OldPair,
     swap_denom: &str,
 ) -> StdResult<Decimal> {
     let position_type = match swap_denom == pair.quote_denom {
@@ -41,7 +41,7 @@ fn query_quote_price(
 
 pub fn query_belief_price(
     querier: &QuerierWrapper,
-    pair: &Pair,
+    pair: &OldPair,
     swap_denom: &str,
 ) -> StdResult<Decimal> {
     let position_type = match swap_denom == pair.quote_denom {
@@ -61,7 +61,7 @@ pub fn query_belief_price(
 
 pub fn query_price(
     querier: &QuerierWrapper,
-    pair: &Pair,
+    pair: &OldPair,
     swap_amount: &Coin,
     price_type: PriceType,
 ) -> StdResult<Decimal> {
@@ -191,7 +191,7 @@ mod query_quote_price_tests {
         queries::query_quote_price,
         test_helpers::set_fin_price,
     };
-    use base::pair::Pair;
+    use base::pair::OldPair;
     use cosmwasm_std::{
         from_binary, testing::mock_dependencies, to_binary, Addr, QueryRequest, WasmQuery,
     };
@@ -221,7 +221,7 @@ mod query_quote_price_tests {
 
         let response = query_quote_price(
             &deps.as_ref().querier,
-            &Pair {
+            &OldPair {
                 address: Addr::unchecked("pair"),
                 base_denom: "base".to_string(),
                 quote_denom: "quote".to_string(),
@@ -257,7 +257,7 @@ mod query_quote_price_tests {
 
         let response = query_quote_price(
             &deps.as_ref().querier,
-            &Pair {
+            &OldPair {
                 address: Addr::unchecked("pair"),
                 base_denom: "base".to_string(),
                 quote_denom: "quote".to_string(),
@@ -277,7 +277,7 @@ mod query_belief_price_tests {
         queries::{query_belief_price, query_quote_price},
         test_helpers::set_fin_price,
     };
-    use base::pair::Pair;
+    use base::pair::OldPair;
     use cosmwasm_std::{testing::mock_dependencies, Addr, Decimal};
 
     #[test]
@@ -286,7 +286,7 @@ mod query_belief_price_tests {
 
         set_fin_price(&mut deps, &ONE_DECIMAL, &ONE, &TEN_MICRONS);
 
-        let pair = &Pair {
+        let pair = &OldPair {
             address: Addr::unchecked("pair"),
             base_denom: "base".to_string(),
             quote_denom: "quote".to_string(),
@@ -296,7 +296,7 @@ mod query_belief_price_tests {
 
         let belief_price = query_belief_price(
             &deps.as_ref().querier,
-            &Pair {
+            &OldPair {
                 address: Addr::unchecked("pair"),
                 base_denom: "base".to_string(),
                 quote_denom: "quote".to_string(),
@@ -314,7 +314,7 @@ mod query_belief_price_tests {
 
         set_fin_price(&mut deps, &ONE_DECIMAL, &ONE, &TEN_MICRONS);
 
-        let pair = &Pair {
+        let pair = &OldPair {
             address: Addr::unchecked("pair"),
             base_denom: "base".to_string(),
             quote_denom: "quote".to_string(),
@@ -334,7 +334,7 @@ mod query_actual_price_tests {
         queries::{query_belief_price, query_price},
         test_helpers::set_fin_price,
     };
-    use base::{pair::Pair, price_type::PriceType};
+    use base::{pair::OldPair, price_type::PriceType};
     use cosmwasm_std::{testing::mock_dependencies, Addr, Coin};
 
     #[test]
@@ -343,7 +343,7 @@ mod query_actual_price_tests {
 
         set_fin_price(&mut deps, &ONE_DECIMAL, &ONE, &TEN_MICRONS);
 
-        let pair = Pair {
+        let pair = OldPair {
             address: Addr::unchecked("pair"),
             base_denom: "base".to_string(),
             quote_denom: "quote".to_string(),
@@ -368,7 +368,7 @@ mod query_actual_price_tests {
 
         set_fin_price(&mut deps, &ONE_DECIMAL, &ONE, &TEN_MICRONS);
 
-        let pair = Pair {
+        let pair = OldPair {
             address: Addr::unchecked("pair"),
             base_denom: "base".to_string(),
             quote_denom: "quote".to_string(),
@@ -395,7 +395,7 @@ mod query_actual_price_tests {
 
         set_fin_price(&mut deps, &ONE_DECIMAL, &ONE, &TEN_MICRONS);
 
-        let pair = Pair {
+        let pair = OldPair {
             address: Addr::unchecked("pair"),
             base_denom: "base".to_string(),
             quote_denom: "quote".to_string(),
@@ -422,7 +422,7 @@ mod query_actual_price_tests {
 
         set_fin_price(&mut deps, &ONE_DECIMAL, &ONE, &TEN_MICRONS);
 
-        let pair = Pair {
+        let pair = OldPair {
             address: Addr::unchecked("pair"),
             base_denom: "base".to_string(),
             quote_denom: "quote".to_string(),
@@ -450,7 +450,7 @@ mod query_actual_price_tests {
 
         set_fin_price(&mut deps, &ONE_DECIMAL, &ONE, &TEN_MICRONS);
 
-        let pair = Pair {
+        let pair = OldPair {
             address: Addr::unchecked("pair"),
             base_denom: "base".to_string(),
             quote_denom: "quote".to_string(),

@@ -1,6 +1,6 @@
 use super::{dca_plus_config::DcaPlusConfig, old_vault::OldVault};
 use base::{
-    pair::Pair,
+    pair::OldPair,
     triggers::trigger::OldTimeInterval,
     vaults::vault::{OldDestination, OldVaultStatus},
 };
@@ -14,7 +14,7 @@ pub struct VaultBuilder {
     pub destinations: Vec<OldDestination>,
     pub status: OldVaultStatus,
     pub balance: Coin,
-    pub pair: Pair,
+    pub pair: OldPair,
     pub swap_amount: Uint128,
     pub position_type: Option<OldPositionType>,
     pub slippage_tolerance: Option<Decimal>,
@@ -34,7 +34,7 @@ impl VaultBuilder {
         destinations: Vec<OldDestination>,
         status: OldVaultStatus,
         balance: Coin,
-        pair: Pair,
+        pair: OldPair,
         swap_amount: Uint128,
         position_type: Option<OldPositionType>,
         slippage_tolerance: Option<Decimal>,

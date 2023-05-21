@@ -3,7 +3,7 @@ use crate::state::old_config::OldConfig;
 use crate::types::fee_collector::FeeCollector;
 use crate::types::old_vault::OldVault;
 use base::events::event::Event;
-use base::pair::Pair;
+use base::pair::OldPair;
 use base::triggers::trigger::OldTimeInterval;
 use base::vaults::vault::{OldDestination, OldVaultStatus};
 use cosmwasm_schema::{cw_serde, QueryResponses};
@@ -165,7 +165,7 @@ pub struct ConfigResponse {
 
 #[cw_serde]
 pub struct PairsResponse {
-    pub pairs: Vec<Pair>,
+    pub pairs: Vec<OldPair>,
 }
 
 #[cw_serde]
