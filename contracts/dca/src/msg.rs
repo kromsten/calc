@@ -1,26 +1,31 @@
-use crate::state::data_fixes::DataFix;
-use crate::state::old_config::OldConfig;
+use crate::types::config::Config;
+use crate::types::destination::Destination;
+use crate::types::event::Event;
 use crate::types::fee_collector::FeeCollector;
-use crate::types::old_vault::OldVault;
-use base::events::event::Event;
-use base::pair::OldPair;
-use base::triggers::trigger::OldTimeInterval;
-use base::vaults::vault::{OldDestination, OldVaultStatus};
+use crate::types::pair::Pair;
+use crate::types::performance_assessment_strategy::PerformanceAssessmentStrategyParams;
+use crate::types::position_type::PositionType;
+use crate::types::swap_adjustment_strategy::{
+    SwapAdjustmentStrategy, SwapAdjustmentStrategyParams,
+};
+use crate::types::time_interval::TimeInterval;
+use crate::types::vault::{Vault, VaultStatus};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Coin, Decimal, Uint128, Uint64};
-use fin_helpers::position_type::OldPositionType;
 
 #[cw_serde]
 pub struct InstantiateMsg {
     pub admin: Addr,
     pub executors: Vec<Addr>,
     pub fee_collectors: Vec<FeeCollector>,
-    pub swap_fee_percent: Decimal,
-    pub delegation_fee_percent: Decimal,
-    pub staking_router_address: Addr,
-    pub page_limit: u16,
+    pub default_swap_fee_percent: Decimal,
+    pub weighted_scale_swap_fee_percent: Decimal,
+    pub automation_fee_percent: Decimal,
+    pub default_page_limit: u16,
     pub paused: bool,
-    pub dca_plus_escrow_level: Decimal,
+    pub risk_weighted_average_escrow_level: Decimal,
+    pub twap_period: u64,
+    pub default_slippage_tolerance: Decimal,
 }
 
 #[cw_serde]
@@ -36,33 +41,36 @@ pub struct MigrateMsg {
     pub twap_period: u64,
     pub default_slippage_tolerance: Decimal,
 }
+
 #[cw_serde]
 pub enum ExecuteMsg {
     CreatePair {
-        address: Addr,
         base_denom: String,
         quote_denom: String,
-    },
-    DeletePair {
         address: Addr,
     },
     CreateVault {
         owner: Option<Addr>,
         label: Option<String>,
-        destinations: Option<Vec<OldDestination>>,
-        pair_address: Addr,
-        position_type: Option<OldPositionType>,
+        destinations: Option<Vec<Destination>>,
+        target_denom: String,
+        position_type: Option<PositionType>,
         slippage_tolerance: Option<Decimal>,
         minimum_receive_amount: Option<Uint128>,
         swap_amount: Uint128,
-        time_interval: OldTimeInterval,
+        time_interval: TimeInterval,
         target_start_time_utc_seconds: Option<Uint64>,
-        target_receive_amount: Option<Uint128>,
-        use_dca_plus: Option<bool>,
+        performance_assessment_strategy: Option<PerformanceAssessmentStrategyParams>,
+        swap_adjustment_strategy: Option<SwapAdjustmentStrategyParams>,
     },
     Deposit {
         address: Addr,
         vault_id: Uint128,
+    },
+    UpdateVault {
+        vault_id: Uint128,
+        label: Option<String>,
+        destinations: Option<Vec<Destination>>,
     },
     CancelVault {
         vault_id: Uint128,
@@ -73,17 +81,14 @@ pub enum ExecuteMsg {
     UpdateConfig {
         executors: Option<Vec<Addr>>,
         fee_collectors: Option<Vec<FeeCollector>>,
-        swap_fee_percent: Option<Decimal>,
-        delegation_fee_percent: Option<Decimal>,
-        staking_router_address: Option<Addr>,
-        page_limit: Option<u16>,
+        default_swap_fee_percent: Option<Decimal>,
+        weighted_scale_swap_fee_percent: Option<Decimal>,
+        automation_fee_percent: Option<Decimal>,
+        default_page_limit: Option<u16>,
         paused: Option<bool>,
-        dca_plus_escrow_level: Option<Decimal>,
-    },
-    UpdateVault {
-        address: Addr,
-        vault_id: Uint128,
-        label: Option<String>,
+        risk_weighted_average_escrow_level: Option<Decimal>,
+        twap_period: Option<u64>,
+        default_slippage_tolerance: Option<Decimal>,
     },
     CreateCustomSwapFee {
         denom: String,
@@ -92,9 +97,9 @@ pub enum ExecuteMsg {
     RemoveCustomSwapFee {
         denom: String,
     },
-    UpdateSwapAdjustments {
-        position_type: OldPositionType,
-        adjustments: Vec<(u8, Decimal)>,
+    UpdateSwapAdjustment {
+        strategy: SwapAdjustmentStrategy,
+        value: Decimal,
     },
     DisburseEscrow {
         vault_id: Uint128,
@@ -102,9 +107,6 @@ pub enum ExecuteMsg {
     ZDelegate {
         delegator_address: Addr,
         validator_address: Addr,
-    },
-    MigrateVaults {
-        limit: u16,
     },
 }
 
@@ -117,14 +119,12 @@ pub enum QueryMsg {
     GetPairs {},
     #[returns(TriggerIdsResponse)]
     GetTimeTriggerIds { limit: Option<u16> },
-    #[returns(TriggerIdResponse)]
-    GetTriggerIdByFinLimitOrderIdx { order_idx: Uint128 },
     #[returns(VaultResponse)]
     GetVault { vault_id: Uint128 },
     #[returns(VaultsResponse)]
     GetVaultsByAddress {
         address: Addr,
-        status: Option<OldVaultStatus>,
+        status: Option<VaultStatus>,
         start_after: Option<Uint128>,
         limit: Option<u16>,
     },
@@ -132,40 +132,37 @@ pub enum QueryMsg {
     GetVaults {
         start_after: Option<Uint128>,
         limit: Option<u16>,
+        reverse: Option<bool>,
     },
     #[returns(EventsResponse)]
     GetEventsByResourceId {
         resource_id: Uint128,
         start_after: Option<u64>,
         limit: Option<u16>,
+        reverse: Option<bool>,
     },
     #[returns(EventsResponse)]
     GetEvents {
         start_after: Option<u64>,
         limit: Option<u16>,
+        reverse: Option<bool>,
     },
     #[returns(CustomFeesResponse)]
     GetCustomSwapFees {},
-    #[returns(DataFixesResponse)]
-    GetDataFixesByResourceId {
-        resource_id: Uint128,
-        start_after: Option<u64>,
-        limit: Option<u16>,
-    },
-    #[returns(DcaPlusPerformanceResponse)]
-    GetDcaPlusPerformance { vault_id: Uint128 },
+    #[returns(VaultPerformanceResponse)]
+    GetVaultPerformance { vault_id: Uint128 },
     #[returns(DisburseEscrowTasksResponse)]
     GetDisburseEscrowTasks { limit: Option<u16> },
 }
 
 #[cw_serde]
 pub struct ConfigResponse {
-    pub config: OldConfig,
+    pub config: Config,
 }
 
 #[cw_serde]
 pub struct PairsResponse {
-    pub pairs: Vec<OldPair>,
+    pub pairs: Vec<Pair>,
 }
 
 #[cw_serde]
@@ -180,18 +177,18 @@ pub struct TriggerIdsResponse {
 
 #[cw_serde]
 pub struct VaultResponse {
-    pub vault: OldVault,
+    pub vault: Vault,
 }
 
 #[cw_serde]
-pub struct DcaPlusPerformanceResponse {
+pub struct VaultPerformanceResponse {
     pub fee: Coin,
     pub factor: Decimal,
 }
 
 #[cw_serde]
 pub struct VaultsResponse {
-    pub vaults: Vec<OldVault>,
+    pub vaults: Vec<Vault>,
 }
 
 #[cw_serde]
@@ -202,11 +199,6 @@ pub struct EventsResponse {
 #[cw_serde]
 pub struct CustomFeesResponse {
     pub custom_fees: Vec<(String, Decimal)>,
-}
-
-#[cw_serde]
-pub struct DataFixesResponse {
-    pub fixes: Vec<DataFix>,
 }
 
 #[cw_serde]

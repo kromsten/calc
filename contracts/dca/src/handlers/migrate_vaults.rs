@@ -41,9 +41,8 @@ mod migrate_vaults_tests {
         handlers::migrate_vaults::migrate_vaults_handler,
         state::{old_vaults::get_old_vaults, vaults::get_vaults},
         tests::{
-            helpers::setup_vault,
-            old_helpers::{instantiate_contract, setup_old_vault},
-            old_mocks::ADMIN,
+            helpers::instantiate_contract, helpers::setup_vault, mocks::ADMIN,
+            old_helpers::setup_old_vault,
         },
         types::{old_vault::OldVault, vault::Vault},
     };

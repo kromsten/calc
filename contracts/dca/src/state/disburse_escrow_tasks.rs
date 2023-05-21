@@ -2,6 +2,8 @@ use cosmwasm_std::{Order, StdResult, Storage, Timestamp, Uint128};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, MultiIndex};
 use std::marker::PhantomData;
 
+use super::config::get_config;
+
 struct DisburseEscrowTaskIndexes<'a> {
     pub due_date: MultiIndex<'a, u64, (u64, u128), u128>,
 }
@@ -17,12 +19,12 @@ fn disburse_escrow_task_store<'a>(
 ) -> IndexedMap<'a, u128, (u64, u128), DisburseEscrowTaskIndexes<'a>> {
     let indexes = DisburseEscrowTaskIndexes {
         due_date: MultiIndex::new(
-            |_, (due_date, _)| due_date.clone(),
-            "disburse_escrow_task_v20",
-            "disburse_escrow_task_v20__due_date",
+            |_, (due_date, _)| *due_date,
+            "disburse_escrow_task_v8",
+            "disburse_escrow_task_v8__due_date",
         ),
     };
-    IndexedMap::new("disburse_escrow_task_v20", indexes)
+    IndexedMap::new("disburse_escrow_task_v8", indexes)
 }
 
 pub fn save_disburse_escrow_task(
@@ -35,6 +37,15 @@ pub fn save_disburse_escrow_task(
         vault_id.into(),
         &(due_date.seconds(), vault_id.into()),
     )
+}
+
+pub fn get_disburse_escrow_task_due_date(
+    store: &dyn Storage,
+    vault_id: Uint128,
+) -> StdResult<Option<Timestamp>> {
+    disburse_escrow_task_store()
+        .may_load(store, vault_id.into())
+        .map(|result| result.map(|(seconds, _)| Timestamp::from_seconds(seconds)))
 }
 
 pub fn get_disburse_escrow_tasks(
@@ -54,7 +65,7 @@ pub fn get_disburse_escrow_tasks(
             ))),
             Order::Ascending,
         )
-        .take(limit.unwrap_or(30) as usize)
+        .take(limit.unwrap_or_else(|| get_config(store).unwrap().default_page_limit) as usize)
         .flat_map(|result| result.map(|(_, (_, vault_id))| vault_id.into()))
         .collect::<Vec<Uint128>>())
 }

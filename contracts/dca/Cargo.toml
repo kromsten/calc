@@ -25,6 +25,7 @@ library = []
 base = { path = "../../packages/base" }
 chrono = { version = "0.4.22", default-features = false }
 cosmwasm-schema = "1.1.1"
+cosmos-sdk-proto = { version = "0.14.0", default-features = false }
 cosmwasm-std = "1.0.0"
 cosmwasm-storage = "1.1.1"
 cw-storage-plus = "0.15.0"
@@ -32,9 +33,9 @@ cw2 = "0.15.0"
 cw20 = "1.0.1"
 fin-helpers = { path = "../../packages/fin-helpers" }
 kujira = "0.7.16"
+prost = "0.11.8"
 schemars = "0.8.10"
 serde = { version = "1.0.144", default-features = false, features = ["derive"] }
-staking-router = { path = "../staking-router" }
 thiserror = { version = "1.0.31" }
 
 [dev-dependencies]

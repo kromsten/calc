@@ -380,6 +380,7 @@ version = "1.5.2"
 dependencies = [
  "base",
  "chrono",
+ "cosmos-sdk-proto 0.14.0",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -389,10 +390,10 @@ dependencies = [
  "cw20",
  "fin-helpers",
  "kujira",
+ "prost 0.11.9",
  "rand",
  "schemars",
  "serde",
- "staking-router",
  "thiserror",
 ]
 
@@ -1006,22 +1007,6 @@ checksum = "67cf02bbac7a337dc36e4f5a693db6c21e7863f45070f7064577eb4367a3212b"
 dependencies = [
  "base64ct",
  "der",
-]
-
-[[package]]
-name = "staking-router"
-version = "1.0.0"
-dependencies = [
- "cosmos-sdk-proto 0.14.0",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-multi-test",
- "cw-storage-plus 0.15.1",
- "cw2 0.15.1",
- "schemars",
- "serde",
- "thiserror",
 ]
 
 [[package]]

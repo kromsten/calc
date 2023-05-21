@@ -1,4 +1,4 @@
-use super::{old_config::get_old_config, old_triggers::get_old_trigger};
+use super::{config::get_config, triggers::get_trigger};
 use crate::{
     helpers::state::fetch_and_increment_counter,
     types::{
@@ -57,7 +57,7 @@ pub fn get_vaults_by_address(
     store: &dyn Storage,
     address: Addr,
     status: Option<VaultStatus>,
-    start_after: Option<u128>,
+    start_after: Option<Uint128>,
     limit: Option<u16>,
 ) -> StdResult<Vec<Vault>> {
     let partition = match status {
@@ -75,7 +75,7 @@ pub fn get_vaults_by_address(
             None,
             cosmwasm_std::Order::Ascending,
         )
-        .take(limit.unwrap_or_else(|| get_old_config(store).unwrap().default_page_limit) as usize)
+        .take(limit.unwrap_or_else(|| get_config(store).unwrap().default_page_limit) as usize)
         .flat_map(|result| result.map(|(_, vault_data)| vault_from(store, &vault_data)))
         .flatten()
         .collect::<Vec<Vault>>())
@@ -83,7 +83,7 @@ pub fn get_vaults_by_address(
 
 pub fn get_vaults(
     store: &dyn Storage,
-    start_after: Option<u128>,
+    start_after: Option<Uint128>,
     limit: Option<u16>,
     reverse: Option<bool>,
 ) -> StdResult<Vec<Vault>> {
@@ -97,7 +97,7 @@ pub fn get_vaults(
                 false => Order::Ascending,
             }),
         )
-        .take(limit.unwrap_or_else(|| get_old_config(store).unwrap().default_page_limit) as usize)
+        .take(limit.unwrap_or_else(|| get_config(store).unwrap().default_page_limit) as usize)
         .flat_map(|result| result.map(|(_, vault_data)| vault_from(store, &vault_data)))
         .flatten()
         .collect::<Vec<Vault>>())
@@ -159,7 +159,7 @@ impl From<Vault> for VaultData {
 }
 
 fn vault_from(store: &dyn Storage, data: &VaultData) -> StdResult<Vault> {
-    let trigger = get_old_trigger(store, data.id)?.map(|t| t.configuration);
+    let trigger = get_trigger(store, data.id)?.map(|t| t.configuration);
 
     Ok(Vault {
         id: data.id,

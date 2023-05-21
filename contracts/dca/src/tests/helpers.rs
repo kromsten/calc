@@ -1,9 +1,10 @@
-use super::mocks::{ADMIN, DENOM_STAKE, DENOM_UOSMO, USER, VALIDATOR};
+use super::mocks::{ADMIN, DENOM_UKUJI, DENOM_UUSK, USER, VALIDATOR};
 use crate::{
     constants::{ONE, TEN},
-    msg::ExecuteMsg,
+    contract::instantiate,
+    msg::{ExecuteMsg, InstantiateMsg},
     state::{
-        cache::VAULT_ID_CACHE,
+        cache::VAULT_CACHE,
         pairs::save_pair,
         triggers::save_trigger,
         vaults::{get_vault, update_vault},
@@ -24,52 +25,54 @@ use crate::{
         vault::{Vault, VaultStatus},
     },
 };
-use cosmwasm_std::{to_binary, Addr, BlockInfo, Coin, Decimal, DepsMut, Env, Timestamp, Uint128};
+use cosmwasm_std::{
+    to_binary, Addr, BlockInfo, Coin, Decimal, DepsMut, Env, MessageInfo, Timestamp, Uint128,
+};
 use std::{cmp::max, str::FromStr};
 
-// pub fn instantiate_contract(deps: DepsMut, env: Env, info: MessageInfo) {
-//     let instantiate_message = InstantiateMsg {
-//         admin: Addr::unchecked(ADMIN),
-//         executors: vec![Addr::unchecked("executor")],
-//         fee_collectors: vec![FeeCollector {
-//             address: ADMIN.to_string(),
-//             allocation: Decimal::from_str("1").unwrap(),
-//         }],
-//         default_swap_fee_percent: Decimal::from_str("0.0165").unwrap(),
-//         weighted_scale_swap_fee_percent: Decimal::percent(1),
-//         automation_fee_percent: Decimal::zero(),
-//         default_page_limit: 30,
-//         paused: false,
-//         risk_weighted_average_escrow_level: Decimal::percent(5),
-//         twap_period: 30,
-//         default_slippage_tolerance: Decimal::percent(2),
-//     };
+pub fn instantiate_contract(deps: DepsMut, env: Env, info: MessageInfo) {
+    let instantiate_message = InstantiateMsg {
+        admin: Addr::unchecked(ADMIN),
+        executors: vec![Addr::unchecked("executor")],
+        fee_collectors: vec![FeeCollector {
+            address: ADMIN.to_string(),
+            allocation: Decimal::from_str("1").unwrap(),
+        }],
+        default_swap_fee_percent: Decimal::from_str("0.0165").unwrap(),
+        weighted_scale_swap_fee_percent: Decimal::percent(1),
+        automation_fee_percent: Decimal::zero(),
+        default_page_limit: 30,
+        paused: false,
+        risk_weighted_average_escrow_level: Decimal::percent(5),
+        twap_period: 30,
+        default_slippage_tolerance: Decimal::percent(2),
+    };
 
-//     instantiate(deps, env.clone(), info.clone(), instantiate_message).unwrap();
-// }
+    instantiate(deps, env.clone(), info.clone(), instantiate_message).unwrap();
+}
 
-// pub fn instantiate_contract_with_multiple_fee_collectors(
-//     deps: DepsMut,
-//     env: Env,
-//     info: MessageInfo,
-//     fee_collectors: Vec<FeeCollector>,
-// ) {
-//     let instantiate_message = InstantiateMsg {
-//         admin: Addr::unchecked(ADMIN),
-//         executors: vec![Addr::unchecked("executor")],
-//         fee_collectors,
-//         default_swap_fee_percent: Decimal::from_str("0.0165").unwrap(),
-//         weighted_scale_swap_fee_percent: Decimal::percent(1),
-//         automation_fee_percent: Decimal::from_str("0.0075").unwrap(),
-//         default_page_limit: 30,
-//         paused: false,
-//         risk_weighted_average_escrow_level: Decimal::from_str("0.0075").unwrap(),
-//         twap_period: 30,
-//         default_slippage_tolerance: Decimal::percent(2),
-//     };
+pub fn instantiate_contract_with_multiple_fee_collectors(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    fee_collectors: Vec<FeeCollector>,
+) {
+    let instantiate_message = InstantiateMsg {
+        admin: Addr::unchecked(ADMIN),
+        executors: vec![Addr::unchecked("executor")],
+        fee_collectors,
+        default_swap_fee_percent: Decimal::from_str("0.0165").unwrap(),
+        weighted_scale_swap_fee_percent: Decimal::percent(1),
+        automation_fee_percent: Decimal::from_str("0.0075").unwrap(),
+        default_page_limit: 30,
+        paused: false,
+        risk_weighted_average_escrow_level: Decimal::from_str("0.0075").unwrap(),
+        twap_period: 30,
+        default_slippage_tolerance: Decimal::percent(2),
+    };
 
-//     instantiate(deps, env.clone(), info.clone(), instantiate_message).unwrap();
-// }
+    instantiate(deps, env.clone(), info.clone(), instantiate_message).unwrap();
+}
 
 impl Default for Config {
     fn default() -> Self {
@@ -105,8 +108,8 @@ impl Default for Destination {
 impl Default for Pair {
     fn default() -> Self {
         Self {
-            base_denom: DENOM_UOSMO.to_string(),
-            quote_denom: DENOM_STAKE.to_string(),
+            base_denom: DENOM_UKUJI.to_string(),
+            quote_denom: DENOM_UUSK.to_string(),
             address: Addr::unchecked("pair"),
         }
     }
@@ -131,18 +134,18 @@ impl Default for Vault {
                 ),
             }],
             status: VaultStatus::Active,
-            balance: Coin::new(TEN.into(), DENOM_UOSMO),
-            target_denom: DENOM_STAKE.to_string(),
+            balance: Coin::new(TEN.into(), DENOM_UKUJI),
+            target_denom: DENOM_UUSK.to_string(),
             swap_amount: ONE,
-            slippage_tolerance: Decimal::percent(2),
+            slippage_tolerance: Decimal::percent(10),
             minimum_receive_amount: None,
             time_interval: TimeInterval::Daily,
             started_at: None,
             escrow_level: Decimal::percent(0),
-            deposited_amount: Coin::new(TEN.into(), DENOM_UOSMO),
-            swapped_amount: Coin::new(0, DENOM_UOSMO),
-            received_amount: Coin::new(0, DENOM_STAKE),
-            escrowed_amount: Coin::new(0, DENOM_STAKE),
+            deposited_amount: Coin::new(TEN.into(), DENOM_UKUJI),
+            swapped_amount: Coin::new(0, DENOM_UKUJI),
+            received_amount: Coin::new(0, DENOM_UUSK),
+            escrowed_amount: Coin::new(0, DENOM_UUSK),
             trigger: Some(TriggerConfiguration::Time {
                 target_time: Timestamp::from_seconds(0),
             }),
@@ -173,8 +176,8 @@ impl Default for SwapAdjustmentStrategyParams {
 impl Default for PerformanceAssessmentStrategy {
     fn default() -> Self {
         Self::CompareToStandardDca {
-            swapped_amount: Coin::new(0, DENOM_UOSMO),
-            received_amount: Coin::new(0, DENOM_STAKE),
+            swapped_amount: Coin::new(0, DENOM_UKUJI),
+            received_amount: Coin::new(0, DENOM_UUSK),
         }
     }
 }
@@ -196,8 +199,8 @@ impl Default for EventBuilder {
 impl Default for EventData {
     fn default() -> Self {
         EventData::DcaVaultExecutionTriggered {
-            base_denom: DENOM_STAKE.to_string(),
-            quote_denom: DENOM_UOSMO.to_string(),
+            base_denom: DENOM_UUSK.to_string(),
+            quote_denom: DENOM_UKUJI.to_string(),
             asset_price: Decimal::new(Uint128::one()),
         }
     }
@@ -239,7 +242,7 @@ pub fn setup_vault(deps: DepsMut, env: Env, mut vault: Vault) -> Vault {
         .unwrap();
     }
 
-    VAULT_ID_CACHE.save(deps.storage, &vault.id).unwrap();
+    VAULT_CACHE.save(deps.storage, &vault.id).unwrap();
 
     get_vault(deps.storage, vault.id).unwrap()
 }

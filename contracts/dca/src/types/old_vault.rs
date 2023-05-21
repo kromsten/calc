@@ -363,7 +363,7 @@ mod get_target_price_tests {
 mod get_expected_execution_completed_date_tests {
     use crate::{
         constants::{ONE, TEN},
-        tests::old_mocks::DENOM_UKUJI,
+        tests::mocks::DENOM_UKUJI,
         types::dca_plus_config::DcaPlusConfig,
     };
 

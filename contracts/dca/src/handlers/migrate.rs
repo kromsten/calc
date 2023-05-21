@@ -91,15 +91,6 @@ pub fn migrate_handler(deps: DepsMut, msg: MigrateMsg) -> Result<Response, Contr
 
 #[cfg(test)]
 mod migrate_tests {
-    use base::{
-        pair::OldPair,
-        triggers::trigger::{OldTrigger, OldTriggerConfiguration},
-    };
-    use cosmwasm_std::{
-        testing::{mock_dependencies, mock_env, mock_info},
-        Addr, Decimal, Decimal256, Order, Uint128,
-    };
-
     use crate::{
         contract::migrate,
         msg::MigrateMsg,
@@ -109,12 +100,20 @@ mod migrate_tests {
             pairs::{find_pair, get_pairs},
             triggers::{get_trigger, trigger_store},
         },
-        tests::{old_helpers::instantiate_contract, old_mocks::ADMIN},
+        tests::{helpers::instantiate_contract, mocks::ADMIN},
         types::{
             fee_collector::FeeCollector,
             pair::Pair,
             trigger::{Trigger, TriggerConfiguration},
         },
+    };
+    use base::{
+        pair::OldPair,
+        triggers::trigger::{OldTrigger, OldTriggerConfiguration},
+    };
+    use cosmwasm_std::{
+        testing::{mock_dependencies, mock_env, mock_info},
+        Addr, Decimal, Decimal256, Order, Uint128,
     };
 
     #[test]
