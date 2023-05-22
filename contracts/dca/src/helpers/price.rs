@@ -9,19 +9,19 @@ use kujira::{
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct FinPoolResponse {
     pub quote_price: Decimal,
     pub total_offer_amount: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct FinBookResponse {
     pub base: Vec<FinPoolResponse>,
     pub quote: Vec<FinPoolResponse>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct FinSimulationResponse {
     pub return_amount: Uint128,
     pub spread_amount: Uint128,
@@ -114,7 +114,7 @@ pub fn get_target_price(
     }
 
     let adjustment =
-        Decimal::from_str(&10u128.pow(decimal_delta.abs() as u32).to_string()).unwrap();
+        Decimal::from_str(&10u128.pow(decimal_delta.unsigned_abs() as u32).to_string()).unwrap();
 
     let rounded_price = exact_target_price
         .checked_mul(adjustment)

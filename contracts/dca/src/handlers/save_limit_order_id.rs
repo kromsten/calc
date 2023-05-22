@@ -22,13 +22,12 @@ pub fn save_limit_order_id(deps: DepsMut, reply: Reply) -> Result<Response, Cont
         });
     }
 
-    if let TriggerConfiguration::FinLimitOrder { target_price, .. } = trigger.unwrap().configuration
-    {
+    if let TriggerConfiguration::Price { target_price, .. } = trigger.unwrap().configuration {
         save_trigger(
             deps.storage,
             Trigger {
                 vault_id,
-                configuration: TriggerConfiguration::FinLimitOrder {
+                configuration: TriggerConfiguration::Price {
                     order_idx: Some(order_idx),
                     target_price,
                 },
@@ -75,7 +74,7 @@ mod save_limit_order_id_tests {
             deps.as_mut().storage,
             Trigger {
                 vault_id,
-                configuration: TriggerConfiguration::FinLimitOrder {
+                configuration: TriggerConfiguration::Price {
                     target_price: Decimal::percent(200),
                     order_idx: None,
                 },
@@ -99,7 +98,7 @@ mod save_limit_order_id_tests {
             trigger,
             Some(Trigger {
                 vault_id,
-                configuration: TriggerConfiguration::FinLimitOrder {
+                configuration: TriggerConfiguration::Price {
                     target_price: Decimal::percent(200),
                     order_idx: Some(order_idx),
                 },

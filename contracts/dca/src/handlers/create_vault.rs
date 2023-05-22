@@ -237,7 +237,7 @@ pub fn create_vault_handler(
                 deps.storage,
                 Trigger {
                     vault_id: vault.id,
-                    configuration: TriggerConfiguration::FinLimitOrder {
+                    configuration: TriggerConfiguration::Price {
                         order_idx: None,
                         target_price,
                     },
@@ -1061,7 +1061,7 @@ mod create_vault_tests {
                 escrowed_amount: Coin::new(0, DENOM_UKUJI.to_string()),
                 swap_adjustment_strategy: None,
                 performance_assessment_strategy: None,
-                trigger: Some(TriggerConfiguration::FinLimitOrder {
+                trigger: Some(TriggerConfiguration::Price {
                     target_price: Decimal::percent(200),
                     order_idx: None
                 }),

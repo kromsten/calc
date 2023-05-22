@@ -181,21 +181,19 @@ pub fn get_old_vaults_by_address(
     Ok(partition
         .range(
             store,
-            start_after.map(|vault_id| Bound::exclusive(vault_id)),
+            start_after.map(Bound::exclusive),
             None,
             cosmwasm_std::Order::Ascending,
         )
         .take(limit.unwrap_or(30) as usize)
         .map(|result| {
             let (_, vault_data) =
-                result.expect(format!("a vault with id after {:?}", start_after).as_str());
+                result.unwrap_or_else(|_| panic!("a vault with id after {:?}", start_after));
             old_vault_from(
                 &vault_data,
-                PAIRS.load(store, vault_data.pair_address.clone()).expect(
-                    format!("a pair for pair address {:?}", vault_data.pair_address).as_str(),
-                ),
-                get_old_trigger(store, vault_data.id.into())
-                    .expect(format!("a trigger for vault id {}", vault_data.id).as_str())
+                PAIRS.load(store, vault_data.pair_address.clone()).unwrap_or_else(|_| panic!("a pair for pair address {:?}", vault_data.pair_address)),
+                get_old_trigger(store, vault_data.id)
+                    .unwrap_or_else(|_| panic!("a trigger for vault id {}", vault_data.id))
                     .map(|trigger| trigger.configuration),
                 &mut get_destinations(store, vault_data.id).expect("vault destinations"),
                 get_dca_plus_config(store, vault_data.id),
@@ -212,21 +210,19 @@ pub fn get_old_vaults(
     Ok(vault_store()
         .range(
             store,
-            start_after.map(|vault_id| Bound::exclusive(vault_id)),
+            start_after.map(Bound::exclusive),
             None,
             cosmwasm_std::Order::Ascending,
         )
         .take(limit.unwrap_or(30) as usize)
         .map(|result| {
             let (_, vault_data) =
-                result.expect(format!("a vault with id after {:?}", start_after).as_str());
+                result.unwrap_or_else(|_| panic!("a vault with id after {:?}", start_after));
             old_vault_from(
                 &vault_data,
-                PAIRS.load(store, vault_data.pair_address.clone()).expect(
-                    format!("a pair for pair address {:?}", vault_data.pair_address).as_str(),
-                ),
-                get_old_trigger(store, vault_data.id.into())
-                    .expect(format!("a trigger for vault id {}", vault_data.id).as_str())
+                PAIRS.load(store, vault_data.pair_address.clone()).unwrap_or_else(|_| panic!("a pair for pair address {:?}", vault_data.pair_address)),
+                get_old_trigger(store, vault_data.id)
+                    .unwrap_or_else(|_| panic!("a trigger for vault id {}", vault_data.id))
                     .map(|trigger| trigger.configuration),
                 &mut get_destinations(store, vault_data.id).expect("vault destinations"),
                 get_dca_plus_config(store, vault_data.id),

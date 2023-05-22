@@ -183,6 +183,6 @@ fn vault_from(store: &dyn Storage, data: &VaultData) -> StdResult<Vault> {
         escrowed_amount: data.escrowed_amount.clone(),
         performance_assessment_strategy: data.performance_assessment_strategy.clone(),
         swap_adjustment_strategy: data.swap_adjustment_strategy.clone(),
-        trigger: trigger.map(|t| t.into()),
+        trigger,
     })
 }

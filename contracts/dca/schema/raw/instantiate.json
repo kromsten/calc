@@ -4,23 +4,40 @@
   "type": "object",
   "required": [
     "admin",
-    "dca_plus_escrow_level",
-    "delegation_fee_percent",
+    "automation_fee_percent",
+    "default_page_limit",
+    "default_slippage_tolerance",
+    "default_swap_fee_percent",
+    "executors",
     "fee_collectors",
-    "page_limit",
     "paused",
-    "staking_router_address",
-    "swap_fee_percent"
+    "risk_weighted_average_escrow_level",
+    "twap_period",
+    "weighted_scale_swap_fee_percent"
   ],
   "properties": {
     "admin": {
       "$ref": "#/definitions/Addr"
     },
-    "dca_plus_escrow_level": {
+    "automation_fee_percent": {
       "$ref": "#/definitions/Decimal"
     },
-    "delegation_fee_percent": {
+    "default_page_limit": {
+      "type": "integer",
+      "format": "uint16",
+      "minimum": 0.0
+    },
+    "default_slippage_tolerance": {
       "$ref": "#/definitions/Decimal"
+    },
+    "default_swap_fee_percent": {
+      "$ref": "#/definitions/Decimal"
+    },
+    "executors": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Addr"
+      }
     },
     "fee_collectors": {
       "type": "array",
@@ -28,18 +45,18 @@
         "$ref": "#/definitions/FeeCollector"
       }
     },
-    "page_limit": {
-      "type": "integer",
-      "format": "uint16",
-      "minimum": 0.0
-    },
     "paused": {
       "type": "boolean"
     },
-    "staking_router_address": {
-      "$ref": "#/definitions/Addr"
+    "risk_weighted_average_escrow_level": {
+      "$ref": "#/definitions/Decimal"
     },
-    "swap_fee_percent": {
+    "twap_period": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "weighted_scale_swap_fee_percent": {
       "$ref": "#/definitions/Decimal"
     }
   },

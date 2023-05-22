@@ -27,7 +27,7 @@ pub(crate) fn trigger_store<'a>() -> IndexedMap<'a, u128, Trigger, TriggerIndexe
         ),
         order_idx: UniqueIndex::new(
             |trigger| match trigger.configuration {
-                TriggerConfiguration::FinLimitOrder { order_idx, .. } => {
+                TriggerConfiguration::Price { order_idx, .. } => {
                     order_idx.unwrap_or_default().into()
                 }
                 _ => u128::MAX - trigger.vault_id.u128(), // allows a unique entry that will never be found via an order_idx
@@ -225,7 +225,7 @@ mod tests {
 
         let trigger = Trigger {
             vault_id: Uint128::from(1u128),
-            configuration: TriggerConfiguration::FinLimitOrder {
+            configuration: TriggerConfiguration::Price {
                 target_price: Decimal::percent(120),
                 order_idx: Some(order_idx),
             },

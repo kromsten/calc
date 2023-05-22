@@ -50,7 +50,7 @@ pub fn assert_sender_is_executor(
     sender: &Addr,
 ) -> Result<(), ContractError> {
     let config = get_config(storage)?;
-    if !config.executors.contains(&sender)
+    if !config.executors.contains(sender)
         && sender != &config.admin
         && sender != &env.contract.address
     {
@@ -298,10 +298,8 @@ pub fn assert_addresses_are_valid(
     addresses: &[Addr],
     label: &str,
 ) -> Result<(), ContractError> {
-    Ok(addresses
-        .iter()
-        .map(|address| assert_address_is_valid(deps, address, label))
-        .collect::<Result<(), ContractError>>()?)
+    addresses
+        .iter().try_for_each(|address| assert_address_is_valid(deps, address, label))
 }
 
 pub fn assert_old_destination_allocations_add_up_to_one(
@@ -390,7 +388,7 @@ pub fn assert_validator_is_valid(
 }
 
 pub fn assert_denom_is_bond_denom(denom: String) -> Result<(), ContractError> {
-    if denom.clone() != "ukuji".to_string() {
+    if denom != *"ukuji" {
         return Err(ContractError::CustomError {
             val: format!("{} is not the bond denomination", denom),
         });

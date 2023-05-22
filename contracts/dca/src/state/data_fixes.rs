@@ -78,7 +78,7 @@ pub fn data_fix_store<'a>() -> IndexedMap<'a, u64, Binary, DataFixIndexes<'a>> {
     let indexes = DataFixIndexes {
         resource_id: UniqueIndex::new(
             |data_fix| {
-                from_binary(&data_fix)
+                from_binary(data_fix)
                     .map(|data_fix: DataFix| (data_fix.resource_id.into(), data_fix.id))
                     .expect("data_fix")
             },
@@ -91,7 +91,7 @@ pub fn data_fix_store<'a>() -> IndexedMap<'a, u64, Binary, DataFixIndexes<'a>> {
 pub fn save_data_fix(store: &mut dyn Storage, data_fix_builder: DataFixBuilder) -> StdResult<()> {
     let data_fix_id = fetch_and_increment_counter(store, DATA_FIX_COUNTER)?;
     let data_fix = data_fix_builder.build(data_fix_id);
-    data_fix_store().save(store, data_fix_id.clone(), &to_binary(&data_fix)?)
+    data_fix_store().save(store, data_fix_id, &to_binary(&data_fix)?)
 }
 
 pub fn save_data_fixes(

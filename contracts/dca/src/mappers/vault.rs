@@ -114,7 +114,7 @@ impl From<OldTriggerConfiguration> for TriggerConfiguration {
             OldTriggerConfiguration::FinLimitOrder {
                 target_price,
                 order_idx,
-            } => TriggerConfiguration::FinLimitOrder {
+            } => TriggerConfiguration::Price {
                 target_price: Decimal::from_str(&target_price.to_string()).unwrap(),
                 order_idx,
             },

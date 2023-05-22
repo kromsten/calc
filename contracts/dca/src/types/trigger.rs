@@ -6,7 +6,7 @@ pub enum TriggerConfiguration {
     Time {
         target_time: Timestamp,
     },
-    FinLimitOrder {
+    Price {
         target_price: Decimal,
         order_idx: Option<Uint128>,
     },

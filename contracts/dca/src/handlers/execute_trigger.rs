@@ -61,7 +61,7 @@ pub fn execute_trigger_handler(
         Some(TriggerConfiguration::Time { target_time }) => {
             assert_target_time_is_in_past(env.block.time, target_time)?;
         }
-        Some(TriggerConfiguration::FinLimitOrder { order_idx, .. }) => {
+        Some(TriggerConfiguration::Price { order_idx, .. }) => {
             if let Some(order_idx) = order_idx {
                 let order = deps.querier.query_wasm_smart::<OrderResponse>(
                     pair.address.clone(),
@@ -517,7 +517,7 @@ mod execute_trigger_tests {
             deps.as_mut(),
             env.clone(),
             Vault {
-                trigger: Some(TriggerConfiguration::FinLimitOrder {
+                trigger: Some(TriggerConfiguration::Price {
                     target_price: Decimal::percent(200),
                     order_idx: Some(order_idx),
                 }),

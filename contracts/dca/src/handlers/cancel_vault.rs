@@ -58,7 +58,7 @@ pub fn cancel_vault_handler(
 
     if let Some(trigger) = vault.trigger {
         match trigger {
-            TriggerConfiguration::FinLimitOrder { order_idx, .. } => {
+            TriggerConfiguration::Price { order_idx, .. } => {
                 if let Some(order_idx) = order_idx {
                     let pair = find_pair(deps.storage, updated_vault.denoms()).unwrap();
 
@@ -303,7 +303,7 @@ mod cancel_vault_tests {
             deps.as_mut(),
             env.clone(),
             Vault {
-                trigger: Some(TriggerConfiguration::FinLimitOrder {
+                trigger: Some(TriggerConfiguration::Price {
                     target_price: Decimal::percent(200),
                     order_idx: Some(order_idx),
                 }),
@@ -344,7 +344,7 @@ mod cancel_vault_tests {
             deps.as_mut(),
             env.clone(),
             Vault {
-                trigger: Some(TriggerConfiguration::FinLimitOrder {
+                trigger: Some(TriggerConfiguration::Price {
                     target_price: Decimal::percent(200),
                     order_idx: Some(order_idx),
                 }),

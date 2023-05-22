@@ -105,7 +105,7 @@ impl OldVault {
         }
 
         let adjustment =
-            Decimal256::from_str(&10u128.pow(decimal_delta.abs() as u32).to_string()).unwrap();
+            Decimal256::from_str(&10u128.pow(decimal_delta.unsigned_abs() as u32).to_string()).unwrap();
 
         let rounded_price = exact_target_price
             .checked_mul(adjustment)

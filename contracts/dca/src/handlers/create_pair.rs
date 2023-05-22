@@ -12,7 +12,7 @@ pub fn create_pair_handler(
     address: Addr,
 ) -> Result<Response, ContractError> {
     assert_sender_is_admin(deps.storage, info.sender)?;
-    deps.api.addr_validate(&address.to_string())?;
+    deps.api.addr_validate(address.as_ref())?;
 
     let pair = Pair {
         base_denom: base_denom.clone(),

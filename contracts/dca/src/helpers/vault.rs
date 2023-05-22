@@ -93,7 +93,9 @@ pub fn get_risk_weighted_average_model_id(
         time_interval,
     );
 
-    let x = match execution_duration.num_days() {
+    
+
+    match execution_duration.num_days() {
         0..=32 => 30,
         33..=38 => 35,
         39..=44 => 40,
@@ -104,9 +106,7 @@ pub fn get_risk_weighted_average_model_id(
         78..=96 => 70,
         97..=123 => 80,
         _ => 90,
-    };
-
-    x
+    }
 }
 
 pub fn get_performance_factor(vault: &Vault, current_price: Decimal) -> StdResult<Decimal> {

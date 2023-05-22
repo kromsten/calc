@@ -61,14 +61,14 @@ pub fn migrate_handler(
         Config {
             executors: msg.clone().executors,
             fee_collectors: msg.clone().fee_collectors,
-            default_swap_fee_percent: msg.clone().default_swap_fee_percent,
-            weighted_scale_swap_fee_percent: msg.clone().weighted_scale_swap_fee_percent,
-            automation_fee_percent: msg.clone().automation_fee_percent,
-            default_page_limit: msg.clone().default_page_limit,
-            paused: msg.clone().paused,
-            risk_weighted_average_escrow_level: msg.clone().risk_weighted_average_escrow_level,
-            twap_period: msg.clone().twap_period,
-            default_slippage_tolerance: msg.clone().default_slippage_tolerance,
+            default_swap_fee_percent: msg.default_swap_fee_percent,
+            weighted_scale_swap_fee_percent: msg.weighted_scale_swap_fee_percent,
+            automation_fee_percent: msg.automation_fee_percent,
+            default_page_limit: msg.default_page_limit,
+            paused: msg.paused,
+            risk_weighted_average_escrow_level: msg.risk_weighted_average_escrow_level,
+            twap_period: msg.twap_period,
+            default_slippage_tolerance: msg.default_slippage_tolerance,
             admin: old_config.admin,
         },
     )?;
@@ -447,7 +447,7 @@ mod migrate_tests {
             trigger,
             Some(Trigger {
                 vault_id: Uint128::new(10),
-                configuration: TriggerConfiguration::FinLimitOrder {
+                configuration: TriggerConfiguration::Price {
                     target_price: Decimal::percent(132),
                     order_idx: Some(Uint128::new(10)),
                 },

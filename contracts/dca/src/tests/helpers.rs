@@ -238,10 +238,10 @@ pub fn setup_vault(deps: DepsMut, env: Env, mut vault: Vault) -> Vault {
                             env.block.time.seconds(),
                         )),
                     },
-                    TriggerConfiguration::FinLimitOrder {
+                    TriggerConfiguration::Price {
                         target_price,
                         order_idx,
-                    } => TriggerConfiguration::FinLimitOrder {
+                    } => TriggerConfiguration::Price {
                         target_price,
                         order_idx,
                     },
