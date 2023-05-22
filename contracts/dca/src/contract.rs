@@ -18,6 +18,7 @@ use crate::handlers::get_events::get_events_handler;
 use crate::handlers::get_events_by_resource_id::get_events_by_resource_id_handler;
 use crate::handlers::get_pairs::get_pairs_handler;
 use crate::handlers::get_time_trigger_ids::get_time_trigger_ids_handler;
+use crate::handlers::get_trigger_id_by_fin_limit_order_idx::get_trigger_id_by_fin_limit_order_idx_handler;
 use crate::handlers::get_vault::get_vault_handler;
 use crate::handlers::get_vault_performance::get_vault_performance_handler;
 use crate::handlers::get_vaults::get_vaults_handler;
@@ -181,6 +182,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::GetTimeTriggerIds { limit } => {
             to_binary(&get_time_trigger_ids_handler(deps, env, limit)?)
         }
+        QueryMsg::GetTriggerIdByFinLimitOrderIdx { order_idx } => to_binary(
+            &get_trigger_id_by_fin_limit_order_idx_handler(deps, order_idx)?,
+        ),
         QueryMsg::GetVaults {
             start_after,
             limit,

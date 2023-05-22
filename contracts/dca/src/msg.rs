@@ -120,6 +120,8 @@ pub enum QueryMsg {
     GetPairs {},
     #[returns(TriggerIdsResponse)]
     GetTimeTriggerIds { limit: Option<u16> },
+    #[returns(TriggerIdResponse)]
+    GetTriggerIdByFinLimitOrderIdx { order_idx: Uint128 },
     #[returns(VaultResponse)]
     GetVault { vault_id: Uint128 },
     #[returns(VaultsResponse)]
