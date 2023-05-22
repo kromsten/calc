@@ -93,7 +93,7 @@ pub fn get_risk_weighted_average_model_id(
         time_interval,
     );
 
-    match execution_duration.num_days() {
+    let x = match execution_duration.num_days() {
         0..=32 => 30,
         33..=38 => 35,
         39..=44 => 40,
@@ -104,7 +104,9 @@ pub fn get_risk_weighted_average_model_id(
         78..=96 => 70,
         97..=123 => 80,
         _ => 90,
-    }
+    };
+
+    x
 }
 
 pub fn get_performance_factor(vault: &Vault, current_price: Decimal) -> StdResult<Decimal> {
@@ -216,17 +218,18 @@ pub fn simulate_standard_dca_execution(
             let fee_amount = received_amount_before_fee * fee_rate;
             let received_amount_after_fee = received_amount_before_fee - fee_amount;
 
-            let vault = Vault {
-                performance_assessment_strategy: Some(
-                    PerformanceAssessmentStrategy::CompareToStandardDca {
-                        swapped_amount: add_to(swapped_amount, swap_amount),
-                        received_amount: add_to(received_amount, received_amount_after_fee),
-                    },
-                ),
-                ..vault
-            };
-
-            update_vault(storage, &vault)?;
+            let vault = update_vault(
+                storage,
+                Vault {
+                    performance_assessment_strategy: Some(
+                        PerformanceAssessmentStrategy::CompareToStandardDca {
+                            swapped_amount: add_to(swapped_amount, swap_amount),
+                            received_amount: add_to(received_amount, received_amount_after_fee),
+                        },
+                    ),
+                    ..vault
+                },
+            )?;
 
             let coin_sent = Coin::new(swap_amount.into(), vault.get_swap_denom());
             let coin_received = Coin::new(

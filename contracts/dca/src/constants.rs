@@ -1,8 +1,9 @@
 use cosmwasm_std::{Decimal, Uint128};
 
-pub const AFTER_SWAP_REPLY_ID: u64 = 1;
-pub const AFTER_FAILED_AUTOMATION_REPLY_ID: u64 = 2;
-pub const AFTER_DELEGATION_REPLY_ID: u64 = 3;
+pub const AFTER_LIMIT_ORDER_PLACED_REPLY_ID: u64 = 1;
+pub const AFTER_SWAP_REPLY_ID: u64 = 2;
+pub const AFTER_FAILED_AUTOMATION_REPLY_ID: u64 = 3;
+pub const AFTER_DELEGATION_REPLY_ID: u64 = 4;
 
 pub const SWAP_FEE_RATE: &str = "0.0015";
 

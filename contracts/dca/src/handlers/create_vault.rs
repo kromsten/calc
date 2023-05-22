@@ -1,4 +1,6 @@
+use crate::constants::{AFTER_LIMIT_ORDER_PLACED_REPLY_ID, TWO_MICRONS};
 use crate::error::ContractError;
+use crate::helpers::price::get_target_price;
 use crate::helpers::validation::{
     assert_address_is_valid, assert_contract_destination_callbacks_are_valid,
     assert_contract_is_not_paused, assert_destination_allocations_add_up_to_one,
@@ -12,12 +14,12 @@ use crate::helpers::validation::{
 };
 use crate::helpers::vault::get_risk_weighted_average_model_id;
 use crate::msg::ExecuteMsg;
-use crate::state::cache::VAULT_CACHE;
+use crate::state::cache::VAULT_ID_CACHE;
 use crate::state::config::get_config;
 use crate::state::events::create_event;
 use crate::state::pairs::find_pair;
 use crate::state::triggers::save_trigger;
-use crate::state::vaults::save_vault;
+use crate::state::vaults::{save_vault, update_vault};
 use crate::types::destination::Destination;
 use crate::types::event::{EventBuilder, EventData};
 use crate::types::performance_assessment_strategy::{
@@ -29,10 +31,11 @@ use crate::types::swap_adjustment_strategy::{
 };
 use crate::types::time_interval::TimeInterval;
 use crate::types::trigger::{Trigger, TriggerConfiguration};
-use crate::types::vault::{VaultBuilder, VaultStatus};
+use crate::types::vault::{Vault, VaultBuilder, VaultStatus};
 use cosmwasm_std::{to_binary, Addr, Coin, Decimal, SubMsg, WasmMsg};
-#[cfg(not(feature = "library"))]
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Timestamp, Uint128, Uint64};
+use kujira::fin::ExecuteMsg as FinExecuteMsg;
+use kujira::fin::{ConfigResponse, QueryMsg};
 
 pub fn create_vault_handler(
     deps: DepsMut,
@@ -48,6 +51,7 @@ pub fn create_vault_handler(
     swap_amount: Uint128,
     time_interval: TimeInterval,
     target_start_time_utc_seconds: Option<Uint64>,
+    target_receive_amount: Option<Uint128>,
     performance_assessment_strategy_params: Option<PerformanceAssessmentStrategyParams>,
     swap_adjustment_strategy_params: Option<SwapAdjustmentStrategyParams>,
 ) -> Result<Response, ContractError> {
@@ -170,7 +174,7 @@ pub fn create_vault_handler(
 
     let vault = save_vault(deps.storage, vault_builder)?;
 
-    VAULT_CACHE.save(deps.storage, &vault.id)?;
+    VAULT_ID_CACHE.save(deps.storage, &vault.id)?;
 
     create_event(
         deps.storage,
@@ -188,36 +192,93 @@ pub fn create_vault_handler(
         .add_attribute("vault_id", vault.id)
         .add_attribute("deposited_amount", vault.balance.to_string());
 
-    save_trigger(
-        deps.storage,
-        Trigger {
-            vault_id: vault.id,
-            configuration: TriggerConfiguration::Time {
-                target_time: match target_start_time_utc_seconds {
-                    Some(time) => Timestamp::from_seconds(time.u64()),
-                    None => env.block.time,
+    match (target_start_time_utc_seconds, target_receive_amount) {
+        (None, None) | (Some(_), None) => {
+            save_trigger(
+                deps.storage,
+                Trigger {
+                    vault_id: vault.id,
+                    configuration: TriggerConfiguration::Time {
+                        target_time: match target_start_time_utc_seconds {
+                            Some(time) => Timestamp::from_seconds(time.u64()),
+                            None => env.block.time,
+                        },
+                    },
                 },
-            },
-        },
-    )?;
+            )?;
 
-    if target_start_time_utc_seconds.is_none() {
-        response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
-            contract_addr: env.contract.address.to_string(),
-            msg: to_binary(&ExecuteMsg::ExecuteTrigger {
-                trigger_id: vault.id,
-            })
-            .unwrap(),
-            funds: vec![],
-        }));
+            if target_start_time_utc_seconds.is_none() {
+                response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
+                    contract_addr: env.contract.address.to_string(),
+                    msg: to_binary(&ExecuteMsg::ExecuteTrigger {
+                        trigger_id: vault.id,
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }));
+            }
+
+            Ok(response)
+        }
+        (None, Some(target_receive_amount)) => {
+            let pair_config = deps
+                .querier
+                .query_wasm_smart::<ConfigResponse>(pair.address.clone(), &QueryMsg::Config {})?;
+
+            let target_price = get_target_price(
+                &vault,
+                &pair,
+                target_receive_amount,
+                pair_config.decimal_delta,
+                pair_config.price_precision,
+            )?;
+
+            save_trigger(
+                deps.storage,
+                Trigger {
+                    vault_id: vault.id,
+                    configuration: TriggerConfiguration::FinLimitOrder {
+                        order_idx: None,
+                        target_price,
+                    },
+                },
+            )?;
+
+            let vault = update_vault(
+                deps.storage,
+                Vault {
+                    balance: Coin::new(
+                        (vault.balance.amount - TWO_MICRONS).into(),
+                        vault.balance.denom,
+                    ),
+                    ..vault
+                },
+            )?;
+
+            Ok(response.add_submessage(SubMsg::reply_on_success(
+                WasmMsg::Execute {
+                    contract_addr: pair.address.to_string(),
+                    msg: to_binary(&FinExecuteMsg::SubmitOrder {
+                        price: target_price.into(),
+                    })
+                    .unwrap(),
+                    funds: vec![Coin::new(TWO_MICRONS.into(), vault.get_swap_denom())],
+                },
+                AFTER_LIMIT_ORDER_PLACED_REPLY_ID,
+            )))
+        }
+        (Some(_), Some(_)) => Err(ContractError::CustomError {
+            val: String::from(
+                "cannot provide both a target_start_time_utc_seconds and a target_price",
+            ),
+        }),
     }
-
-    Ok(response)
 }
 
 #[cfg(test)]
 mod create_vault_tests {
     use super::*;
+    use crate::constants::{ONE, TEN};
     use crate::handlers::create_pair::create_pair_handler;
     use crate::handlers::get_events_by_resource_id::get_events_by_resource_id_handler;
     use crate::handlers::get_vault::get_vault_handler;
@@ -262,6 +323,7 @@ mod create_vault_tests {
             None,
             None,
             None,
+            None,
         )
         .unwrap_err();
 
@@ -298,6 +360,7 @@ mod create_vault_tests {
             None,
             None,
             None,
+            None,
         )
         .unwrap_err();
 
@@ -328,6 +391,7 @@ mod create_vault_tests {
             None,
             Uint128::new(100000),
             TimeInterval::Daily,
+            None,
             None,
             None,
             None,
@@ -381,6 +445,7 @@ mod create_vault_tests {
             None,
             Uint128::new(100000),
             TimeInterval::Daily,
+            None,
             None,
             None,
             None,
@@ -441,6 +506,7 @@ mod create_vault_tests {
             None,
             None,
             None,
+            None,
         )
         .unwrap_err();
 
@@ -481,6 +547,7 @@ mod create_vault_tests {
             None,
             None,
             None,
+            None,
         )
         .unwrap_err();
 
@@ -511,6 +578,7 @@ mod create_vault_tests {
             None,
             Uint128::new(10000),
             TimeInterval::Daily,
+            None,
             None,
             None,
             None,
@@ -557,6 +625,7 @@ mod create_vault_tests {
             None,
             Uint128::new(100000),
             TimeInterval::Daily,
+            None,
             None,
             None,
             Some(SwapAdjustmentStrategyParams::WeightedScale {
@@ -608,6 +677,7 @@ mod create_vault_tests {
             None,
             None,
             None,
+            None,
         )
         .unwrap_err();
 
@@ -651,6 +721,7 @@ mod create_vault_tests {
             Some(env.block.time.minus_seconds(10).seconds().into()),
             None,
             None,
+            None,
         )
         .unwrap_err();
 
@@ -684,6 +755,7 @@ mod create_vault_tests {
             None,
             None,
             None,
+            None,
         )
         .unwrap_err();
 
@@ -694,7 +766,7 @@ mod create_vault_tests {
     }
 
     #[test]
-    fn with_no_swap_adjustment_stratgey_and_performance_assessment_strategy_fails() {
+    fn with_no_swap_adjustment_strategy_and_performance_assessment_strategy_fails() {
         let mut deps = calc_mock_dependencies();
         let env = mock_env();
         let mut info = mock_info(ADMIN, &[]);
@@ -729,6 +801,7 @@ mod create_vault_tests {
             swap_amount,
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
+            None,
             Some(PerformanceAssessmentStrategyParams::CompareToStandardDca),
             None,
         )
@@ -741,7 +814,7 @@ mod create_vault_tests {
     }
 
     #[test]
-    fn with_swap_adjustment_stratgey_and_no_performance_assessment_strategy_fails() {
+    fn with_swap_adjustment_strategy_and_no_performance_assessment_strategy_fails() {
         let mut deps = calc_mock_dependencies();
         let env = mock_env();
         let mut info = mock_info(ADMIN, &[]);
@@ -776,6 +849,7 @@ mod create_vault_tests {
             swap_amount,
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
+            None,
             None,
             Some(SwapAdjustmentStrategyParams::default()),
         )
@@ -825,6 +899,7 @@ mod create_vault_tests {
             None,
             None,
             None,
+            None,
         )
         .unwrap_err();
 
@@ -835,7 +910,7 @@ mod create_vault_tests {
     }
 
     #[test]
-    fn should_create_vault() {
+    fn should_create_vault_with_time_trigger() {
         let mut deps = calc_mock_dependencies();
         let env = mock_env();
         let mut info = mock_info(ADMIN, &[]);
@@ -870,6 +945,7 @@ mod create_vault_tests {
             swap_amount,
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
+            None,
             None,
             None,
         )
@@ -912,6 +988,88 @@ mod create_vault_tests {
     }
 
     #[test]
+    fn should_create_vault_with_price_trigger() {
+        let mut deps = calc_mock_dependencies();
+        let env = mock_env();
+        let mut info = mock_info(ADMIN, &[]);
+
+        instantiate_contract(deps.as_mut(), env.clone(), info.clone());
+
+        let pair = Pair::default();
+
+        create_pair_handler(
+            deps.as_mut(),
+            info.clone(),
+            pair.base_denom.clone(),
+            pair.quote_denom.clone(),
+            pair.address,
+        )
+        .unwrap();
+
+        let swap_amount = ONE;
+        info = mock_info(USER, &[Coin::new(TEN.into(), DENOM_UUSK)]);
+
+        create_vault_handler(
+            deps.as_mut(),
+            env.clone(),
+            &info,
+            info.sender.clone(),
+            None,
+            vec![],
+            DENOM_UKUJI.to_string(),
+            None,
+            None,
+            None,
+            swap_amount,
+            TimeInterval::Daily,
+            None,
+            Some(ONE / TWO_MICRONS),
+            None,
+            None,
+        )
+        .unwrap();
+
+        let vault = get_vault_handler(deps.as_ref(), Uint128::one())
+            .unwrap()
+            .vault;
+
+        let config = get_config(deps.as_ref().storage).unwrap();
+
+        assert_eq!(
+            vault,
+            Vault {
+                minimum_receive_amount: None,
+                label: None,
+                id: Uint128::new(1),
+                owner: info.sender,
+                destinations: vec![Destination::default()],
+                created_at: env.block.time,
+                status: VaultStatus::Scheduled,
+                time_interval: TimeInterval::Daily,
+                balance: Coin::new(
+                    (info.funds[0].amount - TWO_MICRONS).into(),
+                    info.funds[0].denom.clone()
+                ),
+                slippage_tolerance: config.default_slippage_tolerance,
+                swap_amount,
+                target_denom: DENOM_UKUJI.to_string(),
+                started_at: None,
+                deposited_amount: info.funds[0].clone(),
+                escrow_level: Decimal::zero(),
+                swapped_amount: Coin::new(0, DENOM_UUSK.to_string()),
+                received_amount: Coin::new(0, DENOM_UKUJI.to_string()),
+                escrowed_amount: Coin::new(0, DENOM_UKUJI.to_string()),
+                swap_adjustment_strategy: None,
+                performance_assessment_strategy: None,
+                trigger: Some(TriggerConfiguration::FinLimitOrder {
+                    target_price: Decimal::percent(200),
+                    order_idx: None
+                }),
+            }
+        );
+    }
+
+    #[test]
     fn should_publish_deposit_event() {
         let mut deps = calc_mock_dependencies();
         let env = mock_env();
@@ -946,6 +1104,7 @@ mod create_vault_tests {
             Uint128::new(100000),
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
+            None,
             None,
             None,
         )
@@ -1004,6 +1163,7 @@ mod create_vault_tests {
             Uint128::new(100000),
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
+            None,
             None,
             None,
         )
@@ -1078,6 +1238,7 @@ mod create_vault_tests {
             Some(env.block.time.plus_seconds(10).seconds().into()),
             None,
             None,
+            None,
         )
         .unwrap();
 
@@ -1123,6 +1284,7 @@ mod create_vault_tests {
             Uint128::new(100000),
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
+            None,
             Some(PerformanceAssessmentStrategyParams::CompareToStandardDca),
             Some(SwapAdjustmentStrategyParams::default()),
         )
@@ -1174,6 +1336,7 @@ mod create_vault_tests {
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
             None,
+            None,
             Some(SwapAdjustmentStrategyParams::WeightedScale {
                 base_receive_amount: Uint128::new(100000),
                 multiplier: Decimal::percent(200),
@@ -1224,6 +1387,7 @@ mod create_vault_tests {
             Uint128::new(100000),
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
+            None,
             Some(PerformanceAssessmentStrategyParams::CompareToStandardDca),
             Some(SwapAdjustmentStrategyParams::default()),
         )
@@ -1277,6 +1441,7 @@ mod create_vault_tests {
             Uint128::new(100000),
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
+            None,
             Some(PerformanceAssessmentStrategyParams::CompareToStandardDca),
             Some(SwapAdjustmentStrategyParams::default()),
         )
@@ -1332,19 +1497,81 @@ mod create_vault_tests {
             Uint128::new(100000),
             TimeInterval::Daily,
             None,
+            None,
             Some(PerformanceAssessmentStrategyParams::CompareToStandardDca),
             Some(SwapAdjustmentStrategyParams::default()),
         )
         .unwrap();
 
-        assert!(response.messages.contains(&SubMsg::new(WasmMsg::Execute {
-            contract_addr: env.contract.address.to_string(),
-            funds: vec![],
-            msg: to_binary(&ExecuteMsg::ExecuteTrigger {
-                trigger_id: Uint128::one()
+        assert_eq!(
+            response.messages.first().unwrap(),
+            &SubMsg::new(WasmMsg::Execute {
+                contract_addr: env.contract.address.to_string(),
+                funds: vec![],
+                msg: to_binary(&ExecuteMsg::ExecuteTrigger {
+                    trigger_id: Uint128::one()
+                })
+                .unwrap()
             })
-            .unwrap()
-        })));
+        );
+    }
+
+    #[test]
+    fn with_target_price_should_create_limit_order() {
+        let mut deps = calc_mock_dependencies();
+        let env = mock_env();
+        let mut info = mock_info(ADMIN, &[]);
+
+        instantiate_contract(deps.as_mut(), env.clone(), info.clone());
+
+        let pair = Pair::default();
+
+        create_pair_handler(
+            deps.as_mut(),
+            info.clone(),
+            pair.base_denom.clone(),
+            pair.quote_denom.clone(),
+            pair.address.clone(),
+        )
+        .unwrap();
+
+        let swap_amount = ONE;
+        info = mock_info(USER, &[Coin::new(TEN.into(), pair.quote_denom)]);
+
+        let response = create_vault_handler(
+            deps.as_mut(),
+            env.clone(),
+            &info,
+            info.sender.clone(),
+            None,
+            vec![],
+            pair.base_denom.to_string(),
+            None,
+            None,
+            None,
+            swap_amount,
+            TimeInterval::Daily,
+            None,
+            Some(ONE / TWO_MICRONS),
+            None,
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(
+            response.messages.first().unwrap(),
+            &SubMsg::reply_on_success(
+                WasmMsg::Execute {
+                    contract_addr: pair.address.to_string(),
+                    funds: vec![Coin::new(TWO_MICRONS.into(), info.funds[0].denom.clone())],
+                    msg: to_binary(&FinExecuteMsg::SubmitOrder {
+                        price: Decimal::percent(200).into()
+                    })
+                    .unwrap()
+                },
+                AFTER_LIMIT_ORDER_PLACED_REPLY_ID
+            )
+        );
     }
 
     #[test]
@@ -1382,6 +1609,7 @@ mod create_vault_tests {
             Uint128::new(100000),
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
+            None,
             Some(PerformanceAssessmentStrategyParams::CompareToStandardDca),
             Some(SwapAdjustmentStrategyParams::default()),
         )
@@ -1434,6 +1662,7 @@ mod create_vault_tests {
             Uint128::new(100000),
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
+            None,
             None,
             None,
         )
@@ -1492,6 +1721,7 @@ mod create_vault_tests {
             Some(env.block.time.plus_seconds(10).seconds().into()),
             None,
             None,
+            None,
         )
         .unwrap_err();
 
@@ -1546,6 +1776,7 @@ mod create_vault_tests {
             Uint128::new(100000),
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
+            None,
             None,
             None,
         )

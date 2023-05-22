@@ -1,4 +1,5 @@
 use crate::error::ContractError;
+use crate::helpers::coin::add_to;
 use crate::helpers::time::get_next_target_time;
 use crate::helpers::validation::{
     assert_contract_is_not_paused, assert_deposited_denom_matches_send_denom,
@@ -11,7 +12,7 @@ use crate::state::vaults::{get_vault, update_vault};
 use crate::types::event::{EventBuilder, EventData};
 use crate::types::swap_adjustment_strategy::SwapAdjustmentStrategy;
 use crate::types::trigger::{Trigger, TriggerConfiguration};
-use crate::types::vault::VaultStatus;
+use crate::types::vault::{Vault, VaultStatus};
 use cosmwasm_std::{Addr, Env};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{DepsMut, MessageInfo, Response, Uint128};
@@ -27,7 +28,7 @@ pub fn deposit_handler(
     deps.api.addr_validate(address.as_str())?;
     assert_exactly_one_asset(info.funds.clone())?;
 
-    let mut vault = get_vault(deps.storage, vault_id)?;
+    let vault = get_vault(deps.storage, vault_id)?;
     let vault_was_inactive = vault.is_inactive();
 
     if address != vault.owner {
@@ -45,36 +46,40 @@ pub fn deposit_handler(
         vault.clone().balance.denom,
     )?;
 
-    vault.balance.amount += info.funds[0].amount;
-    vault.deposited_amount.amount += info.funds[0].amount;
+    let new_balance = add_to(vault.balance.clone(), info.funds[0].amount);
 
-    if !vault.is_scheduled() {
-        vault.status = VaultStatus::Active
-    }
-
-    vault.swap_adjustment_strategy =
-        vault
-            .swap_adjustment_strategy
-            .clone()
-            .map(|swap_adjustment_strategy| match swap_adjustment_strategy {
-                SwapAdjustmentStrategy::RiskWeightedAverage {
-                    base_denom,
-                    position_type,
-                    ..
-                } => SwapAdjustmentStrategy::RiskWeightedAverage {
-                    model_id: get_risk_weighted_average_model_id(
-                        &env.block.time,
-                        &vault.balance,
-                        &vault.swap_amount,
-                        &vault.time_interval,
-                    ),
-                    base_denom,
-                    position_type,
+    let vault = update_vault(
+        deps.storage,
+        Vault {
+            balance: new_balance.clone(),
+            deposited_amount: add_to(vault.deposited_amount.clone(), info.funds[0].amount),
+            status: if vault.is_inactive() {
+                VaultStatus::Active
+            } else {
+                vault.status
+            },
+            swap_adjustment_strategy: vault.swap_adjustment_strategy.clone().map(
+                |swap_adjustment_strategy| match swap_adjustment_strategy {
+                    SwapAdjustmentStrategy::RiskWeightedAverage {
+                        base_denom,
+                        position_type,
+                        ..
+                    } => SwapAdjustmentStrategy::RiskWeightedAverage {
+                        model_id: get_risk_weighted_average_model_id(
+                            &env.block.time,
+                            &new_balance,
+                            &vault.swap_amount,
+                            &vault.time_interval,
+                        ),
+                        base_denom,
+                        position_type,
+                    },
+                    _ => swap_adjustment_strategy,
                 },
-                _ => swap_adjustment_strategy,
-            });
-
-    update_vault(deps.storage, &vault)?;
+            ),
+            ..vault
+        },
+    )?;
 
     create_event(
         deps.storage,

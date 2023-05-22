@@ -11,15 +11,24 @@ use crate::{
     msg::MigrateMsg,
     state::{
         config::update_config, old_config::get_old_config, old_pairs::PAIRS,
-        old_triggers::TRIGGERS, pairs::save_pair, triggers::save_trigger,
+        old_swap_adjustments::get_old_swap_adjustment, old_triggers::TRIGGERS, pairs::save_pair,
+        swap_adjustments::update_swap_adjustment, triggers::save_trigger,
     },
-    types::config::Config,
+    types::{
+        config::Config,
+        swap_adjustment_strategy::{BaseDenom, SwapAdjustmentStrategy},
+    },
 };
 use base::{pair::OldPair, triggers::trigger::OldTrigger};
-use cosmwasm_std::{DepsMut, Order, Response, StdError};
+use cosmwasm_std::{DepsMut, Env, Order, Response, StdError};
 use cw2::{get_contract_version, set_contract_version};
+use fin_helpers::position_type::OldPositionType;
 
-pub fn migrate_handler(deps: DepsMut, msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate_handler(
+    deps: DepsMut,
+    env: Env,
+    msg: MigrateMsg,
+) -> Result<Response, ContractError> {
     let contract_version = get_contract_version(deps.storage)?;
 
     if contract_version.contract != CONTRACT_NAME {
@@ -82,6 +91,28 @@ pub fn migrate_handler(deps: DepsMut, msg: MigrateMsg) -> Result<Response, Contr
         save_trigger(deps.storage, old_trigger.into())?;
     }
 
+    for model_id in [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90] {
+        for position_type in [OldPositionType::Enter, OldPositionType::Exit] {
+            let swap_adjustment = get_old_swap_adjustment(
+                deps.storage,
+                position_type.clone(),
+                model_id,
+                env.block.time,
+            )?;
+
+            update_swap_adjustment(
+                deps.storage,
+                SwapAdjustmentStrategy::RiskWeightedAverage {
+                    model_id,
+                    base_denom: BaseDenom::Bitcoin,
+                    position_type: position_type.into(),
+                },
+                swap_adjustment,
+                env.block.time,
+            )?;
+        }
+    }
+
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     Ok(Response::new()
@@ -96,14 +127,18 @@ mod migrate_tests {
         msg::MigrateMsg,
         state::{
             old_pairs::PAIRS,
+            old_swap_adjustments::update_swap_adjustments,
             old_triggers::save_old_trigger,
             pairs::{find_pair, get_pairs},
+            swap_adjustments::get_swap_adjustment,
             triggers::{get_trigger, trigger_store},
         },
         tests::{helpers::instantiate_contract, mocks::ADMIN},
         types::{
             fee_collector::FeeCollector,
             pair::Pair,
+            position_type::PositionType,
+            swap_adjustment_strategy::{BaseDenom, SwapAdjustmentStrategy},
             trigger::{Trigger, TriggerConfiguration},
         },
     };
@@ -115,6 +150,7 @@ mod migrate_tests {
         testing::{mock_dependencies, mock_env, mock_info},
         Addr, Decimal, Decimal256, Order, Uint128,
     };
+    use fin_helpers::position_type::OldPositionType;
 
     #[test]
     fn migrates_pair() {
@@ -133,6 +169,30 @@ mod migrate_tests {
             PAIRS
                 .save(deps.as_mut().storage, pair.address.clone(), &pair)
                 .unwrap();
+        }
+
+        for position_type in [OldPositionType::Enter, OldPositionType::Exit] {
+            update_swap_adjustments(
+                deps.as_mut().storage,
+                position_type,
+                vec![
+                    (30, Decimal::percent(120)),
+                    (35, Decimal::percent(120)),
+                    (40, Decimal::percent(120)),
+                    (45, Decimal::percent(120)),
+                    (50, Decimal::percent(120)),
+                    (55, Decimal::percent(120)),
+                    (60, Decimal::percent(120)),
+                    (65, Decimal::percent(120)),
+                    (70, Decimal::percent(120)),
+                    (75, Decimal::percent(120)),
+                    (80, Decimal::percent(120)),
+                    (85, Decimal::percent(120)),
+                    (90, Decimal::percent(120)),
+                ],
+                env.block.time,
+            )
+            .unwrap();
         }
 
         migrate(
@@ -191,6 +251,30 @@ mod migrate_tests {
                 .unwrap();
         }
 
+        for position_type in [OldPositionType::Enter, OldPositionType::Exit] {
+            update_swap_adjustments(
+                deps.as_mut().storage,
+                position_type,
+                vec![
+                    (30, Decimal::percent(120)),
+                    (35, Decimal::percent(120)),
+                    (40, Decimal::percent(120)),
+                    (45, Decimal::percent(120)),
+                    (50, Decimal::percent(120)),
+                    (55, Decimal::percent(120)),
+                    (60, Decimal::percent(120)),
+                    (65, Decimal::percent(120)),
+                    (70, Decimal::percent(120)),
+                    (75, Decimal::percent(120)),
+                    (80, Decimal::percent(120)),
+                    (85, Decimal::percent(120)),
+                    (90, Decimal::percent(120)),
+                ],
+                env.block.time,
+            )
+            .unwrap();
+        }
+
         migrate(
             deps.as_mut(),
             mock_env(),
@@ -233,6 +317,30 @@ mod migrate_tests {
             };
 
             save_old_trigger(deps.as_mut().storage, trigger).unwrap();
+        }
+
+        for position_type in [OldPositionType::Enter, OldPositionType::Exit] {
+            update_swap_adjustments(
+                deps.as_mut().storage,
+                position_type,
+                vec![
+                    (30, Decimal::percent(120)),
+                    (35, Decimal::percent(120)),
+                    (40, Decimal::percent(120)),
+                    (45, Decimal::percent(120)),
+                    (50, Decimal::percent(120)),
+                    (55, Decimal::percent(120)),
+                    (60, Decimal::percent(120)),
+                    (65, Decimal::percent(120)),
+                    (70, Decimal::percent(120)),
+                    (75, Decimal::percent(120)),
+                    (80, Decimal::percent(120)),
+                    (85, Decimal::percent(120)),
+                    (90, Decimal::percent(120)),
+                ],
+                env.block.time,
+            )
+            .unwrap();
         }
 
         migrate(
@@ -286,6 +394,30 @@ mod migrate_tests {
             };
 
             save_old_trigger(deps.as_mut().storage, trigger).unwrap();
+        }
+
+        for position_type in [OldPositionType::Enter, OldPositionType::Exit] {
+            update_swap_adjustments(
+                deps.as_mut().storage,
+                position_type,
+                vec![
+                    (30, Decimal::percent(120)),
+                    (35, Decimal::percent(120)),
+                    (40, Decimal::percent(120)),
+                    (45, Decimal::percent(120)),
+                    (50, Decimal::percent(120)),
+                    (55, Decimal::percent(120)),
+                    (60, Decimal::percent(120)),
+                    (65, Decimal::percent(120)),
+                    (70, Decimal::percent(120)),
+                    (75, Decimal::percent(120)),
+                    (80, Decimal::percent(120)),
+                    (85, Decimal::percent(120)),
+                    (90, Decimal::percent(120)),
+                ],
+                env.block.time,
+            )
+            .unwrap();
         }
 
         migrate(
@@ -342,6 +474,30 @@ mod migrate_tests {
             save_old_trigger(deps.as_mut().storage, trigger).unwrap();
         }
 
+        for position_type in [OldPositionType::Enter, OldPositionType::Exit] {
+            update_swap_adjustments(
+                deps.as_mut().storage,
+                position_type,
+                vec![
+                    (30, Decimal::percent(120)),
+                    (35, Decimal::percent(120)),
+                    (40, Decimal::percent(120)),
+                    (45, Decimal::percent(120)),
+                    (50, Decimal::percent(120)),
+                    (55, Decimal::percent(120)),
+                    (60, Decimal::percent(120)),
+                    (65, Decimal::percent(120)),
+                    (70, Decimal::percent(120)),
+                    (75, Decimal::percent(120)),
+                    (80, Decimal::percent(120)),
+                    (85, Decimal::percent(120)),
+                    (90, Decimal::percent(120)),
+                ],
+                env.block.time,
+            )
+            .unwrap();
+        }
+
         migrate(
             deps.as_mut(),
             mock_env(),
@@ -369,5 +525,86 @@ mod migrate_tests {
                 .count(),
             20
         );
+    }
+
+    #[test]
+    fn migrates_all_swap_adjustments() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+        instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
+
+        for i in 0..20 {
+            let trigger = OldTrigger {
+                vault_id: Uint128::new(i),
+                configuration: OldTriggerConfiguration::FinLimitOrder {
+                    target_price: Decimal256::percent(132),
+                    order_idx: Some(Uint128::new(i)),
+                },
+            };
+
+            save_old_trigger(deps.as_mut().storage, trigger).unwrap();
+        }
+
+        for position_type in [OldPositionType::Enter, OldPositionType::Exit] {
+            update_swap_adjustments(
+                deps.as_mut().storage,
+                position_type,
+                vec![
+                    (30, Decimal::percent(130)),
+                    (35, Decimal::percent(135)),
+                    (40, Decimal::percent(140)),
+                    (45, Decimal::percent(145)),
+                    (50, Decimal::percent(150)),
+                    (55, Decimal::percent(155)),
+                    (60, Decimal::percent(160)),
+                    (65, Decimal::percent(165)),
+                    (70, Decimal::percent(170)),
+                    (75, Decimal::percent(175)),
+                    (80, Decimal::percent(180)),
+                    (85, Decimal::percent(185)),
+                    (90, Decimal::percent(190)),
+                ],
+                env.block.time,
+            )
+            .unwrap();
+        }
+
+        migrate(
+            deps.as_mut(),
+            mock_env(),
+            MigrateMsg {
+                executors: vec![Addr::unchecked(ADMIN)],
+                fee_collectors: vec![FeeCollector {
+                    allocation: Decimal::percent(100),
+                    address: ADMIN.to_string(),
+                }],
+                default_swap_fee_percent: Decimal::percent(2),
+                weighted_scale_swap_fee_percent: Decimal::percent(2),
+                automation_fee_percent: Decimal::percent(2),
+                default_page_limit: 30,
+                paused: true,
+                risk_weighted_average_escrow_level: Decimal::percent(5),
+                twap_period: 60,
+                default_slippage_tolerance: Decimal::percent(10),
+            },
+        )
+        .unwrap();
+
+        for model_id in [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90] {
+            for position_type in [PositionType::Enter, PositionType::Exit] {
+                let swap_adjustment = get_swap_adjustment(
+                    &deps.storage,
+                    SwapAdjustmentStrategy::RiskWeightedAverage {
+                        model_id,
+                        base_denom: BaseDenom::Bitcoin,
+                        position_type,
+                    },
+                    env.block.time,
+                );
+
+                assert_eq!(swap_adjustment, Decimal::percent(100 + (model_id as u64)));
+            }
+        }
     }
 }

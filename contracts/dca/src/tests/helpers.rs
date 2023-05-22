@@ -4,7 +4,7 @@ use crate::{
     contract::instantiate,
     msg::{ExecuteMsg, InstantiateMsg},
     state::{
-        cache::VAULT_CACHE,
+        cache::VAULT_ID_CACHE,
         pairs::save_pair,
         triggers::save_trigger,
         vaults::{get_vault, update_vault},
@@ -224,25 +224,34 @@ pub fn setup_vault(deps: DepsMut, env: Env, mut vault: Vault) -> Vault {
         existing_vault = get_vault(deps.storage, vault.id);
     }
 
-    update_vault(deps.storage, &vault).unwrap();
+    update_vault(deps.storage, vault.clone()).unwrap();
 
-    if let Some(TriggerConfiguration::Time { target_time }) = vault.trigger {
-        let trigger_time =
-            Timestamp::from_seconds(max(target_time.seconds(), env.block.time.seconds()));
-
+    if vault.trigger.is_some() {
         save_trigger(
             deps.storage,
             Trigger {
                 vault_id: vault.id,
-                configuration: TriggerConfiguration::Time {
-                    target_time: trigger_time,
+                configuration: match vault.trigger.unwrap() {
+                    TriggerConfiguration::Time { target_time } => TriggerConfiguration::Time {
+                        target_time: Timestamp::from_seconds(max(
+                            target_time.seconds(),
+                            env.block.time.seconds(),
+                        )),
+                    },
+                    TriggerConfiguration::FinLimitOrder {
+                        target_price,
+                        order_idx,
+                    } => TriggerConfiguration::FinLimitOrder {
+                        target_price,
+                        order_idx,
+                    },
                 },
             },
         )
         .unwrap();
     }
 
-    VAULT_CACHE.save(deps.storage, &vault.id).unwrap();
+    VAULT_ID_CACHE.save(deps.storage, &vault.id).unwrap();
 
     get_vault(deps.storage, vault.id).unwrap()
 }

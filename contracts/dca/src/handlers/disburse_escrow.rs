@@ -61,12 +61,13 @@ pub fn disburse_escrow_handler(
     let performance_fee = get_performance_fee(&vault, current_price)?;
     let amount_to_disburse = subtract(&vault.escrowed_amount, &performance_fee)?;
 
-    let vault = Vault {
-        escrowed_amount: empty_of(vault.escrowed_amount),
-        ..vault
-    };
-
-    update_vault(deps.storage, &vault)?;
+    let vault = update_vault(
+        deps.storage,
+        Vault {
+            escrowed_amount: empty_of(vault.escrowed_amount),
+            ..vault
+        },
+    )?;
 
     create_event(
         deps.storage,

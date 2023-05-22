@@ -4,12 +4,12 @@ use crate::helpers::disbursement::get_disbursement_messages;
 use crate::helpers::fees::{get_automation_fee_rate, get_fee_messages, get_swap_fee_rate};
 use crate::helpers::math::checked_mul;
 use crate::msg::ExecuteMsg;
-use crate::state::cache::{SWAP_CACHE, VAULT_CACHE};
+use crate::state::cache::{SWAP_CACHE, VAULT_ID_CACHE};
 use crate::state::events::create_event;
 use crate::state::triggers::delete_trigger;
 use crate::state::vaults::{get_vault, update_vault};
 use crate::types::event::{EventBuilder, EventData, ExecutionSkippedReason};
-use crate::types::vault::VaultStatus;
+use crate::types::vault::{Vault, VaultStatus};
 use cosmwasm_std::{to_binary, SubMsg, SubMsgResult, Uint128, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{Attribute, Coin, DepsMut, Env, Reply, Response};
@@ -19,7 +19,7 @@ pub fn disburse_funds_handler(
     env: &Env,
     reply: Reply,
 ) -> Result<Response, ContractError> {
-    let vault_id = VAULT_CACHE.load(deps.storage)?;
+    let vault_id = VAULT_ID_CACHE.load(deps.storage)?;
     let mut vault = get_vault(deps.storage, vault_id)?;
 
     let mut attributes = Vec::<Attribute>::new();
@@ -55,18 +55,29 @@ pub fn disburse_funds_handler(
                 coin_received.denom.clone(),
             )?);
 
-            vault.balance.amount -= coin_sent.amount;
-            vault.swapped_amount = add_to(vault.swapped_amount, coin_sent.amount);
-            vault.received_amount = add_to(vault.received_amount, total_after_total_fee);
-
             let amount_to_escrow = total_after_total_fee * vault.escrow_level;
             total_after_total_fee -= amount_to_escrow;
 
-            vault.escrowed_amount = add_to(vault.escrowed_amount, amount_to_escrow);
+            let new_balance = Coin::new(
+                (vault.balance.amount - coin_sent.amount).into(),
+                vault.balance.denom,
+            );
 
-            if vault.balance.amount.is_zero() {
-                vault.status = VaultStatus::Inactive;
-            }
+            vault = update_vault(
+                deps.storage,
+                Vault {
+                    balance: new_balance.clone(),
+                    swapped_amount: add_to(vault.swapped_amount, coin_sent.amount),
+                    received_amount: add_to(vault.received_amount, total_after_total_fee),
+                    escrowed_amount: add_to(vault.escrowed_amount, amount_to_escrow),
+                    status: if new_balance.amount.is_zero() {
+                        VaultStatus::Inactive
+                    } else {
+                        vault.status
+                    },
+                    ..vault
+                },
+            )?;
 
             sub_msgs.append(
                 &mut get_disbursement_messages(deps.storage, &vault, total_after_total_fee)?.into(),
@@ -85,6 +96,7 @@ pub fn disburse_funds_handler(
                 ),
             )?;
 
+            attributes.push(Attribute::new("disburse_funds", "true"));
             attributes.push(Attribute::new("swapped_amount", coin_sent.to_string()));
             attributes.push(Attribute::new("received_amount", coin_received.to_string()));
             attributes.push(Attribute::new("fee_amount", total_fee.to_string()));
@@ -108,8 +120,6 @@ pub fn disburse_funds_handler(
         }
     }
 
-    update_vault(deps.storage, &vault)?;
-
     if vault.should_not_continue() {
         if vault.escrowed_amount.amount > Uint128::zero() {
             sub_msgs.push(SubMsg::new(WasmMsg::Execute {
@@ -123,7 +133,6 @@ pub fn disburse_funds_handler(
     }
 
     Ok(Response::new()
-        .add_attribute("funds_disbursed", vault.id)
         .add_attributes(attributes)
         .add_submessages(sub_msgs))
 }

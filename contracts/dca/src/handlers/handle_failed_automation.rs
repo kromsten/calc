@@ -1,7 +1,7 @@
 use crate::{
     error::ContractError,
     state::{
-        cache::{POST_EXECUTION_ACTION_CACHE, VAULT_CACHE},
+        cache::{POST_EXECUTION_ACTION_CACHE, VAULT_ID_CACHE},
         events::create_event,
         vaults::get_vault,
     },
@@ -14,7 +14,7 @@ pub fn handle_failed_automation_handler(
     env: Env,
     reply: Reply,
 ) -> Result<Response, ContractError> {
-    let vault_id = VAULT_CACHE.load(deps.storage)?;
+    let vault_id = VAULT_ID_CACHE.load(deps.storage)?;
     let vault = get_vault(deps.storage, vault_id)?;
 
     let mut cache = POST_EXECUTION_ACTION_CACHE.load(deps.storage, vault_id.into())?;

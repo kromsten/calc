@@ -1,9 +1,7 @@
-pub mod after_fin_limit_order_submitted;
 pub mod cancel_vault;
 pub mod create_custom_swap_fee;
 pub mod create_pair;
 pub mod create_vault;
-pub mod delete_pair;
 pub mod deposit;
 pub mod disburse_escrow;
 pub mod disburse_funds;
@@ -25,6 +23,7 @@ pub mod instantiate;
 pub mod migrate;
 pub mod migrate_vaults;
 pub mod remove_custom_swap_fee;
+pub mod save_limit_order_id;
 pub mod update_config;
 pub mod update_swap_adjustment_handler;
 pub mod update_vault;

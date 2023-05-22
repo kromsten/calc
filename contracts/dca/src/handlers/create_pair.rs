@@ -2,7 +2,6 @@ use crate::helpers::validation::assert_sender_is_admin;
 use crate::state::pairs::save_pair;
 use crate::{error::ContractError, types::pair::Pair};
 use cosmwasm_std::{Addr, DepsMut};
-#[cfg(not(feature = "library"))]
 use cosmwasm_std::{MessageInfo, Response};
 
 pub fn create_pair_handler(
@@ -24,7 +23,7 @@ pub fn create_pair_handler(
     save_pair(deps.storage, &pair)?;
 
     Ok(Response::new()
-        .add_attribute("method", "create_pair")
+        .add_attribute("create_pair", "true")
         .add_attribute("base_denom", base_denom)
         .add_attribute("quote_denom", quote_denom)
         .add_attribute("address", format!("{:#?}", address)))

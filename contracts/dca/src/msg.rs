@@ -60,6 +60,7 @@ pub enum ExecuteMsg {
         swap_amount: Uint128,
         time_interval: TimeInterval,
         target_start_time_utc_seconds: Option<Uint64>,
+        target_receive_amount: Option<Uint128>,
         performance_assessment_strategy: Option<PerformanceAssessmentStrategyParams>,
         swap_adjustment_strategy: Option<SwapAdjustmentStrategyParams>,
     },

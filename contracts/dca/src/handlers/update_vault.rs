@@ -52,7 +52,7 @@ pub fn update_vault_handler(
         response = response.add_attribute("destinations", format!("{:?}", destinations));
     }
 
-    update_vault(deps.storage, &vault)?;
+    update_vault(deps.storage, vault)?;
 
     Ok(response)
 }

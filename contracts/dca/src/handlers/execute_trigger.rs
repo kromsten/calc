@@ -5,7 +5,7 @@ use crate::helpers::time::get_next_target_time;
 use crate::helpers::validation::{assert_contract_is_not_paused, assert_target_time_is_in_past};
 use crate::helpers::vault::{get_swap_amount, simulate_standard_dca_execution};
 use crate::msg::ExecuteMsg;
-use crate::state::cache::{SwapCache, SWAP_CACHE, VAULT_CACHE};
+use crate::state::cache::{SwapCache, SWAP_CACHE, VAULT_ID_CACHE};
 use crate::state::events::create_event;
 use crate::state::pairs::find_pair;
 use crate::state::triggers::{delete_trigger, save_trigger};
@@ -14,12 +14,12 @@ use crate::types::event::{EventBuilder, EventData, ExecutionSkippedReason};
 use crate::types::swap_adjustment_strategy::SwapAdjustmentStrategy;
 use crate::types::trigger::{Trigger, TriggerConfiguration};
 use crate::types::vault::{Vault, VaultStatus};
-use cosmwasm_std::{to_binary, Decimal256, SubMsg, WasmMsg};
+use cosmwasm_std::{to_binary, Decimal256, SubMsg, Uint256, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{DepsMut, Env, Response, Uint128};
 use kujira::asset::{Asset, AssetInfo};
 use kujira::denom::Denom;
-use kujira::fin::{ExecuteMsg as FinExecuteMsg, QueryMsg};
+use kujira::fin::{ExecuteMsg as FinExecuteMsg, OrderResponse, QueryMsg};
 use std::str::FromStr;
 
 pub fn execute_trigger_handler(
@@ -55,9 +55,39 @@ pub fn execute_trigger_handler(
         });
     }
 
+    let pair = find_pair(deps.storage, vault.denoms())?;
+
     match vault.trigger {
         Some(TriggerConfiguration::Time { target_time }) => {
             assert_target_time_is_in_past(env.block.time, target_time)?;
+        }
+        Some(TriggerConfiguration::FinLimitOrder { order_idx, .. }) => {
+            if let Some(order_idx) = order_idx {
+                let order = deps.querier.query_wasm_smart::<OrderResponse>(
+                    pair.address.clone(),
+                    &QueryMsg::Order { order_idx },
+                )?;
+
+                if order.offer_amount > Uint256::zero() {
+                    return Err(ContractError::CustomError {
+                        val: String::from("target price has not been met"),
+                    });
+                }
+
+                response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
+                    contract_addr: pair.address.to_string(),
+                    msg: to_binary(&FinExecuteMsg::WithdrawOrders {
+                        order_idxs: Some(vec![order_idx]),
+                        callback: None,
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }));
+            } else {
+                return Err(ContractError::CustomError {
+                    val: String::from("price trigger has not been created"),
+                });
+            }
         }
         _ => {
             return Err(ContractError::CustomError {
@@ -70,16 +100,15 @@ pub fn execute_trigger_handler(
     }
 
     if vault.is_scheduled() {
-        vault = Vault {
-            status: VaultStatus::Active,
-            started_at: Some(env.block.time),
-            ..vault
-        };
+        vault = update_vault(
+            deps.storage,
+            Vault {
+                status: VaultStatus::Active,
+                started_at: Some(env.block.time),
+                ..vault
+            },
+        )?;
     }
-
-    update_vault(deps.storage, &vault)?;
-
-    let pair = find_pair(deps.storage, vault.denoms())?;
 
     let belief_price = query_belief_price(&deps.querier, &pair, vault.get_swap_denom())?;
 
@@ -212,7 +241,7 @@ pub fn execute_trigger_handler(
         return Ok(response.add_attribute("execution_skipped", "slippage_tolerance_exceeded"));
     }
 
-    VAULT_CACHE.save(deps.storage, &vault.id)?;
+    VAULT_ID_CACHE.save(deps.storage, &vault.id)?;
 
     SWAP_CACHE.save(
         deps.storage,
@@ -471,6 +500,46 @@ mod execute_trigger_tests {
                     asset_price: Decimal::one()
                 }
             }
+        );
+    }
+
+    #[test]
+    fn with_price_trigger_should_withdraw_limit_order() {
+        let mut deps = calc_mock_dependencies();
+        let env = mock_env();
+        let info = mock_info(ADMIN, &[]);
+
+        instantiate_contract(deps.as_mut(), env.clone(), info.clone());
+
+        let order_idx = Uint128::new(46);
+
+        let vault = setup_vault(
+            deps.as_mut(),
+            env.clone(),
+            Vault {
+                trigger: Some(TriggerConfiguration::FinLimitOrder {
+                    target_price: Decimal::percent(200),
+                    order_idx: Some(order_idx),
+                }),
+                ..Vault::default()
+            },
+        );
+
+        let pair = find_pair(deps.as_ref().storage, vault.denoms()).unwrap();
+
+        let response = execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
+
+        assert_eq!(
+            response.messages.first().unwrap(),
+            &SubMsg::new(WasmMsg::Execute {
+                contract_addr: pair.address.to_string(),
+                msg: to_binary(&FinExecuteMsg::WithdrawOrders {
+                    order_idxs: Some(vec![order_idx]),
+                    callback: None
+                })
+                .unwrap(),
+                funds: vec![]
+            })
         );
     }
 

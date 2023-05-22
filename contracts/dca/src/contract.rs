@@ -1,5 +1,6 @@
 use crate::constants::{
-    AFTER_DELEGATION_REPLY_ID, AFTER_FAILED_AUTOMATION_REPLY_ID, AFTER_SWAP_REPLY_ID,
+    AFTER_DELEGATION_REPLY_ID, AFTER_FAILED_AUTOMATION_REPLY_ID, AFTER_LIMIT_ORDER_PLACED_REPLY_ID,
+    AFTER_SWAP_REPLY_ID,
 };
 use crate::error::ContractError;
 use crate::handlers::cancel_vault::cancel_vault_handler;
@@ -25,6 +26,7 @@ use crate::handlers::handle_failed_automation::handle_failed_automation_handler;
 use crate::handlers::instantiate::instantiate_handler;
 use crate::handlers::migrate::migrate_handler;
 use crate::handlers::remove_custom_swap_fee::remove_custom_swap_fee_handler;
+use crate::handlers::save_limit_order_id::save_limit_order_id;
 use crate::handlers::update_config::update_config_handler;
 use crate::handlers::update_swap_adjustment_handler::update_swap_adjustment_handler;
 use crate::handlers::update_vault::update_vault_handler;
@@ -39,8 +41,8 @@ pub const CONTRACT_NAME: &str = "crates.io:calc-dca";
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[entry_point]
-pub fn migrate(deps: DepsMut, _: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
-    migrate_handler(deps, msg)
+pub fn migrate(deps: DepsMut, env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+    migrate_handler(deps, env, msg)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -77,6 +79,7 @@ pub fn execute(
             swap_amount,
             time_interval,
             target_start_time_utc_seconds,
+            target_receive_amount,
             performance_assessment_strategy,
             swap_adjustment_strategy,
         } => create_vault_handler(
@@ -93,6 +96,7 @@ pub fn execute(
             swap_amount,
             time_interval,
             target_start_time_utc_seconds,
+            target_receive_amount,
             performance_assessment_strategy,
             swap_adjustment_strategy,
         ),
@@ -160,6 +164,7 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, ContractError> {
     match reply.id {
+        AFTER_LIMIT_ORDER_PLACED_REPLY_ID => save_limit_order_id(deps, reply),
         AFTER_SWAP_REPLY_ID => disburse_funds_handler(deps, &env, reply),
         AFTER_FAILED_AUTOMATION_REPLY_ID => handle_failed_automation_handler(deps, env, reply),
         AFTER_DELEGATION_REPLY_ID => log_delegation_result(reply),

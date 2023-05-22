@@ -4,13 +4,15 @@ use crate::helpers::validation::{
 };
 use crate::state::disburse_escrow_tasks::save_disburse_escrow_task;
 use crate::state::events::create_event;
+use crate::state::pairs::find_pair;
 use crate::state::triggers::delete_trigger;
 use crate::state::vaults::{get_vault, update_vault};
 use crate::types::event::{EventBuilder, EventData};
+use crate::types::trigger::TriggerConfiguration;
 use crate::types::vault::{Vault, VaultStatus};
-#[cfg(not(feature = "library"))]
-use cosmwasm_std::{BankMsg, DepsMut, Response, Uint128};
+use cosmwasm_std::{to_binary, BankMsg, DepsMut, Response, Uint128, WasmMsg};
 use cosmwasm_std::{Coin, Env, MessageInfo, SubMsg};
+use kujira::fin::ExecuteMsg;
 
 pub fn cancel_vault_handler(
     deps: DepsMut,
@@ -45,15 +47,48 @@ pub fn cancel_vault_handler(
         }));
     }
 
-    let updated_vault = Vault {
-        status: VaultStatus::Cancelled,
-        balance: Coin::new(0, vault.get_swap_denom()),
-        ..vault
-    };
+    let updated_vault = update_vault(
+        deps.storage,
+        Vault {
+            status: VaultStatus::Cancelled,
+            balance: Coin::new(0, vault.get_swap_denom()),
+            ..vault.clone()
+        },
+    )?;
 
-    update_vault(deps.storage, &updated_vault)?;
+    if let Some(trigger) = vault.trigger {
+        match trigger {
+            TriggerConfiguration::FinLimitOrder { order_idx, .. } => {
+                if let Some(order_idx) = order_idx {
+                    let pair = find_pair(deps.storage, updated_vault.denoms()).unwrap();
 
-    delete_trigger(deps.storage, updated_vault.id)?;
+                    submessages.push(SubMsg::new(WasmMsg::Execute {
+                        contract_addr: pair.address.to_string(),
+                        msg: to_binary(&ExecuteMsg::RetractOrder {
+                            order_idx,
+                            amount: None,
+                            callback: None,
+                        })
+                        .unwrap(),
+                        funds: vec![],
+                    }));
+
+                    submessages.push(SubMsg::new(WasmMsg::Execute {
+                        contract_addr: pair.address.to_string(),
+                        msg: to_binary(&ExecuteMsg::WithdrawOrders {
+                            order_idxs: Some(vec![order_idx]),
+                            callback: None,
+                        })
+                        .unwrap(),
+                        funds: vec![],
+                    }));
+                }
+            }
+            _ => {}
+        }
+
+        delete_trigger(deps.storage, vault.id)?;
+    }
 
     Ok(Response::new()
         .add_attribute("cancel_vault", "true")
@@ -70,11 +105,11 @@ mod cancel_vault_tests {
     use crate::handlers::get_vault::get_vault_handler;
     use crate::state::disburse_escrow_tasks::get_disburse_escrow_tasks;
     use crate::tests::helpers::{instantiate_contract, setup_vault};
-    use crate::tests::mocks::{ADMIN, DENOM_UKUJI};
+    use crate::tests::mocks::{calc_mock_dependencies, ADMIN, DENOM_UKUJI};
     use crate::types::event::{EventBuilder, EventData};
     use crate::types::vault::{Vault, VaultStatus};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{BankMsg, SubMsg, Uint128};
+    use cosmwasm_std::{BankMsg, Decimal, SubMsg, Uint128};
 
     #[test]
     fn should_return_balance_to_owner() {
@@ -252,5 +287,86 @@ mod cancel_vault_tests {
         .unwrap();
 
         assert!(disburse_escrow_tasks_after.contains(&vault.id));
+    }
+
+    #[test]
+    fn should_retract_limit_order() {
+        let mut deps = calc_mock_dependencies();
+        let env = mock_env();
+        let info = mock_info(ADMIN, &[]);
+
+        instantiate_contract(deps.as_mut(), env.clone(), info.clone());
+
+        let order_idx = Uint128::new(123);
+
+        let vault = setup_vault(
+            deps.as_mut(),
+            env.clone(),
+            Vault {
+                trigger: Some(TriggerConfiguration::FinLimitOrder {
+                    target_price: Decimal::percent(200),
+                    order_idx: Some(order_idx),
+                }),
+                ..Vault::default()
+            },
+        );
+
+        let response = cancel_vault_handler(deps.as_mut(), env.clone(), info, vault.id).unwrap();
+
+        let pair = find_pair(deps.as_ref().storage, vault.denoms()).unwrap();
+
+        assert_eq!(
+            response.messages.get(1).unwrap(),
+            &SubMsg::new(WasmMsg::Execute {
+                contract_addr: pair.address.to_string(),
+                msg: to_binary(&ExecuteMsg::RetractOrder {
+                    order_idx,
+                    amount: None,
+                    callback: None
+                })
+                .unwrap(),
+                funds: vec![]
+            })
+        );
+    }
+
+    #[test]
+    fn should_withdraw_limit_order() {
+        let mut deps = calc_mock_dependencies();
+        let env = mock_env();
+        let info = mock_info(ADMIN, &[]);
+
+        instantiate_contract(deps.as_mut(), env.clone(), info.clone());
+
+        let order_idx = Uint128::new(123);
+
+        let vault = setup_vault(
+            deps.as_mut(),
+            env.clone(),
+            Vault {
+                trigger: Some(TriggerConfiguration::FinLimitOrder {
+                    target_price: Decimal::percent(200),
+                    order_idx: Some(order_idx),
+                }),
+                ..Vault::default()
+            },
+        );
+
+        let response = cancel_vault_handler(deps.as_mut(), env.clone(), info, vault.id).unwrap();
+
+        let pair = find_pair(deps.as_ref().storage, vault.denoms()).unwrap();
+
+        assert_eq!(
+            response.messages.get(2).unwrap(),
+            &SubMsg::new(WasmMsg::Execute {
+                contract_addr: pair.address.to_string(),
+                msg: to_binary(&ExecuteMsg::WithdrawOrders {
+                    order_idxs: Some(vec![order_idx]),
+                    callback: None
+                })
+                .unwrap(),
+                funds: vec![]
+            })
+        );
     }
 }
