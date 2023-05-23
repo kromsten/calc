@@ -191,7 +191,11 @@ pub fn get_old_vaults_by_address(
                 result.unwrap_or_else(|_| panic!("a vault with id after {:?}", start_after));
             old_vault_from(
                 &vault_data,
-                PAIRS.load(store, vault_data.pair_address.clone()).unwrap_or_else(|_| panic!("a pair for pair address {:?}", vault_data.pair_address)),
+                PAIRS
+                    .load(store, vault_data.pair_address.clone())
+                    .unwrap_or_else(|_| {
+                        panic!("a pair for pair address {:?}", vault_data.pair_address)
+                    }),
                 get_old_trigger(store, vault_data.id)
                     .unwrap_or_else(|_| panic!("a trigger for vault id {}", vault_data.id))
                     .map(|trigger| trigger.configuration),
@@ -220,7 +224,11 @@ pub fn get_old_vaults(
                 result.unwrap_or_else(|_| panic!("a vault with id after {:?}", start_after));
             old_vault_from(
                 &vault_data,
-                PAIRS.load(store, vault_data.pair_address.clone()).unwrap_or_else(|_| panic!("a pair for pair address {:?}", vault_data.pair_address)),
+                PAIRS
+                    .load(store, vault_data.pair_address.clone())
+                    .unwrap_or_else(|_| {
+                        panic!("a pair for pair address {:?}", vault_data.pair_address)
+                    }),
                 get_old_trigger(store, vault_data.id)
                     .unwrap_or_else(|_| panic!("a trigger for vault id {}", vault_data.id))
                     .map(|trigger| trigger.configuration),

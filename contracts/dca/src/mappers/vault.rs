@@ -44,7 +44,7 @@ pub fn vault_from(env: Env, old_vault: OldVault) -> Vault {
                 dca_plus_config.escrow_level
             }),
         escrowed_amount: old_vault.dca_plus_config.clone().map_or(
-            Coin::new(0, old_vault.get_receive_denom().clone()),
+            Coin::new(0, old_vault.get_receive_denom()),
             |dca_plus_config| dca_plus_config.escrowed_balance,
         ),
         swapped_amount: old_vault.swapped_amount.clone(),
@@ -89,7 +89,7 @@ impl From<OldTimeInterval> for TimeInterval {
             OldTimeInterval::Daily => TimeInterval::Daily,
             OldTimeInterval::Weekly => TimeInterval::Weekly,
             OldTimeInterval::Monthly => TimeInterval::Monthly,
-            OldTimeInterval::EverySecond => TimeInterval::EverySecond,
+            OldTimeInterval::EverySecond => TimeInterval::EveryBlock,
             OldTimeInterval::EveryMinute => TimeInterval::EveryMinute,
             OldTimeInterval::HalfHourly => TimeInterval::HalfHourly,
             OldTimeInterval::Hourly => TimeInterval::Hourly,

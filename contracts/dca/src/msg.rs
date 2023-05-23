@@ -110,6 +110,9 @@ pub enum ExecuteMsg {
         delegator_address: Addr,
         validator_address: Addr,
     },
+    MigrateVaults {
+        limit: u16,
+    },
 }
 
 #[cw_serde]

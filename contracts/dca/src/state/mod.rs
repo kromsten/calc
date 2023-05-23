@@ -4,7 +4,6 @@ pub mod custom_fees;
 pub mod data_fixes;
 pub mod disburse_escrow_tasks;
 pub mod events;
-pub mod old_config;
 pub mod old_pairs;
 pub mod old_swap_adjustments;
 pub mod old_triggers;

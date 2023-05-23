@@ -9,13 +9,10 @@ use crate::{
         assert_slippage_tolerance_is_less_than_or_equal_to_one, assert_twap_period_is_valid,
     },
     msg::InstantiateMsg,
-    state::{
-        config::update_config,
-        old_config::{update_old_config, OldConfig},
-    },
+    state::config::update_config,
     types::config::Config,
 };
-use cosmwasm_std::{Addr, DepsMut, Response};
+use cosmwasm_std::{DepsMut, Response};
 use cw2::set_contract_version;
 
 pub fn instantiate_handler(deps: DepsMut, msg: InstantiateMsg) -> Result<Response, ContractError> {
@@ -49,21 +46,6 @@ pub fn instantiate_handler(deps: DepsMut, msg: InstantiateMsg) -> Result<Respons
             risk_weighted_average_escrow_level: msg.risk_weighted_average_escrow_level,
             twap_period: msg.twap_period,
             default_slippage_tolerance: msg.default_slippage_tolerance,
-        },
-    )?;
-
-    update_old_config(
-        deps.storage,
-        OldConfig {
-            admin: msg.admin.clone(),
-            executors: msg.executors,
-            fee_collectors: msg.fee_collectors,
-            staking_router_address: Addr::unchecked("staking-router"),
-            default_swap_fee_percent: msg.default_swap_fee_percent,
-            delegation_fee_percent: msg.automation_fee_percent,
-            default_page_limit: msg.default_page_limit,
-            paused: msg.paused,
-            risk_weighted_average_escrow_level: msg.risk_weighted_average_escrow_level,
         },
     )?;
 

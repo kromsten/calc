@@ -479,6 +479,29 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "migrate_vaults"
+      ],
+      "properties": {
+        "migrate_vaults": {
+          "type": "object",
+          "required": [
+            "limit"
+          ],
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     }
   ],
   "definitions": {
@@ -678,7 +701,7 @@
         {
           "type": "string",
           "enum": [
-            "every_second",
+            "every_block",
             "every_minute",
             "half_hourly",
             "hourly",

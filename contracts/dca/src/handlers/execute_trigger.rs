@@ -1,6 +1,6 @@
 use crate::constants::AFTER_SWAP_REPLY_ID;
 use crate::error::ContractError;
-use crate::helpers::price::{query_belief_price, FinSimulationResponse};
+use crate::helpers::price::{get_belief_price, get_slippage};
 use crate::helpers::time::get_next_target_time;
 use crate::helpers::validation::{assert_contract_is_not_paused, assert_target_time_is_in_past};
 use crate::helpers::vault::{get_swap_amount, simulate_standard_dca_execution};
@@ -17,8 +17,6 @@ use crate::types::vault::{Vault, VaultStatus};
 use cosmwasm_std::{to_binary, SubMsg, Uint256, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{DepsMut, Env, Response, Uint128};
-use kujira::asset::{Asset, AssetInfo};
-use kujira::denom::Denom;
 use kujira::fin::{ExecuteMsg as FinExecuteMsg, OrderResponse, QueryMsg};
 
 pub fn execute_trigger_handler(
@@ -110,7 +108,7 @@ pub fn execute_trigger_handler(
         )?;
     }
 
-    let belief_price = query_belief_price(&deps.querier, &pair, vault.get_swap_denom())?;
+    let belief_price = get_belief_price(&deps.querier, &pair, vault.get_swap_denom())?;
 
     create_event(
         deps.storage,
@@ -211,22 +209,7 @@ pub fn execute_trigger_handler(
         return Ok(response.add_attribute("execution_skipped", "price_threshold_exceeded"));
     };
 
-    let actual_receive_amount = deps
-        .querier
-        .query_wasm_smart::<FinSimulationResponse>(
-            pair.address.clone(),
-            &QueryMsg::Simulation {
-                offer_asset: Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: Denom::from(adjusted_swap_amount.denom.clone()),
-                    },
-                    amount: adjusted_swap_amount.amount,
-                },
-            },
-        )?
-        .return_amount;
-
-    if actual_receive_amount < vault.minimum_receive_amount.unwrap_or(Uint128::zero()) {
+    if get_slippage(&deps.querier, &pair, &adjusted_swap_amount)? > vault.slippage_tolerance {
         create_event(
             deps.storage,
             EventBuilder::new(
@@ -651,15 +634,6 @@ mod execute_trigger_tests {
 
         deps.querier.update_fin_price(&THREE_DECIMAL);
 
-        // deps.querier.update_stargate(|path, _| match path {
-        //     "/osmosis.twap.v1beta1.Query/ArithmeticTwapToNow" => {
-        //         to_binary(&ArithmeticTwapResponse {
-        //             arithmetic_twap: "3".to_string(),
-        //         })
-        //     }
-        //     _ => Err(StdError::generic_err("message not customised")),
-        // });
-
         execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
 
         let events = get_events_by_resource_id_handler(deps.as_ref(), vault.id, None, None, None)
@@ -761,13 +735,9 @@ mod execute_trigger_tests {
                     msg: to_binary(&FinExecuteMsg::Swap {
                         offer_asset: None,
                         belief_price: Some(
-                            query_belief_price(
-                                &deps.as_ref().querier,
-                                &pair,
-                                vault.get_swap_denom()
-                            )
-                            .unwrap()
-                            .into()
+                            get_belief_price(&deps.as_ref().querier, &pair, vault.get_swap_denom())
+                                .unwrap()
+                                .into()
                         ),
                         max_spread: Some(vault.slippage_tolerance.into()),
                         to: None,
@@ -1142,15 +1112,6 @@ mod execute_trigger_tests {
             },
         );
 
-        // deps.querier.update_stargate(|path, _| match path {
-        //     "/osmosis.poolmanager.v1beta1.Query/EstimateSwapExactAmountIn" => {
-        //         to_binary(&EstimateSwapExactAmountInResponse {
-        //             token_out_amount: (ONE / TWO_MICRONS).to_string(),
-        //         })
-        //     }
-        //     _ => Err(StdError::generic_err("message not supported")),
-        // });
-
         execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
 
         let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
@@ -1233,13 +1194,9 @@ mod execute_trigger_tests {
                     msg: to_binary(&FinExecuteMsg::Swap {
                         offer_asset: None,
                         belief_price: Some(
-                            query_belief_price(
-                                &deps.as_ref().querier,
-                                &pair,
-                                vault.get_swap_denom()
-                            )
-                            .unwrap()
-                            .into()
+                            get_belief_price(&deps.as_ref().querier, &pair, vault.get_swap_denom())
+                                .unwrap()
+                                .into()
                         ),
                         max_spread: Some(vault.slippage_tolerance.into()),
                         to: None,
@@ -1287,13 +1244,9 @@ mod execute_trigger_tests {
                     msg: to_binary(&FinExecuteMsg::Swap {
                         offer_asset: None,
                         belief_price: Some(
-                            query_belief_price(
-                                &deps.as_ref().querier,
-                                &pair,
-                                vault.get_swap_denom()
-                            )
-                            .unwrap()
-                            .into()
+                            get_belief_price(&deps.as_ref().querier, &pair, vault.get_swap_denom())
+                                .unwrap()
+                                .into()
                         ),
                         max_spread: Some(vault.slippage_tolerance.into()),
                         to: None,
@@ -1319,7 +1272,7 @@ mod execute_trigger_tests {
             deps.as_mut(),
             env.clone(),
             Vault {
-                slippage_tolerance: Decimal::percent(1),
+                slippage_tolerance: Decimal::percent(6),
                 ..Vault::default()
             },
         );
@@ -1340,13 +1293,9 @@ mod execute_trigger_tests {
                     msg: to_binary(&FinExecuteMsg::Swap {
                         offer_asset: None,
                         belief_price: Some(
-                            query_belief_price(
-                                &deps.as_ref().querier,
-                                &pair,
-                                vault.get_swap_denom()
-                            )
-                            .unwrap()
-                            .into()
+                            get_belief_price(&deps.as_ref().querier, &pair, vault.get_swap_denom())
+                                .unwrap()
+                                .into()
                         ),
                         max_spread: Some(vault.slippage_tolerance.into()),
                         to: None,
@@ -1475,13 +1424,9 @@ mod execute_trigger_tests {
                     msg: to_binary(&FinExecuteMsg::Swap {
                         offer_asset: None,
                         belief_price: Some(
-                            query_belief_price(
-                                &deps.as_ref().querier,
-                                &pair,
-                                vault.get_swap_denom()
-                            )
-                            .unwrap()
-                            .into()
+                            get_belief_price(&deps.as_ref().querier, &pair, vault.get_swap_denom())
+                                .unwrap()
+                                .into()
                         ),
                         max_spread: Some(vault.slippage_tolerance.into()),
                         to: None,
@@ -1493,25 +1438,5 @@ mod execute_trigger_tests {
                 AFTER_SWAP_REPLY_ID,
             )
         );
-
-        // assert!(response.messages.contains(&SubMsg {
-        //     id: AFTER_SWAP_REPLY_ID,
-        //     msg: MsgSwapExactAmountIn {
-        //         sender: env.contract.address.to_string(),
-        //         token_in: Some(
-        //             Coin::new(vault.swap_amount.into(), vault.get_swap_denom())
-        //                 .clone()
-        //                 .into()
-        //         ),
-        //         token_out_min_amount: token_out_min_amount.to_string(),
-        //         routes: vec![SwapAmountInRoute {
-        //             pool_id: 3,
-        //             token_out_denom: vault.target_denom,
-        //         }],
-        //     }
-        //     .into(),
-        //     gas_limit: None,
-        //     reply_on: ReplyOn::Always,
-        // }))
     }
 }

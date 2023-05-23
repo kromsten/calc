@@ -52,5 +52,7 @@ pub fn get_old_swap_adjustment(
     if last_updated < block_time.minus_seconds(thirty_hours) {
         return Ok(Decimal::one());
     }
-    adjustments_store(position_type).load(storage, model)
+    Ok(adjustments_store(position_type)
+        .load(storage, model)
+        .unwrap_or(Decimal::one()))
 }

@@ -64,7 +64,7 @@ pub fn migrate_handler(
             weighted_scale_swap_fee_percent: msg.weighted_scale_swap_fee_percent,
             automation_fee_percent: msg.automation_fee_percent,
             default_page_limit: msg.default_page_limit,
-            paused: msg.paused,
+            paused: true,
             risk_weighted_average_escrow_level: msg.risk_weighted_average_escrow_level,
             twap_period: msg.twap_period,
             default_slippage_tolerance: msg.default_slippage_tolerance,

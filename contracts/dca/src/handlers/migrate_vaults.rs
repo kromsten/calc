@@ -13,14 +13,21 @@ pub fn migrate_vaults_handler(
     env: Env,
     limit: u16,
 ) -> Result<Response, ContractError> {
-    let latest_migrated_vault_id = get_vaults(deps.storage, None, Some(1), Some(true))?
+    let start_after_vault_id = get_vaults(deps.storage, None, Some(1), Some(true))?
         .first()
-        .map(|vault| vault.id);
+        .map_or(Uint128::zero(), |vault| vault.id);
 
     let old_vaults_to_be_migrated =
-        get_old_vaults(deps.storage, latest_migrated_vault_id, Some(limit))?;
+        get_old_vaults(deps.storage, Some(start_after_vault_id), Some(limit))?;
+
+    if old_vaults_to_be_migrated.is_empty() {
+        return Ok(Response::new().add_attribute("migrated_ids", "none"));
+    }
+
+    let mut latest_migrated_vault_id = start_after_vault_id + Uint128::one();
 
     for old_vault in old_vaults_to_be_migrated {
+        latest_migrated_vault_id = old_vault.id;
         migrate_vault(deps.storage, vault_from(env.clone(), old_vault))?;
     }
 
@@ -28,9 +35,8 @@ pub fn migrate_vaults_handler(
         "migrated_ids",
         format!(
             "{}-{}",
-            latest_migrated_vault_id.map_or(Uint128::zero(), |id| id + Uint128::one()),
+            start_after_vault_id + Uint128::one(),
             latest_migrated_vault_id
-                .map_or(Uint128::zero(), |id| id + Uint128::new((limit + 1).into()))
         ),
     ))
 }
@@ -58,7 +64,7 @@ mod migrate_vaults_tests {
 
         instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
 
-        for i in 0u128..10u128 {
+        for i in 1u128..11u128 {
             setup_old_vault(
                 deps.as_mut(),
                 env.clone(),
@@ -164,5 +170,43 @@ mod migrate_vaults_tests {
 
         assert_eq!(old_vaults_after.len(), 50);
         assert_eq!(vaults_after.len(), 30);
+    }
+
+    #[test]
+    fn migrates_vaults_from_empty_until_full() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+        instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
+
+        for i in 1u128..51u128 {
+            setup_old_vault(
+                deps.as_mut(),
+                env.clone(),
+                OldVault {
+                    id: Uint128::new(i),
+                    ..OldVault::default()
+                },
+            );
+        }
+
+        let limit = 10;
+
+        for i in 1..5 {
+            migrate_vaults_handler(deps.as_mut(), env.clone(), limit).unwrap();
+
+            let migrated_vaults = get_vaults(&deps.storage, None, Some(100), None).unwrap();
+            assert_eq!(migrated_vaults.len(), i * limit as usize);
+        }
+
+        migrate_vaults_handler(deps.as_mut(), env.clone(), limit).unwrap();
+
+        let migrated_vaults = get_vaults(&deps.storage, None, Some(100), None).unwrap();
+        assert_eq!(migrated_vaults.len(), 50);
+
+        migrate_vaults_handler(deps.as_mut(), env.clone(), limit).unwrap();
+
+        let migrated_vaults = get_vaults(&deps.storage, None, Some(100), None).unwrap();
+        assert_eq!(migrated_vaults.len(), 50);
     }
 }

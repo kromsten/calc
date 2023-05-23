@@ -4,7 +4,7 @@ use crate::{
         coin::{empty_of, subtract},
         disbursement::get_disbursement_messages,
         fees::{get_fee_messages, get_performance_fee},
-        price::query_belief_price,
+        price::get_belief_price,
         validation::assert_sender_is_executor,
     },
     state::{
@@ -58,7 +58,7 @@ pub fn disburse_escrow_handler(
     }
 
     let pair = find_pair(deps.storage, vault.denoms())?;
-    let current_price = query_belief_price(&deps.querier, &pair, vault.get_swap_denom())?;
+    let current_price = get_belief_price(&deps.querier, &pair, vault.get_swap_denom())?;
     let performance_fee = get_performance_fee(&vault, current_price)?;
     let amount_to_disburse = subtract(&vault.escrowed_amount, &performance_fee)?;
 
