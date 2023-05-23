@@ -7,6 +7,7 @@ import { SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate';
 import { Tendermint34Client } from '@cosmjs/tendermint-rpc';
 import { HttpBatchClient } from '@cosmjs/tendermint-rpc/build/rpcclients';
 import { kujiraQueryClient } from 'kujira.js';
+import { PositionType } from '../types/dca/response/get_vault';
 
 const calcSwapFee = 0.0165;
 const automationFee = 0.0075;
@@ -24,8 +25,8 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
     dispatchInterval: 100,
     batchSizeLimit: 200,
   });
-  const tmClient = await Tendermint34Client.create(httpClient);
-  const kujiClient = kujiraQueryClient({ client: tmClient });
+  const tmClient = (await Tendermint34Client.create(httpClient)) as any;
+  const queryClient = kujiraQueryClient({ client: tmClient });
   const cosmWasmClient = await createAdminCosmWasmClient(config);
 
   const adminContractAddress = (
@@ -37,17 +38,22 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
 
   const finPairAddress = await instantiateFinPairContract(cosmWasmClient, adminContractAddress);
 
+  const pairConfig = {
+    ...(await cosmWasmClient.queryContractSmart(finPairAddress, {
+      config: {},
+    })),
+    address: finPairAddress,
+  };
+
+  const pair = {
+    base_denom: pairConfig.denoms[0].native,
+    quote_denom: pairConfig.denoms[1].native,
+    address: finPairAddress,
+  };
+
   const dcaContractAddress = await instantiateDCAContract(cosmWasmClient, adminContractAddress, feeCollectorAddress, [
     finPairAddress,
   ]);
-
-  const stakingRouterContractAddress = await instantiateStakingRouterContract(
-    cosmWasmClient,
-    adminContractAddress,
-    dcaContractAddress,
-  );
-
-  const swapContractAddress = await instantiateSwapContract(cosmWasmClient, adminContractAddress, finPairAddress);
 
   const userWallet = await createWallet(config);
   const userWalletAddress = (await userWallet.getAccounts())[0].address;
@@ -58,13 +64,14 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
     userWallet,
   );
 
-  const validatorAddress = (await kujiClient.staking.validators('')).validators[0].operatorAddress;
+  const validatorAddress = (await queryClient.staking.validators('')).validators[0].operatorAddress;
 
   return {
     beforeAll(this: Mocha.Context) {
       const context = {
         config,
         cosmWasmClient,
+        queryClient,
         userCosmWasmClient,
         dcaContractAddress,
         calcSwapFee,
@@ -72,18 +79,12 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
         adminContractAddress,
         feeCollectorAddress,
         userWalletAddress,
-        stakingRouterContractAddress,
         finPairAddress,
-        swapContractAddress,
         finBuyPrice,
         finSellPrice,
         finMakerFee,
         finTakerFee,
-        pair: {
-          address: finPairAddress,
-          base_denom: 'ukuji',
-          quote_denom: 'udemo',
-        },
+        pair,
         validatorAddress,
         swapAdjustment,
       };
@@ -105,14 +106,16 @@ const instantiateDCAContract = async (
     adminContractAddress,
     {
       admin: adminContractAddress,
-      executors: [],
-      delegation_fee_percent: `${automationFee}`,
+      executors: [adminContractAddress],
+      automation_fee_percent: `${automationFee}`,
       fee_collectors: [{ address: feeCollectorAdress, allocation: '1.0' }],
-      page_limit: 1000,
+      default_page_limit: 30,
       paused: false,
-      staking_router_address: adminContractAddress,
-      swap_fee_percent: `${calcSwapFee}`,
-      dca_plus_escrow_level: '0.05',
+      default_slippage_tolerance: '0.05',
+      twap_period: 60,
+      default_swap_fee_percent: `${calcSwapFee}`,
+      weighted_scale_swap_fee_percent: '0.01',
+      risk_weighted_average_escrow_level: '0.05',
     },
     'dca',
   );
@@ -133,20 +136,15 @@ const instantiateDCAContract = async (
 
   for (const position_type of ['enter', 'exit']) {
     await execute(cosmWasmClient, adminContractAddress, dcaContractAddress, {
-      update_swap_adjustments: {
-        position_type,
-        adjustments: [
-          [30, `${swapAdjustment}`],
-          [35, `${swapAdjustment}`],
-          [40, `${swapAdjustment}`],
-          [45, `${swapAdjustment}`],
-          [50, `${swapAdjustment}`],
-          [55, `${swapAdjustment}`],
-          [60, `${swapAdjustment}`],
-          [70, `${swapAdjustment}`],
-          [80, `${swapAdjustment}`],
-          [90, `${swapAdjustment}`],
-        ],
+      update_swap_adjustment: {
+        strategy: {
+          risk_weighted_average: {
+            model_id: 30,
+            base_denom: 'bitcoin',
+            position_type: position_type as PositionType,
+          },
+        },
+        value: `${swapAdjustment}`,
       },
     });
   }
@@ -154,35 +152,10 @@ const instantiateDCAContract = async (
   return dcaContractAddress;
 };
 
-const instantiateStakingRouterContract = async (
-  cosmWasmClient: SigningCosmWasmClient,
-  adminContractAddress: string,
-  dcaContractAddress: string,
-): Promise<string> => {
-  const address = await uploadAndInstantiate(
-    '../artifacts/staking_router.wasm',
-    cosmWasmClient,
-    adminContractAddress,
-    {
-      admin: adminContractAddress,
-      allowed_z_callers: [dcaContractAddress],
-    },
-    'staking-router',
-  );
-
-  await execute(cosmWasmClient, adminContractAddress, dcaContractAddress, {
-    update_config: {
-      staking_router_address: address,
-    },
-  });
-
-  return address;
-};
-
 export const instantiateFinPairContract = async (
   cosmWasmClient: SigningCosmWasmClient,
   adminContractAddress: string,
-  baseDenom: string = 'ukuji',
+  baseDenom: string = 'utest',
   quoteDenom: string = 'udemo',
   beliefPrice: number = 1.0,
   orders: Record<string, number | Coin>[] = [],
@@ -206,7 +179,9 @@ export const instantiateFinPairContract = async (
   orders =
     (orders.length == 0 && [
       { price: beliefPrice + 0.01, amount: coin('1000000000000', baseDenom) },
+      { price: beliefPrice + 0.2, amount: coin('10000000000000', baseDenom) },
       { price: beliefPrice - 0.01, amount: coin('1000000000000', quoteDenom) },
+      { price: beliefPrice - 0.2, amount: coin('10000000000000', quoteDenom) },
     ]) ||
     orders;
 

@@ -47,7 +47,7 @@ pub fn disburse_funds_handler(
             let total_after_swap_fee = coin_received.amount - swap_fee;
             let automation_fee = checked_mul(total_after_swap_fee, automation_fee_rate)?;
             let total_fee = swap_fee + automation_fee;
-            let mut total_after_total_fee = coin_received.amount - total_fee;
+            let total_after_all_fees = coin_received.amount - total_fee;
 
             sub_msgs.append(&mut get_fee_messages(
                 deps.as_ref(),
@@ -55,22 +55,18 @@ pub fn disburse_funds_handler(
                 coin_received.denom.clone(),
             )?);
 
-            let amount_to_escrow = total_after_total_fee * vault.escrow_level;
-            total_after_total_fee -= amount_to_escrow;
+            let amount_to_escrow = total_after_all_fees * vault.escrow_level;
+            let total_after_escrow = total_after_all_fees - amount_to_escrow;
 
-            let new_balance = Coin::new(
-                (vault.balance.amount - coin_sent.amount).into(),
-                vault.balance.denom,
-            );
+            vault.balance.amount -= coin_sent.amount;
 
             vault = update_vault(
                 deps.storage,
                 Vault {
-                    balance: new_balance.clone(),
                     swapped_amount: add_to(vault.swapped_amount, coin_sent.amount),
-                    received_amount: add_to(vault.received_amount, total_after_total_fee),
+                    received_amount: add_to(vault.received_amount, total_after_all_fees),
                     escrowed_amount: add_to(vault.escrowed_amount, amount_to_escrow),
-                    status: if new_balance.amount.is_zero() {
+                    status: if vault.balance.amount.is_zero() {
                         VaultStatus::Inactive
                     } else {
                         vault.status
@@ -80,7 +76,7 @@ pub fn disburse_funds_handler(
             )?;
 
             sub_msgs.append(
-                &mut get_disbursement_messages(deps.storage, &vault, total_after_total_fee)?.into(),
+                &mut get_disbursement_messages(deps.storage, &vault, total_after_escrow)?.into(),
             );
 
             create_event(

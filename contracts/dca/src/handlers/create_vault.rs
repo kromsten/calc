@@ -35,7 +35,6 @@ use crate::types::vault::{Vault, VaultBuilder, VaultStatus};
 use cosmwasm_std::{to_binary, Addr, Coin, Decimal, SubMsg, WasmMsg};
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Timestamp, Uint128, Uint64};
 use kujira::fin::ExecuteMsg as FinExecuteMsg;
-use kujira::fin::{ConfigResponse, QueryMsg};
 
 pub fn create_vault_handler(
     deps: DepsMut,
@@ -182,7 +181,16 @@ pub fn create_vault_handler(
             vault.id,
             env.block.clone(),
             EventData::DcaVaultFundsDeposited {
-                amount: info.funds[0].clone(),
+                amount: Coin::new(
+                    (info.funds[0].amount
+                        - if target_receive_amount.is_some() {
+                            TWO_MICRONS
+                        } else {
+                            Uint128::zero()
+                        })
+                    .into(),
+                    info.funds[0].denom.clone(),
+                ),
             },
         ),
     )?;
@@ -221,17 +229,8 @@ pub fn create_vault_handler(
             Ok(response)
         }
         (None, Some(target_receive_amount)) => {
-            let pair_config = deps
-                .querier
-                .query_wasm_smart::<ConfigResponse>(pair.address.clone(), &QueryMsg::Config {})?;
-
-            let target_price = get_target_price(
-                &vault,
-                &pair,
-                target_receive_amount,
-                pair_config.decimal_delta,
-                pair_config.price_precision,
-            )?;
+            let target_price =
+                get_target_price(&deps.querier, &vault, &pair, target_receive_amount)?;
 
             save_trigger(
                 deps.storage,
@@ -247,6 +246,10 @@ pub fn create_vault_handler(
             let vault = update_vault(
                 deps.storage,
                 Vault {
+                    deposited_amount: Coin::new(
+                        (vault.deposited_amount.amount - TWO_MICRONS).into(),
+                        vault.deposited_amount.denom,
+                    ),
                     balance: Coin::new(
                         (vault.balance.amount - TWO_MICRONS).into(),
                         vault.balance.denom,
@@ -1054,7 +1057,10 @@ mod create_vault_tests {
                 swap_amount,
                 target_denom: DENOM_UKUJI.to_string(),
                 started_at: None,
-                deposited_amount: info.funds[0].clone(),
+                deposited_amount: Coin::new(
+                    (info.funds[0].amount - TWO_MICRONS).into(),
+                    info.funds[0].denom.clone()
+                ),
                 escrow_level: Decimal::zero(),
                 swapped_amount: Coin::new(0, DENOM_UUSK.to_string()),
                 received_amount: Coin::new(0, DENOM_UKUJI.to_string()),

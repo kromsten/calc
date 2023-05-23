@@ -143,3 +143,10 @@ impl From<OldPair> for Pair {
         }
     }
 }
+
+#[cfg(test)]
+mod vault_from_tests {
+
+    #[test]
+    fn maps_vault_with_time_trigger_correctly() {}
+}

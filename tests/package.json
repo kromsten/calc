@@ -1,8 +1,6 @@
 {
   "scripts": {
-    "generate-types:swap": "ts-node ./src/scripts/generate-types.ts ../contracts/dca/schema/swap.json ./src/types/swap",
-    "generate-types:dca": "ts-node ./src/scripts/generate-types.ts ../contracts/dca/schema/dca.json ./src/types/dca",
-    "generate-types": "npm run generate-types:swap && npm run generate-types:dca",
+    "types": "ts-node ./src/scripts/generate-types.ts ../contracts/dca/schema/dca.json ./src/types/dca",
     "localnet": "docker compose up -d",
     "compile": "cd .. && ./scripts/optimizer.sh && cd tests",
     "test": "mocha --recursive '**/*.test.ts' --timeout 20000 --exit"
@@ -27,6 +25,7 @@
     "ramda": "^0.28.0",
     "sinon": "^14.0.2",
     "ts-node": "^10.9.1",
-    "ts-sinon": "^2.0.2"
+    "ts-sinon": "^2.0.2",
+    "typescript": "^5.0.4"
   }
 }

@@ -9,6 +9,12 @@ use kujira::{
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct FinConfigResponse {
+    pub price_precision: Precision,
+    pub decimal_delta: i8,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct FinPoolResponse {
     pub quote_price: Decimal,
@@ -92,18 +98,36 @@ pub fn query_price(
 }
 
 pub fn get_target_price(
+    querier: &QuerierWrapper,
+    vault: &Vault,
+    pair: &Pair,
+    target_receive_amount: Uint128,
+) -> StdResult<Decimal> {
+    let pair_config = querier
+        .query_wasm_smart::<FinConfigResponse>(pair.address.clone(), &QueryMsg::Config {})?;
+
+    if pair_config.decimal_delta < 0 {
+        return Err(StdError::GenericErr {
+            msg: "Negative decimal deltas are not supported".to_string(),
+        });
+    }
+
+    calculate_target_price(
+        vault,
+        pair,
+        target_receive_amount,
+        pair_config.decimal_delta,
+        pair_config.price_precision,
+    )
+}
+
+fn calculate_target_price(
     vault: &Vault,
     pair: &Pair,
     target_receive_amount: Uint128,
     decimal_delta: i8,
     precision: Precision,
 ) -> StdResult<Decimal> {
-    if decimal_delta < 0 {
-        return Err(StdError::GenericErr {
-            msg: "Negative decimal deltas are not supported".to_string(),
-        });
-    }
-
     let exact_target_price = match pair.position_type(vault.get_swap_denom()) {
         PositionType::Enter => Decimal::from_ratio(vault.swap_amount, target_receive_amount),
         PositionType::Exit => Decimal::from_ratio(target_receive_amount, vault.swap_amount),
@@ -125,7 +149,7 @@ pub fn get_target_price(
 }
 
 #[cfg(test)]
-mod get_target_price_tests {
+mod calculate_target_price_tests {
     use super::*;
 
     #[test]
@@ -140,7 +164,7 @@ mod get_target_price_tests {
         };
 
         assert_eq!(
-            get_target_price(
+            calculate_target_price(
                 &vault,
                 &pair,
                 Uint128::new(20),
@@ -165,7 +189,7 @@ mod get_target_price_tests {
         };
 
         assert_eq!(
-            get_target_price(
+            calculate_target_price(
                 &vault,
                 &pair,
                 Uint128::new(20),
@@ -190,7 +214,7 @@ mod get_target_price_tests {
         };
 
         assert_eq!(
-            get_target_price(
+            calculate_target_price(
                 &vault,
                 &pair,
                 Uint128::new(10),
@@ -213,7 +237,7 @@ mod get_target_price_tests {
         let pair = Pair::default();
 
         let vault = Vault {
-            swap_amount: swap_amount.clone(),
+            swap_amount: swap_amount,
             target_denom: pair.base_denom.clone(),
             balance: Coin::new(100, pair.quote_denom.clone()),
             ..Vault::default()
@@ -224,7 +248,7 @@ mod get_target_price_tests {
             "0.000000001336999998"
         );
         assert_eq!(
-            get_target_price(
+            calculate_target_price(
                 &vault,
                 &pair,
                 target_receive_amount,
@@ -247,7 +271,7 @@ mod get_target_price_tests {
         let pair = Pair::default();
 
         let vault = Vault {
-            swap_amount: swap_amount.clone(),
+            swap_amount: swap_amount,
             target_denom: pair.quote_denom.clone(),
             balance: Coin::new(100, pair.base_denom.clone()),
             ..Vault::default()
@@ -258,7 +282,7 @@ mod get_target_price_tests {
             "0.000000001336999998"
         );
         assert_eq!(
-            get_target_price(
+            calculate_target_price(
                 &vault,
                 &pair,
                 target_receive_amount,

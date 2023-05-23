@@ -64,9 +64,8 @@ pub fn cancel_vault_handler(
 
                     submessages.push(SubMsg::new(WasmMsg::Execute {
                         contract_addr: pair.address.to_string(),
-                        msg: to_binary(&ExecuteMsg::RetractOrder {
-                            order_idx,
-                            amount: None,
+                        msg: to_binary(&ExecuteMsg::WithdrawOrders {
+                            order_idxs: Some(vec![order_idx]),
                             callback: None,
                         })
                         .unwrap(),
@@ -75,17 +74,18 @@ pub fn cancel_vault_handler(
 
                     submessages.push(SubMsg::new(WasmMsg::Execute {
                         contract_addr: pair.address.to_string(),
-                        msg: to_binary(&ExecuteMsg::WithdrawOrders {
-                            order_idxs: Some(vec![order_idx]),
+                        msg: to_binary(&ExecuteMsg::RetractOrder {
+                            order_idx,
+                            amount: None,
                             callback: None,
                         })
                         .unwrap(),
                         funds: vec![],
                     }));
-                }
+                };
             }
             _ => {}
-        }
+        };
 
         delete_trigger(deps.storage, vault.id)?;
     }
@@ -120,6 +120,34 @@ mod cancel_vault_tests {
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 
         let vault = setup_vault(deps.as_mut(), env.clone(), Vault::default());
+
+        let response = cancel_vault_handler(deps.as_mut(), env, info, vault.id).unwrap();
+
+        assert!(response.messages.contains(&SubMsg::new(BankMsg::Send {
+            to_address: vault.owner.to_string(),
+            amount: vec![vault.balance.clone()],
+        })));
+    }
+
+    #[test]
+    fn with_price_trigger_should_return_balance_to_owner() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let info = mock_info(ADMIN, &[]);
+
+        instantiate_contract(deps.as_mut(), env.clone(), info.clone());
+
+        let vault = setup_vault(
+            deps.as_mut(),
+            env.clone(),
+            Vault {
+                trigger: Some(TriggerConfiguration::Price {
+                    target_price: Decimal::percent(200),
+                    order_idx: Some(Uint128::new(28)),
+                }),
+                ..Vault::default()
+            },
+        );
 
         let response = cancel_vault_handler(deps.as_mut(), env, info, vault.id).unwrap();
 
@@ -316,7 +344,7 @@ mod cancel_vault_tests {
         let pair = find_pair(deps.as_ref().storage, vault.denoms()).unwrap();
 
         assert_eq!(
-            response.messages.get(1).unwrap(),
+            response.messages.get(2).unwrap(),
             &SubMsg::new(WasmMsg::Execute {
                 contract_addr: pair.address.to_string(),
                 msg: to_binary(&ExecuteMsg::RetractOrder {
@@ -357,7 +385,7 @@ mod cancel_vault_tests {
         let pair = find_pair(deps.as_ref().storage, vault.denoms()).unwrap();
 
         assert_eq!(
-            response.messages.get(2).unwrap(),
+            response.messages.get(1).unwrap(),
             &SubMsg::new(WasmMsg::Execute {
                 contract_addr: pair.address.to_string(),
                 msg: to_binary(&ExecuteMsg::WithdrawOrders {

@@ -11,6 +11,8 @@ import { execute } from '../shared/cosmwasm';
 import { Addr } from '../types/dca/execute';
 import { EventsResponse } from '../types/dca/response/get_events';
 import { Timestamp } from 'cosmjs-types/google/protobuf/timestamp';
+import { Pair } from '../types/dca/response/get_pairs';
+import { kujiraQueryClient } from 'kujira.js';
 
 export const createWallet = async (config: Config) =>
   await DirectSecp256k1HdWallet.generate(12, {
@@ -37,10 +39,11 @@ export const createCosmWasmClientForWallet = async (
 export const createVault = async (
   context: Context,
   overrides: Record<string, unknown> = {},
-  deposit: Coin[] = [coin('1000000', 'udemo')],
+  deposit: Coin[] = [coin('1000000', context.pair.quote_denom)],
 ) => {
-  if (deposit.length > 0)
+  if (deposit.length > 0) {
     await context.cosmWasmClient.sendTokens(context.adminContractAddress, context.userWalletAddress, deposit, 'auto');
+  }
 
   const response = await execute(
     context.userCosmWasmClient,
@@ -50,7 +53,7 @@ export const createVault = async (
       create_vault: {
         label: 'test',
         swap_amount: '100000',
-        pair_address: context.pair.address,
+        target_denom: context.pair.base_denom,
         time_interval: 'hourly',
         ...overrides,
       },
@@ -76,7 +79,7 @@ export const getBalances = async (
             await Promise.all(
               map(
                 async (denom) => ({
-                  [denom]: parseInt((await cosmWasmClient.getBalance(address, denom)).amount),
+                  [denom]: Number((await cosmWasmClient.getBalance(address, denom)).amount),
                 }),
                 denoms,
               ),
@@ -100,7 +103,26 @@ export const getVaultLastUpdatedTime = async (
     },
   })) as EventsResponse;
 
-  return dayjs(parseInt(response.events.pop().timestamp) / 1000000);
+  return dayjs(Number(response.events.pop().timestamp) / 1000000);
+};
+
+export const getExpectedPrice = async (
+  cosmWasmClient: CosmWasmClient,
+  pair: Pair,
+  swapAmount: Coin,
+): Promise<number> => {
+  const response = await cosmWasmClient.queryContractSmart(pair.address, {
+    simulation: {
+      offer_asset: {
+        info: {
+          native_token: { denom: swapAmount.denom },
+        },
+        amount: swapAmount.amount,
+      },
+    },
+  });
+
+  return Number(swapAmount.amount) / Number(response.return_amount);
 };
 
 export const provideAuthGrant = async (

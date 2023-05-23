@@ -14,13 +14,12 @@ use crate::types::event::{EventBuilder, EventData, ExecutionSkippedReason};
 use crate::types::swap_adjustment_strategy::SwapAdjustmentStrategy;
 use crate::types::trigger::{Trigger, TriggerConfiguration};
 use crate::types::vault::{Vault, VaultStatus};
-use cosmwasm_std::{to_binary, Decimal256, SubMsg, Uint256, WasmMsg};
+use cosmwasm_std::{to_binary, SubMsg, Uint256, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{DepsMut, Env, Response, Uint128};
 use kujira::asset::{Asset, AssetInfo};
 use kujira::denom::Denom;
 use kujira::fin::{ExecuteMsg as FinExecuteMsg, OrderResponse, QueryMsg};
-use std::str::FromStr;
 
 pub fn execute_trigger_handler(
     deps: DepsMut,
@@ -260,8 +259,8 @@ pub fn execute_trigger_handler(
             contract_addr: pair.address.to_string(),
             msg: to_binary(&FinExecuteMsg::Swap {
                 offer_asset: None,
-                belief_price: Some(Decimal256::from_str(&belief_price.to_string())?),
-                max_spread: Some(Decimal256::from_str(&vault.slippage_tolerance.to_string())?),
+                belief_price: Some(belief_price.into()),
+                max_spread: Some(vault.slippage_tolerance.into()),
                 to: None,
                 callback: None,
             })?,
