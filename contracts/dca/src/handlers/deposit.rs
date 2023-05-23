@@ -111,6 +111,7 @@ pub fn deposit_handler(
     Ok(Response::new()
         .add_attribute("deposit", "true")
         .add_attribute("vault_id", vault.id)
+        .add_attribute("owner", vault.owner)
         .add_attribute("deposited_amount", info.funds[0].amount))
 }
 

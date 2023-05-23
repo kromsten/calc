@@ -198,6 +198,7 @@ pub fn create_vault_handler(
     let mut response = Response::new()
         .add_attribute("create_vault", "true")
         .add_attribute("vault_id", vault.id)
+        .add_attribute("owner", vault.owner.clone())
         .add_attribute("deposited_amount", vault.balance.to_string());
 
     match (target_start_time_utc_seconds, target_receive_amount) {

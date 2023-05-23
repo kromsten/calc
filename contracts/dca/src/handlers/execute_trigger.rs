@@ -32,7 +32,8 @@ pub fn execute_trigger_handler(
 
     let mut response = Response::new()
         .add_attribute("execute_vault", "true")
-        .add_attribute("vault_id", vault.id);
+        .add_attribute("vault_id", vault.id)
+        .add_attribute("owner", vault.owner.clone());
 
     delete_trigger(deps.storage, vault.id)?;
 

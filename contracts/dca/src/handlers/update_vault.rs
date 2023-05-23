@@ -25,7 +25,8 @@ pub fn update_vault_handler(
 
     let mut response = Response::default()
         .add_attribute("update_vault", "true")
-        .add_attribute("vault_id", vault.id);
+        .add_attribute("vault_id", vault.id)
+        .add_attribute("owner", vault.owner.clone());
 
     if let Some(label) = label {
         assert_label_is_no_longer_than_100_characters(&label)?;

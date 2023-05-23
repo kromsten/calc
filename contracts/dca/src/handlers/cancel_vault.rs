@@ -93,6 +93,7 @@ pub fn cancel_vault_handler(
     Ok(Response::new()
         .add_attribute("cancel_vault", "true")
         .add_attribute("vault_id", vault.id)
+        .add_attribute("owner", vault.owner)
         .add_attribute("refunded_amount", vault.balance.to_string())
         .add_submessages(submessages))
 }
