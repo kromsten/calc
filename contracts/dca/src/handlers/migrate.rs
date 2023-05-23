@@ -10,9 +10,9 @@ use crate::{
     },
     msg::MigrateMsg,
     state::{
-        config::update_config, old_config::get_old_config, old_pairs::PAIRS,
-        old_swap_adjustments::get_old_swap_adjustment, old_triggers::TRIGGERS, pairs::save_pair,
-        swap_adjustments::update_swap_adjustment, triggers::save_trigger,
+        config::update_config, old_pairs::PAIRS, old_swap_adjustments::get_old_swap_adjustment,
+        old_triggers::TRIGGERS, pairs::save_pair, swap_adjustments::update_swap_adjustment,
+        triggers::save_trigger,
     },
     types::{
         config::Config,
@@ -54,11 +54,10 @@ pub fn migrate_handler(
         msg.risk_weighted_average_escrow_level,
     )?;
 
-    let old_config = get_old_config(deps.storage)?;
-
     update_config(
         deps.storage,
         Config {
+            admin: msg.admin.clone(),
             executors: msg.clone().executors,
             fee_collectors: msg.clone().fee_collectors,
             default_swap_fee_percent: msg.default_swap_fee_percent,
@@ -69,7 +68,6 @@ pub fn migrate_handler(
             risk_weighted_average_escrow_level: msg.risk_weighted_average_escrow_level,
             twap_period: msg.twap_period,
             default_slippage_tolerance: msg.default_slippage_tolerance,
-            admin: old_config.admin,
         },
     )?;
 
@@ -199,6 +197,7 @@ mod migrate_tests {
             deps.as_mut(),
             mock_env(),
             MigrateMsg {
+                admin: Addr::unchecked(ADMIN),
                 executors: vec![Addr::unchecked(ADMIN)],
                 fee_collectors: vec![FeeCollector {
                     allocation: Decimal::percent(100),
@@ -279,6 +278,7 @@ mod migrate_tests {
             deps.as_mut(),
             mock_env(),
             MigrateMsg {
+                admin: Addr::unchecked(ADMIN),
                 executors: vec![Addr::unchecked(ADMIN)],
                 fee_collectors: vec![FeeCollector {
                     allocation: Decimal::percent(100),
@@ -347,6 +347,7 @@ mod migrate_tests {
             deps.as_mut(),
             mock_env(),
             MigrateMsg {
+                admin: Addr::unchecked(ADMIN),
                 executors: vec![Addr::unchecked(ADMIN)],
                 fee_collectors: vec![FeeCollector {
                     allocation: Decimal::percent(100),
@@ -424,6 +425,7 @@ mod migrate_tests {
             deps.as_mut(),
             mock_env(),
             MigrateMsg {
+                admin: Addr::unchecked(ADMIN),
                 executors: vec![Addr::unchecked(ADMIN)],
                 fee_collectors: vec![FeeCollector {
                     allocation: Decimal::percent(100),
@@ -502,6 +504,7 @@ mod migrate_tests {
             deps.as_mut(),
             mock_env(),
             MigrateMsg {
+                admin: Addr::unchecked(ADMIN),
                 executors: vec![Addr::unchecked(ADMIN)],
                 fee_collectors: vec![FeeCollector {
                     allocation: Decimal::percent(100),
@@ -574,6 +577,7 @@ mod migrate_tests {
             deps.as_mut(),
             mock_env(),
             MigrateMsg {
+                admin: Addr::unchecked(ADMIN),
                 executors: vec![Addr::unchecked(ADMIN)],
                 fee_collectors: vec![FeeCollector {
                     allocation: Decimal::percent(100),

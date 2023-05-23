@@ -30,6 +30,7 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub struct MigrateMsg {
+    pub admin: Addr,
     pub executors: Vec<Addr>,
     pub fee_collectors: Vec<FeeCollector>,
     pub default_swap_fee_percent: Decimal,

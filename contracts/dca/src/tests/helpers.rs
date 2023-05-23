@@ -124,7 +124,7 @@ impl Default for Vault {
             label: Some("vault".to_string()),
             destinations: vec![Destination {
                 allocation: Decimal::percent(100),
-                address: Addr::unchecked("contractaddress"),
+                address: Addr::unchecked("cosmos2contract"),
                 msg: Some(
                     to_binary(&ExecuteMsg::ZDelegate {
                         delegator_address: Addr::unchecked(USER),

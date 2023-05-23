@@ -1,4 +1,4 @@
-use super::mocks::{DENOM_UKUJI, DENOM_UUSK, USER};
+use super::mocks::{DENOM_UKUJI, DENOM_UUSK, USER, VALIDATOR};
 use crate::{
     constants::{ONE, TEN},
     state::{
@@ -23,9 +23,9 @@ impl Default for OldVault {
             owner: Addr::unchecked(USER),
             label: Some("vault".to_string()),
             destinations: vec![OldDestination {
-                address: Addr::unchecked(USER),
+                address: Addr::unchecked(VALIDATOR),
                 allocation: Decimal::percent(100),
-                action: PostExecutionAction::Send,
+                action: PostExecutionAction::ZDelegate,
             }],
             status: OldVaultStatus::Active,
             balance: Coin::new(TEN.into(), DENOM_UKUJI),

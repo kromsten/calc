@@ -46,8 +46,9 @@ pub fn get_old_swap_adjustment(
     model: u8,
     block_time: Timestamp,
 ) -> StdResult<Decimal> {
-    let last_updated = last_updated(storage, position_type.clone())?;
     let thirty_hours = 30 * 60 * 60;
+    let last_updated = last_updated(storage, position_type.clone())
+        .unwrap_or(block_time.minus_seconds(thirty_hours + 1));
     if last_updated < block_time.minus_seconds(thirty_hours) {
         return Ok(Decimal::one());
     }
