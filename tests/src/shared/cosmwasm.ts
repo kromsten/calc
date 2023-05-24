@@ -70,6 +70,9 @@ export const uploadAndMigrate = async (
   contractAddress: string,
   migrateMsg: Record<string, unknown>,
 ): Promise<void> => {
+  console.log('Migrating with message:', migrateMsg);
   const { codeId } = await cosmWasmClient.upload(adminAddress, fs.readFileSync(binaryFilePath), 'auto');
+  console.log('Uploaded code id: ', codeId);
   await cosmWasmClient.migrate(adminAddress, contractAddress, codeId, migrateMsg, 'auto');
+  console.log('Migration succeeded');
 };

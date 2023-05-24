@@ -2,40 +2,94 @@ use super::math::checked_mul;
 use crate::{
     state::{config::get_config, custom_fees::get_custom_fee},
     types::{
+        fee_collector::FeeCollector,
         performance_assessment_strategy::PerformanceAssessmentStrategy,
         swap_adjustment_strategy::SwapAdjustmentStrategy, vault::Vault,
     },
 };
-use cosmwasm_std::{BankMsg, Coin, Decimal, Deps, StdResult, Storage, SubMsg, Uint128};
+use cosmos_sdk_proto::{
+    cosmos::base::v1beta1::Coin as ProtoCoin, cosmos::distribution::v1beta1::MsgFundCommunityPool,
+    traits::Message,
+};
+use cosmwasm_std::{
+    BankMsg, Binary, Coin, CosmosMsg, Decimal, Deps, Env, StdResult, Storage, SubMsg, Uint128,
+};
 use std::cmp::min;
 
 pub fn get_fee_messages(
     deps: Deps,
+    env: Env,
     fee_amounts: Vec<Uint128>,
     denom: String,
+    skip_community_pool: bool,
 ) -> StdResult<Vec<SubMsg>> {
     let config = get_config(deps.storage)?;
 
-    Ok(config
+    let fee_collectors = config
         .fee_collectors
+        .iter()
+        .flat_map(|fee_collector| {
+            if skip_community_pool && fee_collector.address == "community_pool" {
+                return None;
+            }
+            return Some(FeeCollector {
+                address: fee_collector.address.clone(),
+                allocation: if skip_community_pool {
+                    let community_pool_allocation = config
+                        .fee_collectors
+                        .iter()
+                        .find(|fee_collector| fee_collector.address == "community_pool")
+                        .map_or(Decimal::zero(), |community_pool| community_pool.allocation);
+                    fee_collector.allocation / (Decimal::one() - community_pool_allocation)
+                } else {
+                    fee_collector.allocation
+                },
+            });
+        })
+        .collect::<Vec<FeeCollector>>();
+
+    Ok(fee_collectors
         .iter()
         .flat_map(|fee_collector| {
             fee_amounts.iter().flat_map(|fee| {
                 let fee_allocation = Coin::new(
                     checked_mul(*fee, fee_collector.allocation)
+                        .ok()
                         .expect("amount to be distributed should be valid")
                         .into(),
                     denom.clone(),
                 );
 
-                if fee_allocation.amount.is_zero() {
-                    return None;
+                if fee_allocation.amount.gt(&Uint128::zero()) {
+                    match fee_collector.address.as_str() {
+                        "community_pool" => {
+                            if skip_community_pool {
+                                None
+                            } else {
+                                Some(SubMsg::new(CosmosMsg::Stargate {
+                                    type_url: "/cosmos.distribution.v1beta1.MsgFundCommunityPool"
+                                        .to_string(),
+                                    value: Binary::from(
+                                        MsgFundCommunityPool {
+                                            amount: vec![ProtoCoin {
+                                                denom: fee_allocation.denom.clone(),
+                                                amount: fee_allocation.amount.to_string(),
+                                            }],
+                                            depositor: env.contract.address.to_string(),
+                                        }
+                                        .encode_to_vec(),
+                                    ),
+                                }))
+                            }
+                        }
+                        _ => Some(SubMsg::new(BankMsg::Send {
+                            to_address: fee_collector.address.to_string(),
+                            amount: vec![fee_allocation],
+                        })),
+                    }
+                } else {
+                    None
                 }
-
-                Some(SubMsg::new(BankMsg::Send {
-                    to_address: fee_collector.address.to_string(),
-                    amount: vec![fee_allocation],
-                }))
             })
         })
         .collect::<Vec<SubMsg>>())

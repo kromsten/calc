@@ -83,14 +83,14 @@ impl Vault {
             .map_or(Ok(false), |minimum_receive_amount| {
                 let swap_amount_as_decimal = Decimal::from_ratio(self.swap_amount, Uint128::one());
 
-                let receive_amount_at_price = swap_amount_as_decimal
+                let expected_receive_amount_at_price = swap_amount_as_decimal
                     .checked_div(belief_price)
                     .expect("belief price should be larger than 0");
 
                 let minimum_receive_amount_as_decimal =
                     Decimal::from_ratio(minimum_receive_amount, Uint128::one());
 
-                Ok(receive_amount_at_price < minimum_receive_amount_as_decimal)
+                Ok(expected_receive_amount_at_price < minimum_receive_amount_as_decimal)
             })
     }
 

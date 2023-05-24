@@ -51,8 +51,10 @@ pub fn disburse_funds_handler(
 
             sub_msgs.append(&mut get_fee_messages(
                 deps.as_ref(),
+                env.clone(),
                 vec![swap_fee, automation_fee],
                 coin_received.denom.clone(),
+                false,
             )?);
 
             let amount_to_escrow = total_after_all_fees * vault.escrow_level;

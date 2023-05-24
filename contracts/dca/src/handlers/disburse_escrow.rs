@@ -22,11 +22,11 @@ use cosmwasm_std::{Coin, DepsMut, Env, MessageInfo, Response, Uint128};
 
 pub fn disburse_escrow_handler(
     deps: DepsMut,
-    env: &Env,
+    env: Env,
     info: MessageInfo,
     vault_id: Uint128,
 ) -> Result<Response, ContractError> {
-    assert_sender_is_executor(deps.storage, env, &info.sender)?;
+    assert_sender_is_executor(deps.storage, &env, &info.sender)?;
 
     let vault = get_vault(deps.storage, vault_id)?;
 
@@ -92,8 +92,10 @@ pub fn disburse_escrow_handler(
         )?)
         .add_submessages(get_fee_messages(
             deps.as_ref(),
+            env,
             vec![performance_fee.amount],
             vault.target_denom,
+            true,
         )?)
         .add_attribute("performance_fee", format!("{:?}", performance_fee))
         .add_attribute("escrow_disbursed", format!("{:?}", amount_to_disburse)))
@@ -152,7 +154,7 @@ mod disburse_escrow_tests {
         )
         .unwrap();
 
-        let err = disburse_escrow_handler(deps.as_mut(), &env, info, vault.id).unwrap_err();
+        let err = disburse_escrow_handler(deps.as_mut(), env, info, vault.id).unwrap_err();
 
         assert_eq!(
             err.to_string(),
@@ -184,7 +186,7 @@ mod disburse_escrow_tests {
         )
         .unwrap();
 
-        let response = disburse_escrow_handler(deps.as_mut(), &env, info, vault.id).unwrap();
+        let response = disburse_escrow_handler(deps.as_mut(), env, info, vault.id).unwrap();
 
         assert!(!response.messages.is_empty());
     }
@@ -206,7 +208,7 @@ mod disburse_escrow_tests {
             },
         );
 
-        let response = disburse_escrow_handler(deps.as_mut(), &env, info, vault.id).unwrap();
+        let response = disburse_escrow_handler(deps.as_mut(), env, info, vault.id).unwrap();
 
         assert!(response.messages.is_empty());
     }
@@ -238,7 +240,7 @@ mod disburse_escrow_tests {
             },
         );
 
-        let response = disburse_escrow_handler(deps.as_mut(), &env, info, vault.id).unwrap();
+        let response = disburse_escrow_handler(deps.as_mut(), env, info, vault.id).unwrap();
 
         assert!(response.messages.contains(&SubMsg::reply_always(
             BankMsg::Send {
@@ -281,7 +283,7 @@ mod disburse_escrow_tests {
 
         let config = get_config(&deps.storage).unwrap();
 
-        let response = disburse_escrow_handler(deps.as_mut(), &env, info, vault.id).unwrap();
+        let response = disburse_escrow_handler(deps.as_mut(), env, info, vault.id).unwrap();
 
         assert_eq!(
             response.messages.first().unwrap(),
@@ -320,7 +322,7 @@ mod disburse_escrow_tests {
             },
         );
 
-        disburse_escrow_handler(deps.as_mut(), &env, info, vault.id).unwrap();
+        disburse_escrow_handler(deps.as_mut(), env.clone(), info, vault.id).unwrap();
 
         let events = get_events_by_resource_id_handler(deps.as_ref(), vault.id, None, None, None)
             .unwrap()
@@ -379,7 +381,7 @@ mod disburse_escrow_tests {
             },
         );
 
-        disburse_escrow_handler(deps.as_mut(), &env, info, vault.id).unwrap();
+        disburse_escrow_handler(deps.as_mut(), env, info, vault.id).unwrap();
 
         let vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
 
@@ -424,7 +426,7 @@ mod disburse_escrow_tests {
         let disburse_escrow_tasks_before =
             get_disburse_escrow_tasks(deps.as_ref().storage, env.block.time, None).unwrap();
 
-        disburse_escrow_handler(deps.as_mut(), &env, info, vault.id).unwrap();
+        disburse_escrow_handler(deps.as_mut(), env.clone(), info, vault.id).unwrap();
 
         let disburse_escrow_tasks_after =
             get_disburse_escrow_tasks(deps.as_ref().storage, env.block.time, None).unwrap();

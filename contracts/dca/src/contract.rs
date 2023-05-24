@@ -150,7 +150,7 @@ pub fn execute(
             update_swap_adjustment_handler(deps, env, info, strategy, value)
         }
         ExecuteMsg::DisburseEscrow { vault_id } => {
-            disburse_escrow_handler(deps, &env, info, vault_id)
+            disburse_escrow_handler(deps, env, info, vault_id)
         }
         ExecuteMsg::ZDelegate {
             delegator_address,
