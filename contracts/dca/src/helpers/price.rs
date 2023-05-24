@@ -63,7 +63,14 @@ pub fn get_belief_price(
         )));
     }
 
-    Ok(book[0].quote_price)
+    let quote_price = book[0].quote_price;
+
+    Ok(match position_type {
+        PositionType::Enter => quote_price,
+        PositionType::Exit => Decimal::one()
+            .checked_div(quote_price)
+            .expect("should return a valid inverted price for fin sell"),
+    })
 }
 
 pub fn simulate_swap(
