@@ -1,4 +1,5 @@
 use crate::error::ContractError;
+use crate::helpers::coin::empty_of;
 use crate::helpers::validation::{
     assert_sender_is_admin_or_vault_owner, assert_vault_is_not_cancelled,
 };
@@ -11,7 +12,7 @@ use crate::types::event::{EventBuilder, EventData};
 use crate::types::trigger::TriggerConfiguration;
 use crate::types::vault::{Vault, VaultStatus};
 use cosmwasm_std::{to_binary, BankMsg, DepsMut, Response, Uint128, WasmMsg};
-use cosmwasm_std::{Coin, Env, MessageInfo, SubMsg};
+use cosmwasm_std::{Env, MessageInfo, SubMsg};
 use kujira::fin::ExecuteMsg;
 
 pub fn cancel_vault_handler(
@@ -51,44 +52,39 @@ pub fn cancel_vault_handler(
         deps.storage,
         Vault {
             status: VaultStatus::Cancelled,
-            balance: Coin::new(0, vault.get_swap_denom()),
+            balance: empty_of(vault.balance.clone()),
             ..vault.clone()
         },
     )?;
 
-    if let Some(trigger) = vault.trigger {
-        match trigger {
-            TriggerConfiguration::Price { order_idx, .. } => {
-                if let Some(order_idx) = order_idx {
-                    let pair = find_pair(deps.storage, updated_vault.denoms()).unwrap();
+    if let Some(TriggerConfiguration::Price { order_idx, .. }) = vault.trigger {
+        if let Some(order_idx) = order_idx {
+            let pair = find_pair(deps.storage, updated_vault.denoms()).unwrap();
 
-                    submessages.push(SubMsg::new(WasmMsg::Execute {
-                        contract_addr: pair.address.to_string(),
-                        msg: to_binary(&ExecuteMsg::WithdrawOrders {
-                            order_idxs: Some(vec![order_idx]),
-                            callback: None,
-                        })
-                        .unwrap(),
-                        funds: vec![],
-                    }));
+            submessages.push(SubMsg::new(WasmMsg::Execute {
+                contract_addr: pair.address.to_string(),
+                msg: to_binary(&ExecuteMsg::WithdrawOrders {
+                    order_idxs: Some(vec![order_idx]),
+                    callback: None,
+                })
+                .unwrap(),
+                funds: vec![],
+            }));
 
-                    submessages.push(SubMsg::new(WasmMsg::Execute {
-                        contract_addr: pair.address.to_string(),
-                        msg: to_binary(&ExecuteMsg::RetractOrder {
-                            order_idx,
-                            amount: None,
-                            callback: None,
-                        })
-                        .unwrap(),
-                        funds: vec![],
-                    }));
-                };
-            }
-            _ => {}
+            submessages.push(SubMsg::new(WasmMsg::Execute {
+                contract_addr: pair.address.to_string(),
+                msg: to_binary(&ExecuteMsg::RetractOrder {
+                    order_idx,
+                    amount: None,
+                    callback: None,
+                })
+                .unwrap(),
+                funds: vec![],
+            }));
         };
+    };
 
-        delete_trigger(deps.storage, vault.id)?;
-    }
+    delete_trigger(deps.storage, vault.id)?;
 
     Ok(Response::new()
         .add_attribute("cancel_vault", "true")
@@ -110,7 +106,7 @@ mod cancel_vault_tests {
     use crate::types::event::{EventBuilder, EventData};
     use crate::types::vault::{Vault, VaultStatus};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{BankMsg, Decimal, SubMsg, Uint128};
+    use cosmwasm_std::{BankMsg, Coin, Decimal, SubMsg, Uint128};
 
     #[test]
     fn should_return_balance_to_owner() {

@@ -114,7 +114,7 @@ pub fn migrate_handler(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     Ok(Response::new()
-        .add_attribute("method", "migrate")
+        .add_attribute("migrate", "true")
         .add_attribute("msg", format!("{:#?}", msg)))
 }
 
@@ -467,9 +467,15 @@ mod migrate_tests {
         for i in 0..20 {
             let trigger = OldTrigger {
                 vault_id: Uint128::new(i),
-                configuration: OldTriggerConfiguration::FinLimitOrder {
-                    target_price: Decimal256::percent(132),
-                    order_idx: Some(Uint128::new(i)),
+                configuration: if i % 2 == 0 {
+                    OldTriggerConfiguration::Time {
+                        target_time: env.block.time.plus_seconds(1000).into(),
+                    }
+                } else {
+                    OldTriggerConfiguration::FinLimitOrder {
+                        target_price: Decimal256::percent(80 + i as u64),
+                        order_idx: Some(Uint128::new(i)),
+                    }
                 },
             };
 

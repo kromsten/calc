@@ -29,7 +29,7 @@ pub fn execute_trigger_handler(
     let mut vault = get_vault(deps.storage, trigger_id)?;
 
     let mut response = Response::new()
-        .add_attribute("execute_vault", "true")
+        .add_attribute("execute_trigger", "true")
         .add_attribute("vault_id", vault.id)
         .add_attribute("owner", vault.owner.clone());
 

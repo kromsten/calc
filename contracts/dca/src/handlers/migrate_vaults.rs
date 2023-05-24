@@ -45,16 +45,23 @@ pub fn migrate_vaults_handler(
 mod migrate_vaults_tests {
     use crate::{
         handlers::migrate_vaults::migrate_vaults_handler,
-        state::{old_vaults::get_old_vaults, vaults::get_vaults},
+        mappers::vault::vault_from,
+        state::{
+            old_triggers::get_old_trigger,
+            old_vaults::{get_old_vault, get_old_vaults},
+            triggers::save_trigger,
+            vaults::{get_vault, get_vaults},
+        },
         tests::{
             helpers::instantiate_contract, helpers::setup_vault, mocks::ADMIN,
             old_helpers::setup_old_vault,
         },
         types::{old_vault::OldVault, vault::Vault},
     };
+    use base::triggers::trigger::OldTriggerConfiguration;
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info},
-        Uint128,
+        Decimal256, Uint128,
     };
 
     #[test]
@@ -180,14 +187,27 @@ mod migrate_vaults_tests {
         instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
 
         for i in 1u128..51u128 {
-            setup_old_vault(
+            let old_vault = setup_old_vault(
                 deps.as_mut(),
                 env.clone(),
                 OldVault {
                     id: Uint128::new(i),
+                    trigger: Some(if i % 2 == 0 {
+                        OldTriggerConfiguration::Time {
+                            target_time: env.block.time.plus_seconds(1000).into(),
+                        }
+                    } else {
+                        OldTriggerConfiguration::FinLimitOrder {
+                            target_price: Decimal256::percent(80 + i as u64),
+                            order_idx: Some(Uint128::new(i)),
+                        }
+                    }),
                     ..OldVault::default()
                 },
             );
+
+            let trigger = get_old_trigger(deps.as_ref().storage, old_vault.id).unwrap();
+            save_trigger(deps.as_mut().storage, trigger.unwrap().into()).unwrap();
         }
 
         let limit = 10;
@@ -208,5 +228,14 @@ mod migrate_vaults_tests {
 
         let migrated_vaults = get_vaults(&deps.storage, None, Some(100), None).unwrap();
         assert_eq!(migrated_vaults.len(), 50);
+
+        for i in 1..51 {
+            let vault_id = Uint128::new(i);
+
+            let old_vault = get_old_vault(deps.as_ref().storage, vault_id).unwrap();
+            let vault = get_vault(deps.as_ref().storage, vault_id).unwrap();
+
+            assert_eq!(vault_from(env.clone(), old_vault), vault);
+        }
     }
 }

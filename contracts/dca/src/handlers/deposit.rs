@@ -1,5 +1,5 @@
 use crate::error::ContractError;
-use crate::helpers::coin::add_to;
+use crate::helpers::coin::add;
 use crate::helpers::time::get_next_target_time;
 use crate::helpers::validation::{
     assert_contract_is_not_paused, assert_deposited_denom_matches_send_denom,
@@ -29,7 +29,6 @@ pub fn deposit_handler(
     assert_exactly_one_asset(info.funds.clone())?;
 
     let vault = get_vault(deps.storage, vault_id)?;
-    let vault_was_inactive = vault.is_inactive();
 
     if address != vault.owner {
         return Err(ContractError::CustomError {
@@ -43,16 +42,17 @@ pub fn deposit_handler(
     assert_vault_is_not_cancelled(&vault)?;
     assert_deposited_denom_matches_send_denom(
         info.funds[0].denom.clone(),
-        vault.clone().balance.denom,
+        vault.balance.denom.clone(),
     )?;
 
-    let new_balance = add_to(vault.balance.clone(), info.funds[0].amount);
+    let vault_was_inactive = vault.is_inactive();
+    let new_balance = add(vault.balance.clone(), info.funds[0].clone())?;
 
     let vault = update_vault(
         deps.storage,
         Vault {
             balance: new_balance.clone(),
-            deposited_amount: add_to(vault.deposited_amount.clone(), info.funds[0].amount),
+            deposited_amount: add(vault.deposited_amount.clone(), info.funds[0].clone())?,
             status: if vault.is_inactive() {
                 VaultStatus::Active
             } else {

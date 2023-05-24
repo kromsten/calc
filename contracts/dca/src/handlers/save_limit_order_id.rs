@@ -40,7 +40,7 @@ pub fn save_limit_order_id(deps: DepsMut, reply: Reply) -> Result<Response, Cont
     }
 
     Ok(Response::new()
-        .add_attribute("method", "fin_limit_order_submitted")
+        .add_attribute("save_fin_limit_order_id", "true")
         .add_attribute("order_idx", order_idx))
 }
 

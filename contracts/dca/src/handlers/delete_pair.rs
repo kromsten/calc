@@ -10,7 +10,9 @@ pub fn delete_pair_handler(deps: DepsMut, denoms: [String; 2]) -> Result<Respons
 
     Ok(Response::new()
         .add_attribute("delete_pair", "true")
-        .add_attribute("pair", format!("{:?}", pair)))
+        .add_attribute("base_denom", pair.base_denom)
+        .add_attribute("quote_denom", pair.quote_denom)
+        .add_attribute("address", format!("{:#?}", pair.address)))
 }
 
 #[cfg(test)]

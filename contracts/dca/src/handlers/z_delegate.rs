@@ -25,6 +25,7 @@ pub fn z_delegate_handler(
 
     Ok(Response::new()
         .add_attributes(vec![
+            ("z_delegate", "true".to_string()),
             ("delegation", amount_to_delegate.to_string()),
             ("delegator", delegator_address.to_string()),
             ("validator", validator_address.to_string()),
@@ -58,7 +59,9 @@ pub fn log_delegation_result(reply: Reply) -> Result<Response, ContractError> {
         SubMsgResult::Err(_) => "failure".to_string(),
     };
 
-    Ok(Response::new().add_attribute("delegate_result", result))
+    Ok(Response::new()
+        .add_attribute("log_delegation_result", "true")
+        .add_attribute("delegate_result", result))
 }
 
 #[cfg(test)]
