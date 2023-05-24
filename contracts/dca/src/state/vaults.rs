@@ -39,8 +39,7 @@ fn vault_store<'a>() -> IndexedMap<'a, u128, VaultData, VaultIndexes<'a>> {
 }
 
 pub fn migrate_vault(store: &mut dyn Storage, vault: Vault) -> StdResult<()> {
-    let data = &vault.clone().into();
-    vault_store().save(store, vault.id.into(), data)
+    vault_store().save(store, vault.id.into(), &vault.clone().into())
 }
 
 pub fn save_vault(store: &mut dyn Storage, vault_builder: VaultBuilder) -> StdResult<Vault> {
