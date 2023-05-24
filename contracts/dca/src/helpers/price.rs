@@ -3,11 +3,17 @@ use cosmwasm_std::{Coin, Decimal, QuerierWrapper, StdError, StdResult, Uint128};
 use kujira::{
     asset::{Asset, AssetInfo},
     denom::Denom,
-    fin::{ConfigResponse, QueryMsg},
+    fin::QueryMsg,
     precision::{Precise, Precision},
 };
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct FinConfigResponse {
+    pub price_precision: Precision,
+    pub decimal_delta: Option<i8>,
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct FinPoolResponse {
@@ -57,14 +63,7 @@ pub fn get_belief_price(
         )));
     }
 
-    let quote_price = book[0].quote_price;
-
-    Ok(match position_type {
-        PositionType::Enter => quote_price,
-        PositionType::Exit => Decimal::one()
-            .checked_div(quote_price)
-            .expect("should return a valid inverted price for fin sell"),
-    })
+    Ok(book[0].quote_price)
 }
 
 pub fn simulate_swap(
@@ -113,10 +112,12 @@ pub fn get_target_price(
     pair: &Pair,
     target_receive_amount: Uint128,
 ) -> StdResult<Decimal> {
-    let pair_config =
-        querier.query_wasm_smart::<ConfigResponse>(pair.address.clone(), &QueryMsg::Config {})?;
+    let pair_config = querier
+        .query_wasm_smart::<FinConfigResponse>(pair.address.clone(), &QueryMsg::Config {})?;
 
-    if pair_config.decimal_delta < 0 {
+    let decimal_delta = pair_config.decimal_delta.unwrap_or(0);
+
+    if decimal_delta < 0 {
         return Err(StdError::GenericErr {
             msg: "Negative decimal deltas are not supported".to_string(),
         });
@@ -126,7 +127,7 @@ pub fn get_target_price(
         vault,
         pair,
         target_receive_amount,
-        pair_config.decimal_delta,
+        decimal_delta,
         pair_config.price_precision,
     )
 }
