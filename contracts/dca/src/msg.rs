@@ -50,6 +50,9 @@ pub enum ExecuteMsg {
         quote_denom: String,
         address: Addr,
     },
+    DeletePair {
+        denoms: [String; 2],
+    },
     CreateVault {
         owner: Option<Addr>,
         label: Option<String>,

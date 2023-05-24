@@ -24,6 +24,10 @@ pub fn get_pairs(storage: &dyn Storage) -> Vec<Pair> {
         .collect::<Vec<Pair>>()
 }
 
+pub fn delete_pair(storage: &mut dyn Storage, pair: &Pair) {
+    PAIRS.remove(storage, key_from(pair.denoms()))
+}
+
 #[cfg(test)]
 mod pairs_state_tests {
     use super::*;

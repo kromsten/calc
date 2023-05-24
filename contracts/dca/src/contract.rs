@@ -7,6 +7,7 @@ use crate::handlers::cancel_vault::cancel_vault_handler;
 use crate::handlers::create_custom_swap_fee::create_custom_swap_fee_handler;
 use crate::handlers::create_pair::create_pair_handler;
 use crate::handlers::create_vault::create_vault_handler;
+use crate::handlers::delete_pair::delete_pair_handler;
 use crate::handlers::deposit::deposit_handler;
 use crate::handlers::disburse_escrow::disburse_escrow_handler;
 use crate::handlers::disburse_funds::disburse_funds_handler;
@@ -70,6 +71,7 @@ pub fn execute(
             quote_denom,
             address,
         } => create_pair_handler(deps, info, base_denom, quote_denom, address),
+        ExecuteMsg::DeletePair { denoms } => delete_pair_handler(deps, denoms),
         ExecuteMsg::CreateVault {
             owner,
             label,
