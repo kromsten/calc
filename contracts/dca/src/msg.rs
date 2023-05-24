@@ -4,7 +4,6 @@ use crate::types::event::Event;
 use crate::types::fee_collector::FeeCollector;
 use crate::types::pair::Pair;
 use crate::types::performance_assessment_strategy::PerformanceAssessmentStrategyParams;
-use crate::types::position_type::PositionType;
 use crate::types::swap_adjustment_strategy::{
     SwapAdjustmentStrategy, SwapAdjustmentStrategyParams,
 };
@@ -58,7 +57,6 @@ pub enum ExecuteMsg {
         label: Option<String>,
         destinations: Option<Vec<Destination>>,
         target_denom: String,
-        position_type: Option<PositionType>,
         slippage_tolerance: Option<Decimal>,
         minimum_receive_amount: Option<Uint128>,
         swap_amount: Uint128,
@@ -76,6 +74,10 @@ pub enum ExecuteMsg {
         vault_id: Uint128,
         label: Option<String>,
         destinations: Option<Vec<Destination>>,
+        slippage_tolerance: Option<Decimal>,
+        minimum_receive_amount: Option<Uint128>,
+        time_interval: Option<TimeInterval>,
+        swap_adjustment_strategy: Option<SwapAdjustmentStrategyParams>,
     },
     CancelVault {
         vault_id: Uint128,

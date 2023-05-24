@@ -11,6 +11,7 @@ use crate::helpers::validation::{
     assert_swap_adjusment_and_performance_assessment_strategies_are_compatible,
     assert_swap_adjustment_strategy_params_are_valid, assert_swap_amount_is_greater_than_50000,
     assert_target_start_time_is_not_in_the_past, assert_time_interval_is_valid,
+    assert_weighted_scale_multiplier_is_no_more_than_10,
 };
 use crate::helpers::vault::get_risk_weighted_average_model_id;
 use crate::msg::ExecuteMsg;
@@ -25,7 +26,6 @@ use crate::types::event::{EventBuilder, EventData};
 use crate::types::performance_assessment_strategy::{
     PerformanceAssessmentStrategy, PerformanceAssessmentStrategyParams,
 };
-use crate::types::position_type::PositionType;
 use crate::types::swap_adjustment_strategy::{
     SwapAdjustmentStrategy, SwapAdjustmentStrategyParams,
 };
@@ -44,7 +44,6 @@ pub fn create_vault_handler(
     label: Option<String>,
     mut destinations: Vec<Destination>,
     target_denom: String,
-    position_type: Option<PositionType>,
     slippage_tolerance: Option<Decimal>,
     minimum_receive_amount: Option<Uint128>,
     swap_amount: Uint128,
@@ -108,29 +107,36 @@ pub fn create_vault_handler(
 
     let pair = find_pair(deps.storage, [swap_denom.clone(), target_denom.clone()])?;
 
-    let swap_adjustment_strategy = swap_adjustment_strategy_params.map(|params| match params {
-        SwapAdjustmentStrategyParams::RiskWeightedAverage { base_denom } => {
-            SwapAdjustmentStrategy::RiskWeightedAverage {
-                model_id: get_risk_weighted_average_model_id(
-                    &env.block.time,
-                    &info.funds[0],
-                    &swap_amount,
-                    &time_interval,
-                ),
-                base_denom,
-                position_type: pair.position_type(swap_denom.clone()),
+    let swap_adjustment_strategy = if let Some(params) = swap_adjustment_strategy_params {
+        Some(match params {
+            SwapAdjustmentStrategyParams::RiskWeightedAverage { base_denom } => {
+                SwapAdjustmentStrategy::RiskWeightedAverage {
+                    model_id: get_risk_weighted_average_model_id(
+                        &env.block.time,
+                        &info.funds[0],
+                        &swap_amount,
+                        &time_interval,
+                    ),
+                    base_denom,
+                    position_type: pair.position_type(swap_denom.clone()),
+                }
             }
-        }
-        SwapAdjustmentStrategyParams::WeightedScale {
-            base_receive_amount,
-            multiplier,
-            increase_only,
-        } => SwapAdjustmentStrategy::WeightedScale {
-            base_receive_amount,
-            multiplier,
-            increase_only,
-        },
-    });
+            SwapAdjustmentStrategyParams::WeightedScale {
+                base_receive_amount,
+                multiplier,
+                increase_only,
+            } => {
+                assert_weighted_scale_multiplier_is_no_more_than_10(multiplier)?;
+                SwapAdjustmentStrategy::WeightedScale {
+                    base_receive_amount,
+                    multiplier,
+                    increase_only,
+                }
+            }
+        })
+    } else {
+        None
+    };
 
     let performance_assessment_strategy = match performance_assessment_strategy_params {
         Some(PerformanceAssessmentStrategyParams::CompareToStandardDca) => {
@@ -156,7 +162,6 @@ pub fn create_vault_handler(
         status: VaultStatus::Scheduled,
         target_denom: target_denom.clone(),
         swap_amount,
-        position_type,
         slippage_tolerance: slippage_tolerance.unwrap_or(config.default_slippage_tolerance),
         minimum_receive_amount,
         balance: info.funds[0].clone(),
@@ -321,7 +326,6 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
-            None,
             Uint128::new(10000),
             TimeInterval::Daily,
             None,
@@ -358,7 +362,6 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
-            None,
             Uint128::new(10000),
             TimeInterval::Daily,
             None,
@@ -390,7 +393,6 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
-            None,
             None,
             None,
             Uint128::new(100000),
@@ -444,7 +446,6 @@ mod create_vault_tests {
                 msg: None,
             }],
             DENOM_UKUJI.to_string(),
-            None,
             None,
             None,
             Uint128::new(100000),
@@ -504,7 +505,6 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
-            None,
             Uint128::new(100000),
             TimeInterval::Daily,
             None,
@@ -545,7 +545,6 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
-            None,
             Uint128::new(100000),
             TimeInterval::Daily,
             None,
@@ -577,7 +576,6 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
-            None,
             None,
             None,
             Uint128::new(10000),
@@ -624,7 +622,6 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
-            None,
             None,
             None,
             Uint128::new(100000),
@@ -675,7 +672,6 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
-            None,
             Uint128::new(100000),
             TimeInterval::Daily,
             None,
@@ -719,7 +715,6 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
-            None,
             Uint128::new(100000),
             TimeInterval::Daily,
             Some(env.block.time.minus_seconds(10).seconds().into()),
@@ -753,7 +748,6 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
-            None,
             Uint128::new(100000),
             TimeInterval::Custom { seconds: 23 },
             None,
@@ -766,6 +760,50 @@ mod create_vault_tests {
         assert_eq!(
             err.to_string(),
             "Error: custom time interval must be at least 60 seconds"
+        );
+    }
+
+    #[test]
+    fn with_both_target_time_and_target_price_fails() {
+        let mut deps = calc_mock_dependencies();
+        let env = mock_env();
+        let info = mock_info(ADMIN, &[]);
+
+        instantiate_contract(deps.as_mut(), env.clone(), info.clone());
+
+        let pair = Pair::default();
+
+        create_pair_handler(
+            deps.as_mut(),
+            info.clone(),
+            pair.base_denom.clone(),
+            pair.quote_denom.clone(),
+            pair.address,
+        )
+        .unwrap();
+
+        let err = create_vault_handler(
+            deps.as_mut(),
+            env.clone(),
+            &mock_info(ADMIN, &[Coin::new(1233123, pair.base_denom.clone())]),
+            info.sender.clone(),
+            None,
+            vec![],
+            pair.quote_denom.to_string(),
+            None,
+            None,
+            Uint128::new(100000),
+            TimeInterval::Daily,
+            Some(env.block.time.seconds().into()),
+            Some(Uint128::new(872316)),
+            None,
+            None,
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            err.to_string(),
+            "Error: cannot provide both a target_start_time_utc_seconds and a target_price"
         );
     }
 
@@ -799,7 +837,6 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
-            None,
             None,
             None,
             swap_amount,
@@ -849,7 +886,6 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
-            None,
             swap_amount,
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
@@ -862,6 +898,57 @@ mod create_vault_tests {
         assert_eq!(
             err.to_string(),
             "Error: incompatible swap adjustment and performance assessment strategies"
+        );
+    }
+
+    #[test]
+    fn with_weighted_scale_multiplier_larger_than_10_fails() {
+        let mut deps = calc_mock_dependencies();
+        let env = mock_env();
+        let mut info = mock_info(ADMIN, &[]);
+
+        instantiate_contract(deps.as_mut(), env.clone(), info.clone());
+
+        let pair = Pair::default();
+
+        create_pair_handler(
+            deps.as_mut(),
+            info.clone(),
+            pair.base_denom.clone(),
+            pair.quote_denom.clone(),
+            pair.address,
+        )
+        .unwrap();
+
+        let swap_amount = Uint128::new(100000);
+        info = mock_info(USER, &[Coin::new(100000, DENOM_UUSK)]);
+
+        let err = create_vault_handler(
+            deps.as_mut(),
+            env.clone(),
+            &info,
+            info.sender.clone(),
+            None,
+            vec![],
+            DENOM_UKUJI.to_string(),
+            None,
+            None,
+            swap_amount,
+            TimeInterval::Daily,
+            Some(env.block.time.plus_seconds(10).seconds().into()),
+            None,
+            None,
+            Some(SwapAdjustmentStrategyParams::WeightedScale {
+                base_receive_amount: Uint128::new(232231),
+                multiplier: Decimal::percent(1001),
+                increase_only: false,
+            }),
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            err.to_string(),
+            "Error: Cannot set weighted scale multiplier to more than 10"
         );
     }
 
@@ -895,7 +982,6 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
-            None,
             Some(Decimal::percent(150)),
             None,
             swap_amount,
@@ -909,7 +995,7 @@ mod create_vault_tests {
 
         assert_eq!(
             err.to_string(),
-            "Error: default slippage tolerance must be less than or equal to 1"
+            "Error: slippage tolerance must be less than or equal to 1"
         );
     }
 
@@ -943,7 +1029,6 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
-            None,
             None,
             None,
             swap_amount,
@@ -1021,7 +1106,6 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
-            None,
             None,
             None,
             swap_amount,
@@ -1107,7 +1191,6 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
-            None,
             Uint128::new(100000),
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
@@ -1164,7 +1247,6 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
-            None,
             None,
             None,
             Uint128::new(100000),
@@ -1239,7 +1321,6 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
-            None,
             Uint128::new(100000),
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
@@ -1285,7 +1366,6 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
-            None,
             None,
             None,
             Uint128::new(100000),
@@ -1336,7 +1416,6 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
-            None,
             None,
             None,
             Uint128::new(100000),
@@ -1390,7 +1469,6 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
-            None,
             Uint128::new(100000),
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
@@ -1442,7 +1520,6 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
-            None,
             None,
             None,
             Uint128::new(100000),
@@ -1500,7 +1577,6 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
-            None,
             Uint128::new(100000),
             TimeInterval::Daily,
             None,
@@ -1553,7 +1629,6 @@ mod create_vault_tests {
             None,
             vec![],
             pair.base_denom.to_string(),
-            None,
             None,
             None,
             swap_amount,
@@ -1612,7 +1687,6 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
-            None,
             Uint128::new(100000),
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
@@ -1663,7 +1737,6 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
-            None,
             None,
             None,
             Uint128::new(100000),
@@ -1722,7 +1795,6 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
-            None,
             Uint128::new(100000),
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
@@ -1777,7 +1849,6 @@ mod create_vault_tests {
                 ),
             }],
             DENOM_UKUJI.to_string(),
-            None,
             None,
             None,
             Uint128::new(100000),

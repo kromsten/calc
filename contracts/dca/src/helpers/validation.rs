@@ -237,7 +237,7 @@ pub fn assert_slippage_tolerance_is_less_than_or_equal_to_one(
 ) -> Result<(), ContractError> {
     if slippage_tolerance > Decimal::percent(100) {
         return Err(ContractError::CustomError {
-            val: "default slippage tolerance must be less than or equal to 1".to_string(),
+            val: "slippage tolerance must be less than or equal to 1".to_string(),
         });
     }
     Ok(())
@@ -299,7 +299,8 @@ pub fn assert_addresses_are_valid(
     label: &str,
 ) -> Result<(), ContractError> {
     addresses
-        .iter().try_for_each(|address| assert_address_is_valid(deps, address, label))
+        .iter()
+        .try_for_each(|address| assert_address_is_valid(deps, address, label))
 }
 
 pub fn assert_old_destination_allocations_add_up_to_one(
@@ -579,6 +580,17 @@ pub fn assert_swap_adjustment_value_is_valid(
                 strategy.min_adjustment(),
                 strategy.max_adjustment()
             ),
+        });
+    }
+    Ok(())
+}
+
+pub fn assert_weighted_scale_multiplier_is_no_more_than_10(
+    multiplier: Decimal,
+) -> Result<(), ContractError> {
+    if multiplier > Decimal::percent(1000) {
+        return Err(ContractError::CustomError {
+            val: "Cannot set weighted scale multiplier to more than 10".to_string(),
         });
     }
     Ok(())

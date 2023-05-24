@@ -1,7 +1,7 @@
 use super::{
     destination::Destination, performance_assessment_strategy::PerformanceAssessmentStrategy,
-    position_type::PositionType, swap_adjustment_strategy::SwapAdjustmentStrategy,
-    time_interval::TimeInterval, trigger::TriggerConfiguration,
+    swap_adjustment_strategy::SwapAdjustmentStrategy, time_interval::TimeInterval,
+    trigger::TriggerConfiguration,
 };
 use crate::helpers::time::get_total_execution_duration;
 use cosmwasm_schema::cw_serde;
@@ -130,7 +130,6 @@ pub struct VaultBuilder {
     pub balance: Coin,
     pub target_denom: String,
     pub swap_amount: Uint128,
-    pub position_type: Option<PositionType>,
     pub slippage_tolerance: Decimal,
     pub minimum_receive_amount: Option<Uint128>,
     pub time_interval: TimeInterval,
@@ -154,7 +153,6 @@ impl VaultBuilder {
         balance: Coin,
         target_denom: String,
         swap_amount: Uint128,
-        position_type: Option<PositionType>,
         slippage_tolerance: Decimal,
         minimum_receive_amount: Option<Uint128>,
         time_interval: TimeInterval,
@@ -176,7 +174,6 @@ impl VaultBuilder {
             balance,
             target_denom,
             swap_amount,
-            position_type,
             slippage_tolerance,
             minimum_receive_amount,
             time_interval,
