@@ -157,12 +157,12 @@ mod vault_from_tests {
             position_type::PositionType,
             swap_adjustment_strategy::{BaseDenom, SwapAdjustmentStrategy},
             trigger::TriggerConfiguration,
-            vault::Vault,
+            vault::{Vault, VaultStatus},
         },
     };
     use base::{
         triggers::trigger::OldTriggerConfiguration,
-        vaults::vault::{OldDestination, PostExecutionAction},
+        vaults::vault::{OldDestination, OldVaultStatus, PostExecutionAction},
     };
     use cosmwasm_std::{
         testing::mock_env, to_binary, Addr, Coin, Decimal, Decimal256, Timestamp, Uint128,
@@ -221,6 +221,47 @@ mod vault_from_tests {
         assert_eq!(
             vault.escrowed_amount,
             old_vault.dca_plus_config.unwrap().escrowed_balance
+        )
+    }
+
+    #[test]
+    fn maps_time_trigger_correctly() {
+        let target_time = Timestamp::from_seconds(123123);
+
+        let old_vault = OldVault {
+            trigger: Some(OldTriggerConfiguration::Time { target_time }),
+            ..OldVault::default()
+        };
+
+        let vault = vault_from(mock_env(), old_vault.clone());
+
+        assert_eq!(
+            vault.trigger,
+            Some(TriggerConfiguration::Time { target_time })
+        )
+    }
+
+    #[test]
+    fn maps_price_trigger_correctly() {
+        let target_price_percent = 2311;
+        let order_idx = Uint128::new(213123);
+
+        let old_vault = OldVault {
+            trigger: Some(OldTriggerConfiguration::FinLimitOrder {
+                target_price: Decimal256::percent(target_price_percent),
+                order_idx: Some(order_idx),
+            }),
+            ..OldVault::default()
+        };
+
+        let vault = vault_from(mock_env(), old_vault.clone());
+
+        assert_eq!(
+            vault.trigger,
+            Some(TriggerConfiguration::Price {
+                target_price: Decimal::percent(target_price_percent),
+                order_idx: Some(order_idx)
+            })
         )
     }
 
@@ -369,59 +410,6 @@ mod vault_from_tests {
     }
 
     #[test]
-    fn maps_time_trigger_correctly() {
-        let old_vault = OldVault {
-            trigger: Some(OldTriggerConfiguration::Time {
-                target_time: Timestamp::from_seconds(3248743),
-            }),
-            ..OldVault::default()
-        };
-
-        let vault = vault_from(mock_env(), old_vault.clone());
-
-        assert_eq!(
-            match vault.trigger.unwrap() {
-                TriggerConfiguration::Time { target_time } => target_time,
-                _ => panic!("Wrong trigger type"),
-            },
-            match old_vault.trigger.unwrap() {
-                OldTriggerConfiguration::Time { target_time } => target_time,
-                _ => panic!("Wrong trigger type"),
-            }
-        )
-    }
-
-    #[test]
-    fn maps_price_trigger_correctly() {
-        let old_vault = OldVault {
-            trigger: Some(OldTriggerConfiguration::FinLimitOrder {
-                target_price: Decimal256::percent(32487632),
-                order_idx: Some(Uint128::new(28347)),
-            }),
-            ..OldVault::default()
-        };
-
-        let vault = vault_from(mock_env(), old_vault.clone());
-
-        assert_eq!(
-            match vault.trigger.unwrap() {
-                TriggerConfiguration::Price {
-                    target_price,
-                    order_idx,
-                } => (target_price.into(), order_idx),
-                _ => panic!("Wrong trigger type"),
-            },
-            match old_vault.trigger.unwrap() {
-                OldTriggerConfiguration::FinLimitOrder {
-                    target_price,
-                    order_idx,
-                } => (target_price, order_idx),
-                _ => panic!("Wrong trigger type"),
-            }
-        )
-    }
-
-    #[test]
     fn maps_target_base_denom_correctly() {
         let pair = OldVault::default().pair;
 
@@ -447,5 +435,107 @@ mod vault_from_tests {
         let vault = vault_from(mock_env(), old_vault.clone());
 
         assert_eq!(vault.target_denom, pair.quote_denom);
+    }
+
+    #[test]
+    fn maps_statuses_correctly() {
+        let old_vault = OldVault {
+            status: OldVaultStatus::Active,
+            ..OldVault::default()
+        };
+
+        let vault = vault_from(mock_env(), old_vault.clone());
+
+        assert_eq!(vault.status, VaultStatus::Active);
+
+        let old_vault = OldVault {
+            status: OldVaultStatus::Inactive,
+            ..OldVault::default()
+        };
+
+        let vault = vault_from(mock_env(), old_vault.clone());
+
+        assert_eq!(vault.status, VaultStatus::Inactive);
+
+        let old_vault = OldVault {
+            status: OldVaultStatus::Cancelled,
+            ..OldVault::default()
+        };
+
+        let vault = vault_from(mock_env(), old_vault.clone());
+
+        assert_eq!(vault.status, VaultStatus::Cancelled);
+
+        let old_vault = OldVault {
+            status: OldVaultStatus::Scheduled,
+            ..OldVault::default()
+        };
+
+        let vault = vault_from(mock_env(), old_vault.clone());
+
+        assert_eq!(vault.status, VaultStatus::Scheduled);
+    }
+
+    #[test]
+    fn maps_timestamps_correctly() {
+        let old_vault = OldVault {
+            created_at: Timestamp::from_seconds(2312123),
+            started_at: Some(Timestamp::from_seconds(2312123)),
+            ..OldVault::default()
+        };
+
+        let vault = vault_from(mock_env(), old_vault.clone());
+
+        assert_eq!(vault.created_at, old_vault.created_at);
+        assert_eq!(vault.started_at, old_vault.started_at);
+
+        let old_vault = OldVault {
+            started_at: None,
+            ..OldVault::default()
+        };
+
+        let vault = vault_from(mock_env(), old_vault.clone());
+
+        assert_eq!(vault.started_at, old_vault.started_at);
+    }
+
+    #[test]
+    fn maps_slippage_tolerance_correctly() {
+        let old_vault = OldVault {
+            slippage_tolerance: Some(Decimal::percent(123)),
+            ..OldVault::default()
+        };
+
+        let vault = vault_from(mock_env(), old_vault.clone());
+
+        assert_eq!(
+            vault.slippage_tolerance,
+            old_vault.slippage_tolerance.unwrap()
+        );
+
+        let old_vault = OldVault {
+            slippage_tolerance: None,
+            ..OldVault::default()
+        };
+
+        let vault = vault_from(mock_env(), old_vault.clone());
+
+        assert_eq!(vault.slippage_tolerance, Decimal::percent(10));
+    }
+
+    #[test]
+    fn maps_metadata_correctly() {
+        let old_vault = OldVault {
+            id: Uint128::new(3742),
+            label: Some("a,sjd;as".to_string()),
+            owner: Addr::unchecked("adsbuybwq;idwuqn"),
+            ..OldVault::default()
+        };
+
+        let vault = vault_from(mock_env(), old_vault.clone());
+
+        assert_eq!(vault.id, old_vault.id);
+        assert_eq!(vault.label, old_vault.label);
+        assert_eq!(vault.owner, old_vault.owner);
     }
 }

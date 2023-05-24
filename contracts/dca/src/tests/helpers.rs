@@ -233,10 +233,7 @@ pub fn setup_vault(deps: DepsMut, env: Env, mut vault: Vault) -> Vault {
                 vault_id: vault.id,
                 configuration: match vault.trigger.unwrap() {
                     TriggerConfiguration::Time { target_time } => TriggerConfiguration::Time {
-                        target_time: Timestamp::from_seconds(max(
-                            target_time.seconds(),
-                            env.block.time.seconds(),
-                        )),
+                        target_time: max(target_time, env.block.time),
                     },
                     TriggerConfiguration::Price {
                         target_price,

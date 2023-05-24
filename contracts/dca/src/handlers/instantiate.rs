@@ -96,7 +96,7 @@ mod instantiate_tests {
         assert_eq!(
             result.attributes,
             vec![
-                attr("method", "instantiate"),
+                attr("instantiate", "true"),
                 attr("admin", "osmo16q6jpx7ns0ugwghqay73uxd5aq30du3uqgxf0d")
             ]
         )

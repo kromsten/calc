@@ -11,15 +11,14 @@ use crate::{
     msg::MigrateMsg,
     state::{
         config::update_config, old_pairs::PAIRS, old_swap_adjustments::get_old_swap_adjustment,
-        old_triggers::TRIGGERS, pairs::save_pair, swap_adjustments::update_swap_adjustment,
-        triggers::save_trigger,
+        pairs::save_pair, swap_adjustments::update_swap_adjustment,
     },
     types::{
         config::Config,
         swap_adjustment_strategy::{BaseDenom, SwapAdjustmentStrategy},
     },
 };
-use base::{pair::OldPair, triggers::trigger::OldTrigger};
+use base::pair::OldPair;
 use cosmwasm_std::{DepsMut, Env, Order, Response, StdError};
 use cw2::{get_contract_version, set_contract_version};
 use fin_helpers::position_type::OldPositionType;
@@ -80,15 +79,6 @@ pub fn migrate_handler(
         save_pair(deps.storage, &old_pair.into())?;
     }
 
-    let old_triggers = TRIGGERS
-        .range(deps.storage, None, None, Order::Ascending)
-        .flat_map(|result| result.map(|(_, trigger)| trigger))
-        .collect::<Vec<OldTrigger>>();
-
-    for old_trigger in old_triggers {
-        save_trigger(deps.storage, old_trigger.into())?;
-    }
-
     for model_id in [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90] {
         for position_type in [OldPositionType::Enter, OldPositionType::Exit] {
             let swap_adjustment = get_old_swap_adjustment(
@@ -129,7 +119,6 @@ mod migrate_tests {
             old_triggers::save_old_trigger,
             pairs::{find_pair, get_pairs},
             swap_adjustments::get_swap_adjustment,
-            triggers::{get_trigger, trigger_store},
         },
         tests::{helpers::instantiate_contract, mocks::ADMIN},
         types::{
@@ -137,7 +126,6 @@ mod migrate_tests {
             pair::Pair,
             position_type::PositionType,
             swap_adjustment_strategy::{BaseDenom, SwapAdjustmentStrategy},
-            trigger::{Trigger, TriggerConfiguration},
         },
     };
     use base::{
@@ -146,7 +134,7 @@ mod migrate_tests {
     };
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info},
-        Addr, Decimal, Decimal256, Order, Uint128,
+        Addr, Decimal, Decimal256, Uint128,
     };
     use fin_helpers::position_type::OldPositionType;
 
@@ -299,241 +287,6 @@ mod migrate_tests {
         let pairs = get_pairs(deps.as_ref().storage);
 
         assert_eq!(pairs.len(), 20);
-    }
-
-    #[test]
-    fn migrates_time_trigger() {
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-
-        instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
-
-        for i in 0..20 {
-            let trigger = OldTrigger {
-                vault_id: Uint128::new(i),
-                configuration: OldTriggerConfiguration::Time {
-                    target_time: env.block.time.plus_seconds(i as u64),
-                },
-            };
-
-            save_old_trigger(deps.as_mut().storage, trigger).unwrap();
-        }
-
-        for position_type in [OldPositionType::Enter, OldPositionType::Exit] {
-            update_swap_adjustments(
-                deps.as_mut().storage,
-                position_type,
-                vec![
-                    (30, Decimal::percent(120)),
-                    (35, Decimal::percent(120)),
-                    (40, Decimal::percent(120)),
-                    (45, Decimal::percent(120)),
-                    (50, Decimal::percent(120)),
-                    (55, Decimal::percent(120)),
-                    (60, Decimal::percent(120)),
-                    (65, Decimal::percent(120)),
-                    (70, Decimal::percent(120)),
-                    (75, Decimal::percent(120)),
-                    (80, Decimal::percent(120)),
-                    (85, Decimal::percent(120)),
-                    (90, Decimal::percent(120)),
-                ],
-                env.block.time,
-            )
-            .unwrap();
-        }
-
-        migrate(
-            deps.as_mut(),
-            mock_env(),
-            MigrateMsg {
-                admin: Addr::unchecked(ADMIN),
-                executors: vec![Addr::unchecked(ADMIN)],
-                fee_collectors: vec![FeeCollector {
-                    allocation: Decimal::percent(100),
-                    address: ADMIN.to_string(),
-                }],
-                default_swap_fee_percent: Decimal::percent(2),
-                weighted_scale_swap_fee_percent: Decimal::percent(2),
-                automation_fee_percent: Decimal::percent(2),
-                default_page_limit: 30,
-                paused: true,
-                risk_weighted_average_escrow_level: Decimal::percent(5),
-                twap_period: 60,
-                default_slippage_tolerance: Decimal::percent(10),
-            },
-        )
-        .unwrap();
-
-        let trigger = get_trigger(deps.as_ref().storage, Uint128::new(10)).unwrap();
-
-        assert_eq!(
-            trigger,
-            Some(Trigger {
-                vault_id: Uint128::new(10),
-                configuration: TriggerConfiguration::Time {
-                    target_time: env.block.time.plus_seconds(10),
-                },
-            })
-        );
-    }
-
-    #[test]
-    fn migrates_price_trigger() {
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-
-        instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
-
-        for i in 0..20 {
-            let trigger = OldTrigger {
-                vault_id: Uint128::new(i),
-                configuration: OldTriggerConfiguration::FinLimitOrder {
-                    target_price: Decimal256::percent(132),
-                    order_idx: Some(Uint128::new(i)),
-                },
-            };
-
-            save_old_trigger(deps.as_mut().storage, trigger).unwrap();
-        }
-
-        for position_type in [OldPositionType::Enter, OldPositionType::Exit] {
-            update_swap_adjustments(
-                deps.as_mut().storage,
-                position_type,
-                vec![
-                    (30, Decimal::percent(120)),
-                    (35, Decimal::percent(120)),
-                    (40, Decimal::percent(120)),
-                    (45, Decimal::percent(120)),
-                    (50, Decimal::percent(120)),
-                    (55, Decimal::percent(120)),
-                    (60, Decimal::percent(120)),
-                    (65, Decimal::percent(120)),
-                    (70, Decimal::percent(120)),
-                    (75, Decimal::percent(120)),
-                    (80, Decimal::percent(120)),
-                    (85, Decimal::percent(120)),
-                    (90, Decimal::percent(120)),
-                ],
-                env.block.time,
-            )
-            .unwrap();
-        }
-
-        migrate(
-            deps.as_mut(),
-            mock_env(),
-            MigrateMsg {
-                admin: Addr::unchecked(ADMIN),
-                executors: vec![Addr::unchecked(ADMIN)],
-                fee_collectors: vec![FeeCollector {
-                    allocation: Decimal::percent(100),
-                    address: ADMIN.to_string(),
-                }],
-                default_swap_fee_percent: Decimal::percent(2),
-                weighted_scale_swap_fee_percent: Decimal::percent(2),
-                automation_fee_percent: Decimal::percent(2),
-                default_page_limit: 30,
-                paused: true,
-                risk_weighted_average_escrow_level: Decimal::percent(5),
-                twap_period: 60,
-                default_slippage_tolerance: Decimal::percent(10),
-            },
-        )
-        .unwrap();
-
-        let trigger = get_trigger(deps.as_ref().storage, Uint128::new(10)).unwrap();
-
-        assert_eq!(
-            trigger,
-            Some(Trigger {
-                vault_id: Uint128::new(10),
-                configuration: TriggerConfiguration::Price {
-                    target_price: Decimal::percent(132),
-                    order_idx: Some(Uint128::new(10)),
-                },
-            })
-        );
-    }
-
-    #[test]
-    fn migrates_all_triggers() {
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-
-        instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
-
-        for i in 0..20 {
-            let trigger = OldTrigger {
-                vault_id: Uint128::new(i),
-                configuration: if i % 2 == 0 {
-                    OldTriggerConfiguration::Time {
-                        target_time: env.block.time.plus_seconds(1000).into(),
-                    }
-                } else {
-                    OldTriggerConfiguration::FinLimitOrder {
-                        target_price: Decimal256::percent(80 + i as u64),
-                        order_idx: Some(Uint128::new(i)),
-                    }
-                },
-            };
-
-            save_old_trigger(deps.as_mut().storage, trigger).unwrap();
-        }
-
-        for position_type in [OldPositionType::Enter, OldPositionType::Exit] {
-            update_swap_adjustments(
-                deps.as_mut().storage,
-                position_type,
-                vec![
-                    (30, Decimal::percent(120)),
-                    (35, Decimal::percent(120)),
-                    (40, Decimal::percent(120)),
-                    (45, Decimal::percent(120)),
-                    (50, Decimal::percent(120)),
-                    (55, Decimal::percent(120)),
-                    (60, Decimal::percent(120)),
-                    (65, Decimal::percent(120)),
-                    (70, Decimal::percent(120)),
-                    (75, Decimal::percent(120)),
-                    (80, Decimal::percent(120)),
-                    (85, Decimal::percent(120)),
-                    (90, Decimal::percent(120)),
-                ],
-                env.block.time,
-            )
-            .unwrap();
-        }
-
-        migrate(
-            deps.as_mut(),
-            mock_env(),
-            MigrateMsg {
-                admin: Addr::unchecked(ADMIN),
-                executors: vec![Addr::unchecked(ADMIN)],
-                fee_collectors: vec![FeeCollector {
-                    allocation: Decimal::percent(100),
-                    address: ADMIN.to_string(),
-                }],
-                default_swap_fee_percent: Decimal::percent(2),
-                weighted_scale_swap_fee_percent: Decimal::percent(2),
-                automation_fee_percent: Decimal::percent(2),
-                default_page_limit: 30,
-                paused: true,
-                risk_weighted_average_escrow_level: Decimal::percent(5),
-                twap_period: 60,
-                default_slippage_tolerance: Decimal::percent(10),
-            },
-        )
-        .unwrap();
-
-        assert_eq!(
-            trigger_store()
-                .range(deps.as_ref().storage, None, None, Order::Ascending)
-                .count(),
-            20
-        );
     }
 
     #[test]
