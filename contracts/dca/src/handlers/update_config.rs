@@ -47,6 +47,7 @@ pub fn update_config_handler(
         twap_period: twap_period.unwrap_or(existing_config.twap_period),
         default_slippage_tolerance: default_slippage_tolerance
             .unwrap_or(existing_config.default_slippage_tolerance),
+        old_staking_router_address: existing_config.old_staking_router_address,
     };
 
     assert_fee_level_is_valid(&config.default_swap_fee_percent)?;

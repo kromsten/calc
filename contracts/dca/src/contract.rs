@@ -174,7 +174,7 @@ pub fn execute(
             delegator_address,
             validator_address,
         ),
-        ExecuteMsg::MigrateVaults { limit } => migrate_vaults_handler(deps, env, limit),
+        ExecuteMsg::MigrateVaults { limit } => migrate_vaults_handler(deps, limit),
     }
 }
 

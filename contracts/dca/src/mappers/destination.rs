@@ -5,7 +5,7 @@ use cosmwasm_std::{to_binary, Addr};
 pub fn destination_from(
     old_destination: &OldDestination,
     owner: Addr,
-    contract_address: Addr,
+    old_staking_router_address: Addr,
 ) -> Destination {
     match old_destination.action.clone() {
         PostExecutionAction::Send => Destination {
@@ -14,7 +14,7 @@ pub fn destination_from(
             msg: None,
         },
         PostExecutionAction::ZDelegate => Destination {
-            address: contract_address,
+            address: old_staking_router_address,
             allocation: old_destination.allocation,
             msg: Some(
                 to_binary(&ExecuteMsg::ZDelegate {
@@ -45,7 +45,7 @@ mod destination_from_tests {
         let destination = destination_from(
             &old_destination,
             Addr::unchecked("owner"),
-            Addr::unchecked("contract"),
+            Addr::unchecked("staking-router"),
         );
 
         assert_eq!(
@@ -69,14 +69,14 @@ mod destination_from_tests {
         let destination = destination_from(
             &old_destination,
             Addr::unchecked("owner"),
-            Addr::unchecked("contract"),
+            Addr::unchecked("staking-router"),
         );
 
         assert_eq!(
             destination,
             Destination {
                 allocation: old_destination.allocation,
-                address: Addr::unchecked("contract"),
+                address: Addr::unchecked("staking-router"),
                 msg: Some(
                     to_binary(&ExecuteMsg::ZDelegate {
                         delegator_address: Addr::unchecked("owner"),

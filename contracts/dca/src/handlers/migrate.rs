@@ -67,6 +67,7 @@ pub fn migrate_handler(
             risk_weighted_average_escrow_level: msg.risk_weighted_average_escrow_level,
             twap_period: msg.twap_period,
             default_slippage_tolerance: msg.default_slippage_tolerance,
+            old_staking_router_address: msg.old_staking_router_address.clone(),
         },
     )?;
 
@@ -199,6 +200,7 @@ mod migrate_tests {
                 risk_weighted_average_escrow_level: Decimal::percent(5),
                 twap_period: 60,
                 default_slippage_tolerance: Decimal::percent(10),
+                old_staking_router_address: Addr::unchecked("staking-router"),
             },
         )
         .unwrap();
@@ -280,6 +282,7 @@ mod migrate_tests {
                 risk_weighted_average_escrow_level: Decimal::percent(5),
                 twap_period: 60,
                 default_slippage_tolerance: Decimal::percent(10),
+                old_staking_router_address: Addr::unchecked("staking-router"),
             },
         )
         .unwrap();
@@ -350,6 +353,7 @@ mod migrate_tests {
                 risk_weighted_average_escrow_level: Decimal::percent(5),
                 twap_period: 60,
                 default_slippage_tolerance: Decimal::percent(10),
+                old_staking_router_address: Addr::unchecked("staking-router"),
             },
         )
         .unwrap();

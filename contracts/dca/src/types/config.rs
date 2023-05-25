@@ -15,4 +15,5 @@ pub struct Config {
     pub risk_weighted_average_escrow_level: Decimal,
     pub twap_period: u64,
     pub default_slippage_tolerance: Decimal,
+    pub old_staking_router_address: Addr,
 }

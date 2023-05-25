@@ -25,6 +25,7 @@ pub struct InstantiateMsg {
     pub risk_weighted_average_escrow_level: Decimal,
     pub twap_period: u64,
     pub default_slippage_tolerance: Decimal,
+    pub old_staking_router_address: Addr,
 }
 
 #[cw_serde]
@@ -40,6 +41,7 @@ pub struct MigrateMsg {
     pub risk_weighted_average_escrow_level: Decimal,
     pub twap_period: u64,
     pub default_slippage_tolerance: Decimal,
+    pub old_staking_router_address: Addr,
 }
 
 #[cw_serde]

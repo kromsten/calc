@@ -14,11 +14,11 @@ use base::{
     triggers::trigger::{OldTimeInterval, OldTrigger, OldTriggerConfiguration},
     vaults::vault::OldVaultStatus,
 };
-use cosmwasm_std::{Coin, Decimal, Env};
+use cosmwasm_std::{Addr, Coin, Decimal};
 use fin_helpers::position_type::OldPositionType;
 use std::str::FromStr;
 
-pub fn vault_from(env: Env, old_vault: OldVault) -> Vault {
+pub fn vault_from(old_staking_router_address: Addr, old_vault: OldVault) -> Vault {
     Vault {
         id: old_vault.id,
         created_at: old_vault.created_at,
@@ -27,7 +27,13 @@ pub fn vault_from(env: Env, old_vault: OldVault) -> Vault {
         destinations: old_vault
             .destinations
             .iter()
-            .map(|d| destination_from(d, old_vault.owner.clone(), env.contract.address.clone()))
+            .map(|d| {
+                destination_from(
+                    d,
+                    old_vault.owner.clone(),
+                    old_staking_router_address.clone(),
+                )
+            })
             .collect(),
         status: old_vault.status.clone().into(),
         balance: old_vault.balance.clone(),
@@ -164,14 +170,12 @@ mod vault_from_tests {
         triggers::trigger::OldTriggerConfiguration,
         vaults::vault::{OldDestination, OldVaultStatus, PostExecutionAction},
     };
-    use cosmwasm_std::{
-        testing::mock_env, to_binary, Addr, Coin, Decimal, Decimal256, Timestamp, Uint128,
-    };
+    use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Decimal256, Timestamp, Uint128};
 
     #[test]
     fn maps_default_vault_correctly() {
         assert_eq!(
-            vault_from(mock_env(), OldVault::default()),
+            vault_from(Addr::unchecked("staking-router"), OldVault::default()),
             Vault::default()
         )
     }
@@ -193,7 +197,7 @@ mod vault_from_tests {
             ..OldVault::default()
         };
 
-        let vault = vault_from(mock_env(), old_vault.clone());
+        let vault = vault_from(Addr::unchecked("staking-router"), old_vault.clone());
 
         assert_eq!(vault.balance, old_vault.balance);
         assert_eq!(vault.swap_amount, old_vault.swap_amount);
@@ -233,7 +237,7 @@ mod vault_from_tests {
             ..OldVault::default()
         };
 
-        let vault = vault_from(mock_env(), old_vault.clone());
+        let vault = vault_from(Addr::unchecked("staking-router"), old_vault.clone());
 
         assert_eq!(
             vault.trigger,
@@ -254,7 +258,7 @@ mod vault_from_tests {
             ..OldVault::default()
         };
 
-        let vault = vault_from(mock_env(), old_vault.clone());
+        let vault = vault_from(Addr::unchecked("staking-router"), old_vault.clone());
 
         assert_eq!(
             vault.trigger,
@@ -279,7 +283,7 @@ mod vault_from_tests {
             ..OldVault::default()
         };
 
-        let vault = vault_from(mock_env(), old_vault.clone());
+        let vault = vault_from(Addr::unchecked("staking-router"), old_vault.clone());
 
         assert_eq!(
             vault.performance_assessment_strategy,
@@ -328,7 +332,7 @@ mod vault_from_tests {
             ..OldVault::default()
         };
 
-        let vault = vault_from(mock_env(), old_vault.clone());
+        let vault = vault_from(Addr::unchecked("staking-router"), old_vault.clone());
 
         assert_eq!(
             vault.swap_adjustment_strategy,
@@ -350,7 +354,7 @@ mod vault_from_tests {
             ..OldVault::default()
         };
 
-        let vault = vault_from(mock_env(), old_vault.clone());
+        let vault = vault_from(Addr::unchecked("staking-router"), old_vault.clone());
 
         assert_eq!(
             vault.swap_adjustment_strategy,
@@ -380,9 +384,8 @@ mod vault_from_tests {
             ..OldVault::default()
         };
 
-        let env = mock_env();
-
-        let vault = vault_from(env.clone(), old_vault.clone());
+        let old_staking_router_address = Addr::unchecked("staking-router");
+        let vault = vault_from(old_staking_router_address.clone(), old_vault.clone());
 
         assert_eq!(vault.destinations.len(), old_vault.destinations.len());
         assert_eq!(
@@ -397,7 +400,7 @@ mod vault_from_tests {
             vault.destinations[1],
             Destination {
                 allocation: old_vault.destinations[1].allocation,
-                address: env.contract.address,
+                address: old_staking_router_address,
                 msg: Some(
                     to_binary(&ExecuteMsg::ZDelegate {
                         delegator_address: old_vault.owner,
@@ -418,7 +421,7 @@ mod vault_from_tests {
             ..OldVault::default()
         };
 
-        let vault = vault_from(mock_env(), old_vault.clone());
+        let vault = vault_from(Addr::unchecked("staking-router"), old_vault.clone());
 
         assert_eq!(vault.target_denom, pair.base_denom);
     }
@@ -432,7 +435,7 @@ mod vault_from_tests {
             ..OldVault::default()
         };
 
-        let vault = vault_from(mock_env(), old_vault.clone());
+        let vault = vault_from(Addr::unchecked("staking-router"), old_vault.clone());
 
         assert_eq!(vault.target_denom, pair.quote_denom);
     }
@@ -444,7 +447,7 @@ mod vault_from_tests {
             ..OldVault::default()
         };
 
-        let vault = vault_from(mock_env(), old_vault.clone());
+        let vault = vault_from(Addr::unchecked("staking-router"), old_vault.clone());
 
         assert_eq!(vault.status, VaultStatus::Active);
 
@@ -453,7 +456,7 @@ mod vault_from_tests {
             ..OldVault::default()
         };
 
-        let vault = vault_from(mock_env(), old_vault.clone());
+        let vault = vault_from(Addr::unchecked("staking-router"), old_vault.clone());
 
         assert_eq!(vault.status, VaultStatus::Inactive);
 
@@ -462,7 +465,7 @@ mod vault_from_tests {
             ..OldVault::default()
         };
 
-        let vault = vault_from(mock_env(), old_vault.clone());
+        let vault = vault_from(Addr::unchecked("staking-router"), old_vault.clone());
 
         assert_eq!(vault.status, VaultStatus::Cancelled);
 
@@ -471,7 +474,7 @@ mod vault_from_tests {
             ..OldVault::default()
         };
 
-        let vault = vault_from(mock_env(), old_vault.clone());
+        let vault = vault_from(Addr::unchecked("staking-router"), old_vault.clone());
 
         assert_eq!(vault.status, VaultStatus::Scheduled);
     }
@@ -484,7 +487,7 @@ mod vault_from_tests {
             ..OldVault::default()
         };
 
-        let vault = vault_from(mock_env(), old_vault.clone());
+        let vault = vault_from(Addr::unchecked("staking-router"), old_vault.clone());
 
         assert_eq!(vault.created_at, old_vault.created_at);
         assert_eq!(vault.started_at, old_vault.started_at);
@@ -494,7 +497,7 @@ mod vault_from_tests {
             ..OldVault::default()
         };
 
-        let vault = vault_from(mock_env(), old_vault.clone());
+        let vault = vault_from(Addr::unchecked("staking-router"), old_vault.clone());
 
         assert_eq!(vault.started_at, old_vault.started_at);
     }
@@ -506,7 +509,7 @@ mod vault_from_tests {
             ..OldVault::default()
         };
 
-        let vault = vault_from(mock_env(), old_vault.clone());
+        let vault = vault_from(Addr::unchecked("staking-router"), old_vault.clone());
 
         assert_eq!(
             vault.slippage_tolerance,
@@ -518,7 +521,7 @@ mod vault_from_tests {
             ..OldVault::default()
         };
 
-        let vault = vault_from(mock_env(), old_vault.clone());
+        let vault = vault_from(Addr::unchecked("staking-router"), old_vault.clone());
 
         assert_eq!(vault.slippage_tolerance, Decimal::percent(10));
     }
@@ -532,7 +535,7 @@ mod vault_from_tests {
             ..OldVault::default()
         };
 
-        let vault = vault_from(mock_env(), old_vault.clone());
+        let vault = vault_from(Addr::unchecked("staking-router"), old_vault.clone());
 
         assert_eq!(vault.id, old_vault.id);
         assert_eq!(vault.label, old_vault.label);

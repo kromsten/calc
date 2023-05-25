@@ -46,6 +46,7 @@ pub fn instantiate_contract(deps: DepsMut, env: Env, info: MessageInfo) {
         risk_weighted_average_escrow_level: Decimal::percent(5),
         twap_period: 30,
         default_slippage_tolerance: Decimal::percent(2),
+        old_staking_router_address: Addr::unchecked("staking-router"),
     };
 
     instantiate(deps, env.clone(), info.clone(), instantiate_message).unwrap();
@@ -69,6 +70,7 @@ pub fn instantiate_contract_with_multiple_fee_collectors(
         risk_weighted_average_escrow_level: Decimal::from_str("0.0075").unwrap(),
         twap_period: 30,
         default_slippage_tolerance: Decimal::percent(2),
+        old_staking_router_address: Addr::unchecked("staking-router"),
     };
 
     instantiate(deps, env.clone(), info.clone(), instantiate_message).unwrap();
@@ -91,6 +93,7 @@ impl Default for Config {
             risk_weighted_average_escrow_level: Decimal::from_str("0.0075").unwrap(),
             twap_period: 30,
             default_slippage_tolerance: Decimal::percent(2),
+            old_staking_router_address: Addr::unchecked("staking-router"),
         }
     }
 }
@@ -124,7 +127,7 @@ impl Default for Vault {
             label: Some("vault".to_string()),
             destinations: vec![Destination {
                 allocation: Decimal::percent(100),
-                address: Addr::unchecked("cosmos2contract"),
+                address: Addr::unchecked("staking-router"),
                 msg: Some(
                     to_binary(&ExecuteMsg::ZDelegate {
                         delegator_address: Addr::unchecked(USER),
