@@ -1,7 +1,7 @@
 use cosmwasm_std::{Decimal, Order, StdResult, Storage};
 use cw_storage_plus::Map;
 
-const CUSTOM_FEES: Map<String, Decimal> = Map::new("fees_v6");
+const CUSTOM_FEES: Map<String, Decimal> = Map::new("fees_v20");
 
 pub fn create_custom_fee(
     storage: &mut dyn Storage,

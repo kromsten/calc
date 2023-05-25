@@ -116,16 +116,6 @@
                 }
               ]
             },
-            "position_type": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/PositionType"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
             "slippage_tolerance": {
               "anyOf": [
                 {
@@ -231,6 +221,46 @@
               "type": [
                 "string",
                 "null"
+              ]
+            },
+            "minimum_receive_amount": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Uint128"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "slippage_tolerance": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Decimal"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "swap_adjustment_strategy": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/SwapAdjustmentStrategyParams"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "time_interval": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/TimeInterval"
+                },
+                {
+                  "type": "null"
+                }
               ]
             },
             "vault_id": {
