@@ -117,6 +117,12 @@ pub enum ExecuteMsg {
         delegator_address: Addr,
         validator_address: Addr,
     },
+    OldZDelegate {
+        delegator_address: Addr,
+        validator_address: Addr,
+        amount: Uint128,
+        denom: String,
+    },
     MigrateVaults {
         limit: u16,
     },

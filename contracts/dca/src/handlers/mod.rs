@@ -23,6 +23,7 @@ pub mod handle_failed_automation;
 pub mod instantiate;
 pub mod migrate;
 pub mod migrate_vaults;
+pub mod old_z_delegate_handler;
 pub mod remove_custom_swap_fee;
 pub mod save_limit_order_id;
 pub mod update_config;

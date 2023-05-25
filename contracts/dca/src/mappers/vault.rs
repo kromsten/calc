@@ -18,7 +18,7 @@ use cosmwasm_std::{Addr, Coin, Decimal};
 use fin_helpers::position_type::OldPositionType;
 use std::str::FromStr;
 
-pub fn vault_from(old_staking_router_address: Addr, old_vault: OldVault) -> Vault {
+pub fn vault_from(contract_address: Addr, old_vault: OldVault) -> Vault {
     Vault {
         id: old_vault.id,
         created_at: old_vault.created_at,
@@ -27,13 +27,7 @@ pub fn vault_from(old_staking_router_address: Addr, old_vault: OldVault) -> Vaul
         destinations: old_vault
             .destinations
             .iter()
-            .map(|d| {
-                destination_from(
-                    d,
-                    old_vault.owner.clone(),
-                    old_staking_router_address.clone(),
-                )
-            })
+            .map(|d| destination_from(d, old_vault.owner.clone(), contract_address.clone()))
             .collect(),
         status: old_vault.status.clone().into(),
         balance: old_vault.balance.clone(),
@@ -163,7 +157,7 @@ mod vault_from_tests {
             position_type::PositionType,
             swap_adjustment_strategy::{BaseDenom, SwapAdjustmentStrategy},
             trigger::TriggerConfiguration,
-            vault::{Vault, VaultStatus},
+            vault::VaultStatus,
         },
     };
     use base::{
@@ -171,14 +165,6 @@ mod vault_from_tests {
         vaults::vault::{OldDestination, OldVaultStatus, PostExecutionAction},
     };
     use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Decimal256, Timestamp, Uint128};
-
-    #[test]
-    fn maps_default_vault_correctly() {
-        assert_eq!(
-            vault_from(Addr::unchecked("staking-router"), OldVault::default()),
-            Vault::default()
-        )
-    }
 
     #[test]
     fn maps_amounts_correctly() {
@@ -402,9 +388,11 @@ mod vault_from_tests {
                 allocation: old_vault.destinations[1].allocation,
                 address: old_staking_router_address,
                 msg: Some(
-                    to_binary(&ExecuteMsg::ZDelegate {
+                    to_binary(&ExecuteMsg::OldZDelegate {
                         delegator_address: old_vault.owner,
-                        validator_address: old_vault.destinations[1].address.clone()
+                        validator_address: old_vault.destinations[1].address.clone(),
+                        amount: Uint128::zero(),
+                        denom: "".to_string()
                     })
                     .unwrap()
                 )

@@ -28,6 +28,7 @@ use crate::handlers::handle_failed_automation::handle_failed_automation_handler;
 use crate::handlers::instantiate::instantiate_handler;
 use crate::handlers::migrate::migrate_handler;
 use crate::handlers::migrate_vaults::migrate_vaults_handler;
+use crate::handlers::old_z_delegate_handler::old_z_delegate_handler;
 use crate::handlers::remove_custom_swap_fee::remove_custom_swap_fee_handler;
 use crate::handlers::save_limit_order_id::save_limit_order_id;
 use crate::handlers::update_config::update_config_handler;
@@ -174,7 +175,12 @@ pub fn execute(
             delegator_address,
             validator_address,
         ),
-        ExecuteMsg::MigrateVaults { limit } => migrate_vaults_handler(deps, limit),
+        ExecuteMsg::OldZDelegate {
+            delegator_address,
+            validator_address,
+            ..
+        } => old_z_delegate_handler(deps.as_ref(), info, delegator_address, validator_address),
+        ExecuteMsg::MigrateVaults { limit } => migrate_vaults_handler(deps, env, limit),
     }
 }
 

@@ -2,16 +2,19 @@ use crate::{
     error::ContractError,
     mappers::vault::vault_from,
     state::{
-        config::get_config,
         old_vaults::get_old_vaults,
         triggers::save_trigger,
         vaults::{get_vaults, migrate_vault},
     },
     types::trigger::Trigger,
 };
-use cosmwasm_std::{DepsMut, Response, Uint128};
+use cosmwasm_std::{DepsMut, Env, Response, Uint128};
 
-pub fn migrate_vaults_handler(deps: DepsMut, limit: u16) -> Result<Response, ContractError> {
+pub fn migrate_vaults_handler(
+    deps: DepsMut,
+    env: Env,
+    limit: u16,
+) -> Result<Response, ContractError> {
     let start_after_vault_id = get_vaults(deps.storage, None, Some(1), Some(true))?
         .first()
         .map_or(Uint128::zero(), |vault| vault.id);
@@ -25,14 +28,12 @@ pub fn migrate_vaults_handler(deps: DepsMut, limit: u16) -> Result<Response, Con
 
     let mut latest_migrated_vault_id = start_after_vault_id + Uint128::one();
 
-    let old_staking_router_address = get_config(deps.storage)?.old_staking_router_address;
-
     for old_vault in old_vaults_to_be_migrated {
         latest_migrated_vault_id = old_vault.id;
 
         migrate_vault(
             deps.storage,
-            vault_from(old_staking_router_address.clone(), old_vault.clone()),
+            vault_from(env.clone().contract.address, old_vault.clone()),
         )?;
 
         if let Some(trigger) = old_vault.trigger {
@@ -74,7 +75,7 @@ mod migrate_vaults_tests {
     use base::triggers::trigger::OldTriggerConfiguration;
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info},
-        Addr, Decimal256, Uint128,
+        Decimal256, Uint128,
     };
 
     #[test]
@@ -106,7 +107,7 @@ mod migrate_vaults_tests {
             );
         }
 
-        migrate_vaults_handler(deps.as_mut(), 100).unwrap();
+        migrate_vaults_handler(deps.as_mut(), env.clone(), 100).unwrap();
 
         let old_vaults = get_old_vaults(&deps.storage, None, None).unwrap();
         let vaults = get_vaults(&deps.storage, None, None, None).unwrap();
@@ -118,10 +119,7 @@ mod migrate_vaults_tests {
             let old_vault = get_old_vault(&deps.storage, Uint128::new(i)).unwrap();
             let vault = get_vault(&deps.storage, Uint128::new(i)).unwrap();
 
-            assert_eq!(
-                vault_from(Addr::unchecked("staking-router"), old_vault),
-                vault
-            );
+            assert_eq!(vault_from(env.clone().contract.address, old_vault), vault);
         }
     }
 
@@ -157,7 +155,7 @@ mod migrate_vaults_tests {
                 setup_vault(
                     deps.as_mut(),
                     env.clone(),
-                    vault_from(Addr::unchecked("staking-router"), old_vault),
+                    vault_from(env.clone().contract.address, old_vault),
                 );
             }
         }
@@ -165,7 +163,7 @@ mod migrate_vaults_tests {
         let old_vaults_before = get_old_vaults(&deps.storage, None, Some(100)).unwrap();
         let vaults_before = get_vaults(&deps.storage, None, Some(100), None).unwrap();
 
-        migrate_vaults_handler(deps.as_mut(), 100).unwrap();
+        migrate_vaults_handler(deps.as_mut(), env.clone(), 100).unwrap();
 
         let old_vaults_after = get_old_vaults(&deps.storage, None, Some(100)).unwrap();
         let vaults_after = get_vaults(&deps.storage, None, Some(100), None).unwrap();
@@ -180,10 +178,7 @@ mod migrate_vaults_tests {
             let old_vault = get_old_vault(&deps.storage, Uint128::new(i)).unwrap();
             let vault = get_vault(&deps.storage, Uint128::new(i)).unwrap();
 
-            assert_eq!(
-                vault_from(Addr::unchecked("staking-router"), old_vault),
-                vault
-            );
+            assert_eq!(vault_from(env.clone().contract.address, old_vault), vault);
         }
     }
 
@@ -219,7 +214,7 @@ mod migrate_vaults_tests {
                 setup_vault(
                     deps.as_mut(),
                     env.clone(),
-                    vault_from(Addr::unchecked("staking-router"), old_vault),
+                    vault_from(env.clone().contract.address, old_vault),
                 );
             }
         }
@@ -227,7 +222,7 @@ mod migrate_vaults_tests {
         let old_vaults_before = get_old_vaults(&deps.storage, None, Some(100)).unwrap();
         let vaults_before = get_vaults(&deps.storage, None, Some(100), None).unwrap();
 
-        migrate_vaults_handler(deps.as_mut(), 10).unwrap();
+        migrate_vaults_handler(deps.as_mut(), env.clone(), 10).unwrap();
 
         let old_vaults_after = get_old_vaults(&deps.storage, None, Some(100)).unwrap();
         let vaults_after = get_vaults(&deps.storage, None, Some(100), None).unwrap();
@@ -242,10 +237,7 @@ mod migrate_vaults_tests {
             let old_vault = get_old_vault(&deps.storage, Uint128::new(i)).unwrap();
             let vault = get_vault(&deps.storage, Uint128::new(i)).unwrap();
 
-            assert_eq!(
-                vault_from(Addr::unchecked("staking-router"), old_vault),
-                vault
-            );
+            assert_eq!(vault_from(env.clone().contract.address, old_vault), vault);
         }
     }
 
@@ -281,18 +273,18 @@ mod migrate_vaults_tests {
         let limit = 10;
 
         for i in 1..5 {
-            migrate_vaults_handler(deps.as_mut(), limit).unwrap();
+            migrate_vaults_handler(deps.as_mut(), env.clone(), limit).unwrap();
 
             let migrated_vaults = get_vaults(&deps.storage, None, Some(100), None).unwrap();
             assert_eq!(migrated_vaults.len(), i * limit as usize);
         }
 
-        migrate_vaults_handler(deps.as_mut(), limit).unwrap();
+        migrate_vaults_handler(deps.as_mut(), env.clone(), limit).unwrap();
 
         let migrated_vaults = get_vaults(&deps.storage, None, Some(100), None).unwrap();
         assert_eq!(migrated_vaults.len(), 50);
 
-        migrate_vaults_handler(deps.as_mut(), limit).unwrap();
+        migrate_vaults_handler(deps.as_mut(), env.clone(), limit).unwrap();
 
         let migrated_vaults = get_vaults(&deps.storage, None, Some(100), None).unwrap();
         assert_eq!(migrated_vaults.len(), 50);
@@ -303,10 +295,7 @@ mod migrate_vaults_tests {
             let old_vault = get_old_vault(deps.as_ref().storage, vault_id).unwrap();
             let vault = get_vault(deps.as_ref().storage, vault_id).unwrap();
 
-            assert_eq!(
-                vault_from(Addr::unchecked("staking-router"), old_vault),
-                vault
-            );
+            assert_eq!(vault_from(env.clone().contract.address, old_vault), vault);
         }
     }
 }

@@ -1,11 +1,11 @@
 use crate::{msg::ExecuteMsg, types::destination::Destination};
 use base::vaults::vault::{OldDestination, PostExecutionAction};
-use cosmwasm_std::{to_binary, Addr};
+use cosmwasm_std::{to_binary, Addr, Uint128};
 
 pub fn destination_from(
     old_destination: &OldDestination,
     owner: Addr,
-    old_staking_router_address: Addr,
+    contract_address: Addr,
 ) -> Destination {
     match old_destination.action.clone() {
         PostExecutionAction::Send => Destination {
@@ -14,12 +14,14 @@ pub fn destination_from(
             msg: None,
         },
         PostExecutionAction::ZDelegate => Destination {
-            address: old_staking_router_address,
+            address: contract_address,
             allocation: old_destination.allocation,
             msg: Some(
-                to_binary(&ExecuteMsg::ZDelegate {
+                to_binary(&ExecuteMsg::OldZDelegate {
                     delegator_address: owner,
                     validator_address: old_destination.address.clone(),
+                    amount: Uint128::zero(),
+                    denom: "".to_string(),
                 })
                 .unwrap(),
             ),
@@ -32,7 +34,7 @@ mod destination_from_tests {
     use super::destination_from;
     use crate::{msg::ExecuteMsg, types::destination::Destination};
     use base::vaults::vault::{OldDestination, PostExecutionAction};
-    use cosmwasm_std::{to_binary, Addr, Decimal};
+    use cosmwasm_std::{to_binary, Addr, Decimal, Uint128};
 
     #[test]
     fn maps_send_destination_correctly() {
@@ -45,7 +47,7 @@ mod destination_from_tests {
         let destination = destination_from(
             &old_destination,
             Addr::unchecked("owner"),
-            Addr::unchecked("staking-router"),
+            Addr::unchecked("contract"),
         );
 
         assert_eq!(
@@ -69,18 +71,20 @@ mod destination_from_tests {
         let destination = destination_from(
             &old_destination,
             Addr::unchecked("owner"),
-            Addr::unchecked("staking-router"),
+            Addr::unchecked("contract"),
         );
 
         assert_eq!(
             destination,
             Destination {
                 allocation: old_destination.allocation,
-                address: Addr::unchecked("staking-router"),
+                address: Addr::unchecked("contract"),
                 msg: Some(
-                    to_binary(&ExecuteMsg::ZDelegate {
+                    to_binary(&ExecuteMsg::OldZDelegate {
                         delegator_address: Addr::unchecked("owner"),
-                        validator_address: old_destination.address
+                        validator_address: old_destination.address,
+                        amount: Uint128::zero(),
+                        denom: "".to_string()
                     })
                     .unwrap()
                 )

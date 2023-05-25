@@ -637,6 +637,39 @@
       {
         "type": "object",
         "required": [
+          "old_z_delegate"
+        ],
+        "properties": {
+          "old_z_delegate": {
+            "type": "object",
+            "required": [
+              "amount",
+              "delegator_address",
+              "denom",
+              "validator_address"
+            ],
+            "properties": {
+              "amount": {
+                "$ref": "#/definitions/Uint128"
+              },
+              "delegator_address": {
+                "$ref": "#/definitions/Addr"
+              },
+              "denom": {
+                "type": "string"
+              },
+              "validator_address": {
+                "$ref": "#/definitions/Addr"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
           "migrate_vaults"
         ],
         "properties": {
