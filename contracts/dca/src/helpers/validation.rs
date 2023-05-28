@@ -10,8 +10,6 @@ use crate::types::swap_adjustment_strategy::{
 };
 use crate::types::time_interval::TimeInterval;
 use crate::types::vault::{Vault, VaultStatus};
-use base::pair::OldPair;
-use base::vaults::vault::{OldDestination, PostExecutionAction};
 use cosmwasm_std::{from_binary, Addr, Coin, Decimal, Deps, Env, Storage, Timestamp, Uint128};
 
 pub fn assert_exactly_one_asset(funds: Vec<Coin>) -> Result<(), ContractError> {
@@ -108,21 +106,6 @@ pub fn assert_swap_amount_is_greater_than_50000(swap_amount: Uint128) -> Result<
     Ok(())
 }
 
-pub fn assert_send_denom_is_in_pair_denoms(
-    pair: OldPair,
-    send_denom: String,
-) -> Result<(), ContractError> {
-    if send_denom != pair.base_denom && send_denom != pair.quote_denom {
-        return Err(ContractError::CustomError {
-            val: format!(
-                "send denom {} does not match pair base denom {} or quote denom {}",
-                send_denom, pair.base_denom, pair.quote_denom
-            ),
-        });
-    }
-    Ok(())
-}
-
 pub fn assert_deposited_denom_matches_send_denom(
     deposit_denom: String,
     send_denom: String,
@@ -158,30 +141,6 @@ pub fn assert_target_time_is_in_past(
         return Err(ContractError::CustomError {
             val: String::from("trigger execution time has not yet elapsed"),
         });
-    }
-    Ok(())
-}
-
-pub fn assert_old_destinations_limit_is_not_breached(
-    destinations: &[OldDestination],
-) -> Result<(), ContractError> {
-    if destinations.len() > 10 {
-        return Err(ContractError::CustomError {
-            val: String::from("no more than 10 destinations can be provided"),
-        });
-    };
-    Ok(())
-}
-
-pub fn assert_destination_send_addresses_are_valid(
-    deps: Deps,
-    destinations: &[OldDestination],
-) -> Result<(), ContractError> {
-    for destination in destinations
-        .iter()
-        .filter(|d| d.action == PostExecutionAction::Send)
-    {
-        assert_address_is_valid(deps, &destination.address, "destination")?;
     }
     Ok(())
 }
@@ -254,32 +213,6 @@ pub fn assert_no_more_than_10_fee_collectors(
     Ok(())
 }
 
-pub fn assert_destination_validator_addresses_are_valid(
-    deps: Deps,
-    destinations: &[OldDestination],
-) -> Result<(), ContractError> {
-    for destination in destinations
-        .iter()
-        .filter(|d| d.action == PostExecutionAction::ZDelegate)
-    {
-        assert_validator_is_valid(deps, destination.address.to_string())?;
-    }
-    Ok(())
-}
-
-pub fn assert_delegation_denom_is_stakeable(
-    destinations: &[OldDestination],
-    receive_denom: String,
-) -> Result<(), ContractError> {
-    if destinations
-        .iter()
-        .any(|d| d.action == PostExecutionAction::ZDelegate)
-    {
-        assert_denom_is_bond_denom(receive_denom)?;
-    }
-    Ok(())
-}
-
 pub fn assert_address_is_valid(
     deps: Deps,
     address: &Addr,
@@ -301,23 +234,6 @@ pub fn assert_addresses_are_valid(
     addresses
         .iter()
         .try_for_each(|address| assert_address_is_valid(deps, address, label))
-}
-
-pub fn assert_old_destination_allocations_add_up_to_one(
-    destinations: &[OldDestination],
-) -> Result<(), ContractError> {
-    if destinations
-        .iter()
-        .fold(Decimal::zero(), |acc, destintation| {
-            acc.checked_add(destintation.allocation).unwrap()
-        })
-        != Decimal::percent(100)
-    {
-        return Err(ContractError::CustomError {
-            val: String::from("destination allocations must add up to 1"),
-        });
-    }
-    Ok(())
 }
 
 pub fn assert_fee_collector_allocations_add_up_to_one(
@@ -343,17 +259,6 @@ pub fn assert_dca_plus_escrow_level_is_less_than_100_percent(
     if dca_plus_escrow_level > Decimal::percent(100) {
         return Err(ContractError::CustomError {
             val: "dca_plus_escrow_level cannot be greater than 100%".to_string(),
-        });
-    }
-    Ok(())
-}
-
-pub fn assert_no_old_destination_allocations_are_zero(
-    destinations: &[OldDestination],
-) -> Result<(), ContractError> {
-    if destinations.iter().any(|d| d.allocation.is_zero()) {
-        return Err(ContractError::CustomError {
-            val: String::from("all destination allocations must be greater than 0"),
         });
     }
     Ok(())

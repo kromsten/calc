@@ -1,8 +1,8 @@
 use crate::error::ContractError;
+use crate::helpers::message::get_attribute_in_event;
 use crate::state::cache::VAULT_ID_CACHE;
 use crate::state::triggers::{get_trigger, save_trigger};
 use crate::types::trigger::{Trigger, TriggerConfiguration};
-use base::helpers::message_helpers::get_attribute_in_event;
 use cosmwasm_std::{DepsMut, Reply, Response, Uint128};
 
 pub fn save_limit_order_id(deps: DepsMut, reply: Reply) -> Result<Response, ContractError> {

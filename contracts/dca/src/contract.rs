@@ -27,7 +27,6 @@ use crate::handlers::get_vaults_by_address::get_vaults_by_address_handler;
 use crate::handlers::handle_failed_automation::handle_failed_automation_handler;
 use crate::handlers::instantiate::instantiate_handler;
 use crate::handlers::migrate::migrate_handler;
-use crate::handlers::migrate_vaults::migrate_vaults_handler;
 use crate::handlers::old_z_delegate_handler::old_z_delegate_handler;
 use crate::handlers::remove_custom_swap_fee::remove_custom_swap_fee_handler;
 use crate::handlers::save_limit_order_id::save_limit_order_id;
@@ -45,8 +44,8 @@ pub const CONTRACT_NAME: &str = "crates.io:calc-dca";
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[entry_point]
-pub fn migrate(deps: DepsMut, env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
-    migrate_handler(deps, env, msg)
+pub fn migrate(deps: DepsMut, _: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+    migrate_handler(deps, msg)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -180,7 +179,6 @@ pub fn execute(
             validator_address,
             ..
         } => old_z_delegate_handler(deps.as_ref(), info, delegator_address, validator_address),
-        ExecuteMsg::MigrateVaults { limit } => migrate_vaults_handler(deps, env, limit),
     }
 }
 

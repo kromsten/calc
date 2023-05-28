@@ -123,9 +123,6 @@ pub enum ExecuteMsg {
         amount: Uint128,
         denom: String,
     },
-    MigrateVaults {
-        limit: u16,
-    },
 }
 
 #[cw_serde]
