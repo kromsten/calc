@@ -85,7 +85,7 @@ mod z_delegate_tests {
         let response = z_delegate_handler(
             mock_dependencies().as_ref(),
             mock_env(),
-            info.clone(),
+            info,
             Addr::unchecked(USER),
             Addr::unchecked(VALIDATOR),
         )
@@ -107,7 +107,7 @@ mod z_delegate_tests {
         let response = z_delegate_handler(
             mock_dependencies().as_ref(),
             mock_env(),
-            info.clone(),
+            info,
             Addr::unchecked(USER),
             Addr::unchecked(VALIDATOR),
         )
@@ -129,7 +129,7 @@ mod z_delegate_tests {
         let response = z_delegate_handler(
             mock_dependencies().as_ref(),
             mock_env(),
-            info.clone(),
+            info,
             delegator_address.clone(),
             Addr::unchecked(VALIDATOR),
         )
@@ -137,7 +137,7 @@ mod z_delegate_tests {
 
         assert!(response.messages.contains(&SubMsg::new(BankMsg::Send {
             to_address: delegator_address.to_string(),
-            amount: vec![amount_to_delegate.clone()],
+            amount: vec![amount_to_delegate],
         })));
     }
 
@@ -152,7 +152,7 @@ mod z_delegate_tests {
         let response = z_delegate_handler(
             mock_dependencies().as_ref(),
             mock_env(),
-            info.clone(),
+            info,
             delegator_address.clone(),
             validator_address.clone(),
         )

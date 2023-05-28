@@ -57,7 +57,7 @@ mod get_vault_performance_tests {
 
         instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
 
-        let vault = setup_vault(deps.as_mut(), env.clone(), Vault::default());
+        let vault = setup_vault(deps.as_mut(), env, Vault::default());
 
         let err = get_vault_performance_handler(deps.as_ref(), vault.id).unwrap_err();
 
@@ -83,13 +83,13 @@ mod get_vault_performance_tests {
 
         let vault = setup_vault(
             deps.as_mut(),
-            env.clone(),
+            env,
             Vault {
                 swapped_amount: Coin::new(TEN.into(), DENOM_UUSK),
                 received_amount: Coin::new(TEN.into(), DENOM_UUSK),
                 escrowed_amount: Coin::new(TEN.into(), DENOM_UUSK),
                 swap_adjustment_strategy: Some(SwapAdjustmentStrategy::default()),
-                performance_assessment_strategy: Some(performance_assessment_strategy.clone()),
+                performance_assessment_strategy: Some(performance_assessment_strategy),
                 escrow_level: Decimal::percent(5),
                 ..Vault::default()
             },

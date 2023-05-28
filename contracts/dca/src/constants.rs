@@ -15,7 +15,7 @@ pub const TEN: Uint128 = Uint128::new(10000000);
 pub const ONE_HUNDRED: Uint128 = Uint128::new(100000000);
 pub const ONE_THOUSAND: Uint128 = Uint128::new(1000000000);
 
-pub const HALF_DECIMAL: Decimal = Decimal::new(Uint128::new(0500000000000000000));
+pub const HALF_DECIMAL: Decimal = Decimal::new(Uint128::new(500000000000000000));
 pub const ONE_DECIMAL: Decimal = Decimal::new(Uint128::new(1000000000000000000));
 pub const ONE_AND_HALF_DECIMAL: Decimal = Decimal::new(Uint128::new(1500000000000000000));
 pub const TWO_DECIMAL: Decimal = Decimal::new(Uint128::new(2000000000000000000));

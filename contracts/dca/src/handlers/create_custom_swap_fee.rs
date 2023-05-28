@@ -42,13 +42,13 @@ mod create_custom_swap_fee_tests {
     fn create_custom_swap_fee_should_succeed() {
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = mock_info(ADMIN, &vec![]);
-        instantiate_contract(deps.as_mut(), env.clone(), info.clone());
+        let info = mock_info(ADMIN, &[]);
+        instantiate_contract(deps.as_mut(), env, info.clone());
 
         let pair = Pair::default();
         save_pair(deps.as_mut().storage, &pair).unwrap();
 
-        let denom = pair.base_denom.clone();
+        let denom = pair.base_denom;
 
         create_custom_swap_fee_handler(deps.as_mut(), info, denom.clone(), Decimal::percent(1))
             .unwrap();
@@ -56,20 +56,20 @@ mod create_custom_swap_fee_tests {
         let custom_fees = get_custom_swap_fees_handler(deps.as_ref()).unwrap();
 
         assert_eq!(custom_fees.len(), 1);
-        assert_eq!(custom_fees[0], (denom.clone(), Decimal::percent(1)));
+        assert_eq!(custom_fees[0], (denom, Decimal::percent(1)));
     }
 
     #[test]
     fn create_custom_swap_fee_should_overwrite_existing_fee() {
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = mock_info(ADMIN, &vec![]);
-        instantiate_contract(deps.as_mut(), env.clone(), info.clone());
+        let info = mock_info(ADMIN, &[]);
+        instantiate_contract(deps.as_mut(), env, info.clone());
 
         let pair = Pair::default();
         save_pair(deps.as_mut().storage, &pair).unwrap();
 
-        let denom = pair.base_denom.clone();
+        let denom = pair.base_denom;
 
         create_custom_swap_fee_handler(
             deps.as_mut(),
@@ -97,13 +97,13 @@ mod create_custom_swap_fee_tests {
     fn create_custom_swap_fee_larger_than_5_percent_fails() {
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = mock_info(ADMIN, &vec![]);
-        instantiate_contract(deps.as_mut(), env.clone(), info.clone());
+        let info = mock_info(ADMIN, &[]);
+        instantiate_contract(deps.as_mut(), env, info.clone());
 
         let pair = Pair::default();
         save_pair(deps.as_mut().storage, &pair).unwrap();
 
-        let denom = pair.base_denom.clone();
+        let denom = pair.base_denom;
 
         let response =
             create_custom_swap_fee_handler(deps.as_mut(), info, denom, Decimal::percent(6))
@@ -119,8 +119,8 @@ mod create_custom_swap_fee_tests {
     fn create_custom_swap_fee_for_unsupported_denom_fails() {
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = mock_info(ADMIN, &vec![]);
-        instantiate_contract(deps.as_mut(), env.clone(), info.clone());
+        let info = mock_info(ADMIN, &[]);
+        instantiate_contract(deps.as_mut(), env, info.clone());
 
         let pair = Pair::default();
         save_pair(deps.as_mut().storage, &pair).unwrap();

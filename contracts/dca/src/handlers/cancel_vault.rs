@@ -122,7 +122,7 @@ mod cancel_vault_tests {
 
         assert!(response.messages.contains(&SubMsg::new(BankMsg::Send {
             to_address: vault.owner.to_string(),
-            amount: vec![vault.balance.clone()],
+            amount: vec![vault.balance],
         })));
     }
 
@@ -150,7 +150,7 @@ mod cancel_vault_tests {
 
         assert!(response.messages.contains(&SubMsg::new(BankMsg::Send {
             to_address: vault.owner.to_string(),
-            amount: vec![vault.balance.clone()],
+            amount: vec![vault.balance],
         })));
     }
 
@@ -185,7 +185,7 @@ mod cancel_vault_tests {
 
         let vault = setup_vault(deps.as_mut(), env.clone(), Vault::default());
 
-        cancel_vault_handler(deps.as_mut(), env.clone(), info, vault.id).unwrap();
+        cancel_vault_handler(deps.as_mut(), env, info, vault.id).unwrap();
 
         let updated_vault = get_vault_handler(deps.as_ref(), vault.id).unwrap().vault;
 
@@ -203,7 +203,7 @@ mod cancel_vault_tests {
 
         let vault = setup_vault(deps.as_mut(), env.clone(), Vault::default());
 
-        cancel_vault_handler(deps.as_mut(), env.clone(), info, vault.id).unwrap();
+        cancel_vault_handler(deps.as_mut(), env, info, vault.id).unwrap();
 
         let updated_vault = get_vault_handler(deps.as_ref(), vault.id).unwrap().vault;
 
@@ -228,7 +228,7 @@ mod cancel_vault_tests {
             },
         );
 
-        let err = cancel_vault_handler(deps.as_mut(), env.clone(), info, vault.id).unwrap_err();
+        let err = cancel_vault_handler(deps.as_mut(), env, info, vault.id).unwrap_err();
 
         assert_eq!(err.to_string(), "Error: vault is already cancelled");
     }
@@ -239,13 +239,13 @@ mod cancel_vault_tests {
         let env = mock_env();
         let info = mock_info(ADMIN, &[]);
 
-        instantiate_contract(deps.as_mut(), env.clone(), info.clone());
+        instantiate_contract(deps.as_mut(), env.clone(), info);
 
         let vault = setup_vault(deps.as_mut(), env.clone(), Vault::default());
 
         let err = cancel_vault_handler(
             deps.as_mut(),
-            env.clone(),
+            env,
             mock_info("not-the-owner", &[]),
             vault.id,
         )
@@ -264,7 +264,7 @@ mod cancel_vault_tests {
 
         let vault = setup_vault(deps.as_mut(), env.clone(), Vault::default());
 
-        cancel_vault_handler(deps.as_mut(), env.clone(), info, vault.id).unwrap();
+        cancel_vault_handler(deps.as_mut(), env, info, vault.id).unwrap();
 
         let updated_vault = get_vault_handler(deps.as_ref(), vault.id).unwrap().vault;
 
@@ -336,7 +336,7 @@ mod cancel_vault_tests {
             },
         );
 
-        let response = cancel_vault_handler(deps.as_mut(), env.clone(), info, vault.id).unwrap();
+        let response = cancel_vault_handler(deps.as_mut(), env, info, vault.id).unwrap();
 
         let pair = find_pair(deps.as_ref().storage, vault.denoms()).unwrap();
 
@@ -377,7 +377,7 @@ mod cancel_vault_tests {
             },
         );
 
-        let response = cancel_vault_handler(deps.as_mut(), env.clone(), info, vault.id).unwrap();
+        let response = cancel_vault_handler(deps.as_mut(), env, info, vault.id).unwrap();
 
         let pair = find_pair(deps.as_ref().storage, vault.denoms()).unwrap();
 

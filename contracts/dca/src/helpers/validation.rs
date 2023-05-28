@@ -49,8 +49,8 @@ pub fn assert_sender_is_executor(
 ) -> Result<(), ContractError> {
     let config = get_config(storage)?;
     if !config.executors.contains(sender)
-        && sender != &config.admin
-        && sender != &env.contract.address
+        && sender != config.admin
+        && sender != env.contract.address
     {
         return Err(ContractError::Unauthorized {});
     }
@@ -82,7 +82,7 @@ pub fn assert_sender_is_contract_or_admin(
     env: &Env,
 ) -> Result<(), ContractError> {
     let config = get_config(storage)?;
-    if sender != &config.admin && sender != &env.contract.address {
+    if sender != config.admin && sender != env.contract.address {
         return Err(ContractError::Unauthorized {});
     }
     Ok(())

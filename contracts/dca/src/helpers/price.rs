@@ -255,7 +255,7 @@ mod calculate_target_price_tests {
         let pair = Pair::default();
 
         let vault = Vault {
-            swap_amount: swap_amount,
+            swap_amount,
             target_denom: pair.base_denom.clone(),
             balance: Coin::new(100, pair.quote_denom.clone()),
             ..Vault::default()
@@ -289,7 +289,7 @@ mod calculate_target_price_tests {
         let pair = Pair::default();
 
         let vault = Vault {
-            swap_amount: swap_amount,
+            swap_amount,
             target_denom: pair.quote_denom.clone(),
             balance: Coin::new(100, pair.base_denom.clone()),
             ..Vault::default()

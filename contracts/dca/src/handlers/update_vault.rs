@@ -99,8 +99,7 @@ pub fn update_vault_handler(
                     val: format!(
                         "cannot update swap adjustment strategy from {:?} to {:?}",
                         vault.swap_adjustment_strategy, swap_adjustment_strategy
-                    )
-                    .to_string(),
+                    ),
                 })
             }
         },
@@ -109,30 +108,10 @@ pub fn update_vault_handler(
                 val: format!(
                     "cannot update swap adjustment strategy from {:?} to {:?}",
                     vault.swap_adjustment_strategy, swap_adjustment_strategy
-                )
-                .to_string(),
+                ),
             })
         }
         _ => {}
-    }
-
-    if let Some(swap_adjustment_strategy) = swap_adjustment_strategy {
-        if let SwapAdjustmentStrategyParams::WeightedScale {
-            base_receive_amount,
-            multiplier,
-            increase_only,
-        } = swap_adjustment_strategy
-        {
-            if let Some(SwapAdjustmentStrategy::WeightedScale { .. }) =
-                vault.swap_adjustment_strategy
-            {
-                vault.swap_adjustment_strategy = Some(SwapAdjustmentStrategy::WeightedScale {
-                    base_receive_amount,
-                    multiplier,
-                    increase_only,
-                });
-            }
-        }
     }
 
     update_vault(deps.storage, vault)?;
@@ -225,13 +204,13 @@ mod update_vault_tests {
 
         let vault = setup_vault(deps.as_mut(), mock_env(), Vault::default());
 
-        let label = Some("12345678910".repeat(10).to_string());
+        let label = Some("12345678910".repeat(10));
 
         let err = update_vault_handler(
             deps.as_mut(),
             mock_info(USER, &[]),
             vault.id,
-            label.clone(),
+            label,
             None,
             None,
             None,
@@ -267,7 +246,7 @@ mod update_vault_tests {
             deps.as_mut(),
             mock_info(USER, &[]),
             vault.id,
-            label.clone(),
+            label,
             None,
             None,
             None,
@@ -298,7 +277,7 @@ mod update_vault_tests {
             deps.as_mut(),
             mock_info(USER, &[]),
             vault.id,
-            label.clone(),
+            label,
             None,
             None,
             None,
@@ -642,7 +621,7 @@ mod update_vault_tests {
 
         let vault = setup_vault(deps.as_mut(), mock_env(), Vault::default());
 
-        let label = Some("123456789".repeat(10).to_string());
+        let label = Some("123456789".repeat(10));
 
         update_vault_handler(
             deps.as_mut(),

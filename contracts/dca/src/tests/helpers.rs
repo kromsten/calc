@@ -49,7 +49,7 @@ pub fn instantiate_contract(deps: DepsMut, env: Env, info: MessageInfo) {
         old_staking_router_address: Addr::unchecked("staking-router"),
     };
 
-    instantiate(deps, env.clone(), info.clone(), instantiate_message).unwrap();
+    instantiate(deps, env, info, instantiate_message).unwrap();
 }
 
 pub fn instantiate_contract_with_multiple_fee_collectors(
@@ -73,7 +73,7 @@ pub fn instantiate_contract_with_multiple_fee_collectors(
         old_staking_router_address: Addr::unchecked("staking-router"),
     };
 
-    instantiate(deps, env.clone(), info.clone(), instantiate_message).unwrap();
+    instantiate(deps, env, info, instantiate_message).unwrap();
 }
 
 impl Default for Config {

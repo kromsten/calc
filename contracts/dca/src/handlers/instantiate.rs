@@ -73,7 +73,7 @@ mod instantiate_tests {
     fn instantiate_with_valid_admin_address_should_succeed() {
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = mock_info("", &vec![]);
+        let info = mock_info("", &[]);
 
         let instantiate_message = InstantiateMsg {
             admin: Addr::unchecked(VALID_ADDRESS_ONE),
@@ -108,7 +108,7 @@ mod instantiate_tests {
     fn instantiate_with_invalid_admin_address_should_fail() {
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = mock_info("", &vec![]);
+        let info = mock_info("", &[]);
 
         let instantiate_message = InstantiateMsg {
             admin: Addr::unchecked(INVALID_ADDRESS),
@@ -140,7 +140,7 @@ mod instantiate_tests {
     fn instantiate_with_invalid_fee_collector_address_should_fail() {
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = mock_info("", &vec![]);
+        let info = mock_info("", &[]);
 
         let instantiate_message = InstantiateMsg {
             admin: Addr::unchecked(VALID_ADDRESS_ONE),
@@ -172,7 +172,7 @@ mod instantiate_tests {
     fn instantiate_with_fee_collector_amounts_not_equal_to_100_percent_should_fail() {
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = mock_info("", &vec![]);
+        let info = mock_info("", &[]);
 
         let instantiate_message = InstantiateMsg {
             admin: Addr::unchecked(VALID_ADDRESS_ONE),

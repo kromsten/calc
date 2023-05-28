@@ -50,7 +50,7 @@ mod create_pair_tests {
     fn create_pair_that_already_exists_should_update_it() {
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = mock_info(ADMIN, &vec![]);
+        let info = mock_info(ADMIN, &[]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 
@@ -84,11 +84,11 @@ mod create_pair_tests {
     fn create_pair_with_unauthorised_sender_should_fail() {
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = mock_info(ADMIN, &vec![]);
+        let info = mock_info(ADMIN, &[]);
 
-        instantiate_contract(deps.as_mut(), env.clone(), info.clone());
+        instantiate_contract(deps.as_mut(), env.clone(), info);
 
-        let info_with_unauthorised_sender = mock_info("not-admin", &vec![]);
+        let info_with_unauthorised_sender = mock_info("not-admin", &[]);
 
         let create_pair_execute_message = ExecuteMsg::CreatePair {
             base_denom: String::from("base"),
@@ -111,7 +111,7 @@ mod create_pair_tests {
     fn recreate_pair_with_switched_denoms_should_overwrite_it() {
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = mock_info(ADMIN, &vec![]);
+        let info = mock_info(ADMIN, &[]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 

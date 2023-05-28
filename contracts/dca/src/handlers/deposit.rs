@@ -196,7 +196,7 @@ mod dposit_tests {
         let mut deps = mock_dependencies();
         let env = mock_env();
         let deposit_amount = Coin::new(TEN.into(), DENOM_UKUJI);
-        let info = mock_info(ADMIN, &[deposit_amount.clone()]);
+        let info = mock_info(ADMIN, &[deposit_amount]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 
@@ -209,7 +209,7 @@ mod dposit_tests {
             },
         );
 
-        deposit_handler(deps.as_mut(), env.clone(), info, vault.owner, vault.id).unwrap();
+        deposit_handler(deps.as_mut(), env, info, vault.owner, vault.id).unwrap();
 
         let updated_vault = get_vault_handler(deps.as_ref(), vault.id).unwrap().vault;
 
@@ -222,7 +222,7 @@ mod dposit_tests {
         let mut deps = mock_dependencies();
         let env = mock_env();
         let deposit_amount = Coin::new(TEN.into(), DENOM_UKUJI);
-        let info = mock_info(ADMIN, &[deposit_amount.clone()]);
+        let info = mock_info(ADMIN, &[deposit_amount]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 
@@ -235,7 +235,7 @@ mod dposit_tests {
             },
         );
 
-        deposit_handler(deps.as_mut(), env.clone(), info, vault.owner, vault.id).unwrap();
+        deposit_handler(deps.as_mut(), env, info, vault.owner, vault.id).unwrap();
 
         let updated_vault = get_vault_handler(deps.as_ref(), vault.id).unwrap().vault;
 
@@ -248,13 +248,13 @@ mod dposit_tests {
         let mut deps = mock_dependencies();
         let env = mock_env();
         let deposit_amount = Coin::new(TEN.into(), DENOM_UKUJI);
-        let info = mock_info(ADMIN, &[deposit_amount.clone()]);
+        let info = mock_info(ADMIN, &[deposit_amount]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 
         let vault = setup_vault(deps.as_mut(), env.clone(), Vault::default());
 
-        deposit_handler(deps.as_mut(), env.clone(), info, vault.owner, vault.id).unwrap();
+        deposit_handler(deps.as_mut(), env, info, vault.owner, vault.id).unwrap();
 
         let updated_vault = get_vault_handler(deps.as_ref(), vault.id).unwrap().vault;
 
@@ -267,7 +267,7 @@ mod dposit_tests {
         let mut deps = mock_dependencies();
         let env = mock_env();
         let deposit_amount = Coin::new(TEN.into(), DENOM_UKUJI);
-        let info = mock_info(ADMIN, &[deposit_amount.clone()]);
+        let info = mock_info(ADMIN, &[deposit_amount]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 
@@ -275,7 +275,7 @@ mod dposit_tests {
 
         let response = deposit_handler(
             deps.as_mut(),
-            env.clone(),
+            env,
             info,
             Addr::unchecked(USER),
             vault.id,
@@ -290,7 +290,7 @@ mod dposit_tests {
         let mut deps = mock_dependencies();
         let env = mock_env();
         let deposit_amount = Coin::new(TEN.into(), DENOM_UKUJI);
-        let info = mock_info(ADMIN, &[deposit_amount.clone()]);
+        let info = mock_info(ADMIN, &[deposit_amount]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 
@@ -305,7 +305,7 @@ mod dposit_tests {
 
         let response = deposit_handler(
             deps.as_mut(),
-            env.clone(),
+            env,
             info,
             Addr::unchecked(USER),
             vault.id,
@@ -320,7 +320,7 @@ mod dposit_tests {
         let mut deps = mock_dependencies();
         let env = mock_env();
         let deposit_amount = Coin::new(TEN.into(), DENOM_UKUJI);
-        let info = mock_info(ADMIN, &[deposit_amount.clone()]);
+        let info = mock_info(ADMIN, &[deposit_amount]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 
@@ -334,7 +334,7 @@ mod dposit_tests {
         );
 
         let err =
-            deposit_handler(deps.as_mut(), env.clone(), info, vault.owner, vault.id).unwrap_err();
+            deposit_handler(deps.as_mut(), env, info, vault.owner, vault.id).unwrap_err();
 
         assert_eq!(err.to_string(), "Error: vault is already cancelled");
     }
@@ -344,7 +344,7 @@ mod dposit_tests {
         let mut deps = mock_dependencies();
         let env = mock_env();
         let deposit_amount = Coin::new(TEN.into(), DENOM_UKUJI);
-        let info = mock_info(ADMIN, &[deposit_amount.clone()]);
+        let info = mock_info(ADMIN, &[deposit_amount]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 
@@ -359,7 +359,7 @@ mod dposit_tests {
 
         let err = deposit_handler(
             deps.as_mut(),
-            env.clone(),
+            env,
             info,
             Addr::unchecked("not-the-owner"),
             vault.id,
@@ -377,15 +377,15 @@ mod dposit_tests {
         let mut deps = mock_dependencies();
         let env = mock_env();
         let deposit_amount = Coin::new(TEN.into(), DENOM_UUSK);
-        let info = mock_info(ADMIN, &[deposit_amount.clone()]);
+        let info = mock_info(ADMIN, &[deposit_amount]);
 
-        instantiate_contract(deps.as_mut(), env.clone(), info.clone());
+        instantiate_contract(deps.as_mut(), env.clone(), info);
 
         let vault = setup_vault(deps.as_mut(), env.clone(), Vault::default());
 
         let err = deposit_handler(
             deps.as_mut(),
-            env.clone(),
+            env,
             mock_info(
                 USER,
                 &[Coin::new(ONE.into(), vault.received_amount.denom.clone())],
@@ -412,7 +412,7 @@ mod dposit_tests {
         let deposit_amount = Coin::new(TEN.into(), DENOM_UUSK);
         let info = mock_info(
             ADMIN,
-            &[deposit_amount.clone(), Coin::new(TEN.into(), DENOM_UKUJI)],
+            &[deposit_amount, Coin::new(TEN.into(), DENOM_UKUJI)],
         );
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
@@ -420,7 +420,7 @@ mod dposit_tests {
         let vault = setup_vault(deps.as_mut(), env.clone(), Vault::default());
 
         let err =
-            deposit_handler(deps.as_mut(), env.clone(), info, vault.owner, vault.id).unwrap_err();
+            deposit_handler(deps.as_mut(), env, info, vault.owner, vault.id).unwrap_err();
 
         assert_eq!(
             err.to_string(),
@@ -435,7 +435,7 @@ mod dposit_tests {
         let deposit_amount = Coin::new(TEN.into(), DENOM_UUSK);
         let info = mock_info(
             ADMIN,
-            &[deposit_amount.clone(), Coin::new(TEN.into(), DENOM_UKUJI)],
+            &[deposit_amount, Coin::new(TEN.into(), DENOM_UKUJI)],
         );
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
@@ -454,7 +454,7 @@ mod dposit_tests {
         let vault = setup_vault(deps.as_mut(), env.clone(), Vault::default());
 
         let err =
-            deposit_handler(deps.as_mut(), env.clone(), info, vault.owner, vault.id).unwrap_err();
+            deposit_handler(deps.as_mut(), env, info, vault.owner, vault.id).unwrap_err();
 
         assert_eq!(err.to_string(), "Error: contract is paused");
     }
@@ -464,7 +464,7 @@ mod dposit_tests {
         let mut deps = mock_dependencies();
         let env = mock_env();
         let deposit_amount = Coin::new(ONE_HUNDRED.into(), DENOM_UKUJI);
-        let info = mock_info(ADMIN, &[deposit_amount.clone()]);
+        let info = mock_info(ADMIN, &[deposit_amount]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 
@@ -481,7 +481,7 @@ mod dposit_tests {
             },
         );
 
-        deposit_handler(deps.as_mut(), env.clone(), info, vault.owner, vault.id).unwrap();
+        deposit_handler(deps.as_mut(), env, info, vault.owner, vault.id).unwrap();
 
         let updated_vault = get_vault_handler(deps.as_ref(), vault.id).unwrap().vault;
 
@@ -516,7 +516,7 @@ mod dposit_tests {
 
         let vault = setup_vault(deps.as_mut(), env.clone(), Vault::default());
 
-        deposit_handler(deps.as_mut(), env.clone(), info, vault.owner, vault.id).unwrap();
+        deposit_handler(deps.as_mut(), env, info, vault.owner, vault.id).unwrap();
 
         let updated_vault = get_vault_handler(deps.as_ref(), vault.id).unwrap().vault;
 

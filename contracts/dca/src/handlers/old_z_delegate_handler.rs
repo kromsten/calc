@@ -58,7 +58,7 @@ pub fn old_z_delegate_handler(
                         delegator_address,
                         validator_address,
                         amount: amount_to_delegate.amount,
-                        denom: amount_to_delegate.denom.clone(),
+                        denom: amount_to_delegate.denom,
                     })
                     .unwrap(),
                     funds: vec![],

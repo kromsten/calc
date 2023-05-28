@@ -54,7 +54,6 @@ pub fn get_fee_messages(
             fee_amounts.iter().flat_map(|fee| {
                 let fee_allocation = Coin::new(
                     checked_mul(*fee, fee_collector.allocation)
-                        .ok()
                         .expect("amount to be distributed should be valid")
                         .into(),
                     denom.clone(),
@@ -410,7 +409,7 @@ mod tests {
     fn swap_adjustment_specific_fee_level_is_used() {
         let mut deps = mock_dependencies();
 
-        instantiate_contract(deps.as_mut(), mock_env().clone(), mock_info(ADMIN, &[]));
+        instantiate_contract(deps.as_mut(), mock_env(), mock_info(ADMIN, &[]));
 
         let swap_adjustment_strategy = SwapAdjustmentStrategy::WeightedScale {
             base_receive_amount: ONE,
@@ -419,7 +418,7 @@ mod tests {
         };
 
         let vault = Vault {
-            swap_adjustment_strategy: Some(swap_adjustment_strategy.clone()),
+            swap_adjustment_strategy: Some(swap_adjustment_strategy),
             ..Default::default()
         };
 

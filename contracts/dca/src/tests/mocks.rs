@@ -23,9 +23,11 @@ pub const VALIDATOR: &str = "validator";
 pub const DENOM_UKUJI: &str = "ukuji";
 pub const DENOM_UUSK: &str = "uusk";
 
+pub type StargateHandler = dyn Fn(&str, &Binary) -> StdResult<Binary>;
+
 pub struct CalcMockQuerier<C: DeserializeOwned = Empty> {
-    default_stargate_handler: Box<dyn for<'a> Fn(&'a str, &Binary) -> StdResult<Binary>>,
-    stargate_handler: Box<dyn for<'a> Fn(&'a str, &Binary) -> StdResult<Binary>>,
+    default_stargate_handler: Box<StargateHandler>,
+    stargate_handler: Box<StargateHandler>,
     mock_querier: MockQuerier<C>,
 }
 
@@ -35,7 +37,7 @@ impl<C: DeserializeOwned> CalcMockQuerier<C> {
 
         querier.update_wasm(|query| {
             SystemResult::Ok(ContractResult::Ok(match query {
-                WasmQuery::Smart { msg, .. } => match from_binary::<QueryMsg>(&msg).unwrap() {
+                WasmQuery::Smart { msg, .. } => match from_binary::<QueryMsg>(msg).unwrap() {
                     QueryMsg::Config {} => to_binary(&ConfigResponse {
                         owner: Addr::unchecked("pair-admin"),
                         denoms: [
@@ -104,6 +106,12 @@ impl<C: DeserializeOwned> CalcMockQuerier<C> {
     }
 }
 
+impl<C: DeserializeOwned> Default for CalcMockQuerier<C> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<C: CustomQuery + DeserializeOwned> Querier for CalcMockQuerier<C> {
     fn raw_query(&self, bin_request: &[u8]) -> QuerierResult {
         let request: QueryRequest<C> = match from_slice(bin_request) {
@@ -137,7 +145,7 @@ impl<C: CustomQuery + DeserializeOwned> CalcMockQuerier<C> {
     pub fn update_fin_price(&mut self, price: &'static Decimal) {
         self.mock_querier.update_wasm(|query| {
             SystemResult::Ok(ContractResult::Ok(match query {
-                WasmQuery::Smart { msg, .. } => match from_binary::<QueryMsg>(&msg).unwrap() {
+                WasmQuery::Smart { msg, .. } => match from_binary::<QueryMsg>(msg).unwrap() {
                     QueryMsg::Config {} => to_binary(&ConfigResponse {
                         owner: Addr::unchecked("pair-admin"),
                         denoms: [
