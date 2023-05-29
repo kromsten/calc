@@ -6,6 +6,7 @@ use crate::helpers::validation::{assert_contract_is_not_paused, assert_target_ti
 use crate::helpers::vault::{get_swap_amount, simulate_standard_dca_execution};
 use crate::msg::ExecuteMsg;
 use crate::state::cache::{SwapCache, SWAP_CACHE, VAULT_ID_CACHE};
+use crate::state::config::get_config;
 use crate::state::events::create_event;
 use crate::state::pairs::find_pair;
 use crate::state::triggers::{delete_trigger, save_trigger};
@@ -14,10 +15,13 @@ use crate::types::event::{EventBuilder, EventData, ExecutionSkippedReason};
 use crate::types::swap_adjustment_strategy::SwapAdjustmentStrategy;
 use crate::types::trigger::{Trigger, TriggerConfiguration};
 use crate::types::vault::{Vault, VaultStatus};
-use cosmwasm_std::{to_binary, SubMsg, Uint256, WasmMsg};
+use cosmwasm_std::{to_binary, SubMsg, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{DepsMut, Env, Response, Uint128};
-use kujira::fin::{ExecuteMsg as FinExecuteMsg, OrderResponse, QueryMsg};
+use exchange::msg::{
+    ExecuteMsg as LimitOrderExecuteMsg, OrderStatus, QueryMsg as LimitOrderQueryMsg,
+};
+use kujira::fin::ExecuteMsg as FinExecuteMsg;
 
 pub fn execute_trigger_handler(
     deps: DepsMut,
@@ -61,24 +65,22 @@ pub fn execute_trigger_handler(
         }
         Some(TriggerConfiguration::Price { order_idx, .. }) => {
             if let Some(order_idx) = order_idx {
-                let order = deps.querier.query_wasm_smart::<OrderResponse>(
-                    pair.address.clone(),
-                    &QueryMsg::Order { order_idx },
+                let config = get_config(deps.storage)?;
+
+                let order_status = deps.querier.query_wasm_smart::<OrderStatus>(
+                    config.dex_contract_address.clone(),
+                    &LimitOrderQueryMsg::GetOrderStatus { order_idx },
                 )?;
 
-                if order.offer_amount > Uint256::zero() {
+                if order_status == OrderStatus::Unfilled {
                     return Err(ContractError::CustomError {
                         val: String::from("target price has not been met"),
                     });
                 }
 
                 response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
-                    contract_addr: pair.address.to_string(),
-                    msg: to_binary(&FinExecuteMsg::WithdrawOrders {
-                        order_idxs: Some(vec![order_idx]),
-                        callback: None,
-                    })
-                    .unwrap(),
+                    contract_addr: config.dex_contract_address.to_string(),
+                    msg: to_binary(&LimitOrderExecuteMsg::WithdrawOrder { order_idx }).unwrap(),
                     funds: vec![],
                 }));
             } else {
@@ -508,17 +510,16 @@ mod execute_trigger_tests {
             },
         );
 
-        let pair = find_pair(deps.as_ref().storage, vault.denoms()).unwrap();
-
         let response = execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap();
+
+        let config = get_config(deps.as_ref().storage).unwrap();
 
         assert_eq!(
             response.messages.first().unwrap(),
             &SubMsg::new(WasmMsg::Execute {
-                contract_addr: pair.address.to_string(),
-                msg: to_binary(&FinExecuteMsg::WithdrawOrders {
-                    order_idxs: Some(vec![order_idx]),
-                    callback: None
+                contract_addr: config.dex_contract_address.to_string(),
+                msg: to_binary(&LimitOrderExecuteMsg::WithdrawOrder {
+                    order_idx: order_idx,
                 })
                 .unwrap(),
                 funds: vec![]
@@ -1302,8 +1303,7 @@ mod execute_trigger_tests {
                         callback: None
                     })
                     .unwrap(),
-                    funds: vec![get_swap_amount(&deps.as_ref(), &env, &vault)
-                        .unwrap()]
+                    funds: vec![get_swap_amount(&deps.as_ref(), &env, &vault).unwrap()]
                 },
                 AFTER_SWAP_REPLY_ID,
             )

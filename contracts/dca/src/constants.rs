@@ -21,3 +21,6 @@ pub const ONE_AND_HALF_DECIMAL: Decimal = Decimal::new(Uint128::new(150000000000
 pub const TWO_DECIMAL: Decimal = Decimal::new(Uint128::new(2000000000000000000));
 pub const THREE_DECIMAL: Decimal = Decimal::new(Uint128::new(3000000000000000000));
 pub const TEN_DECIMAL: Decimal = Decimal::new(Uint128::new(10000000000000000000));
+
+pub const PAIR_CONTRACT_ADDRESS: &str = "pair-contract";
+pub const DEX_CONTRACT_ADDRESS: &str = "swap-contract";

@@ -361,6 +361,16 @@
                 }
               ]
             },
+            "dex_contract_address": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Addr"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "executors": {
               "type": [
                 "array",
@@ -562,29 +572,6 @@
             },
             "validator_address": {
               "$ref": "#/definitions/Addr"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "migrate_vaults"
-      ],
-      "properties": {
-        "migrate_vaults": {
-          "type": "object",
-          "required": [
-            "limit"
-          ],
-          "properties": {
-            "limit": {
-              "type": "integer",
-              "format": "uint16",
-              "minimum": 0.0
             }
           },
           "additionalProperties": false

@@ -1,4 +1,4 @@
-use crate::constants::{ONE, SWAP_FEE_RATE, TEN};
+use crate::constants::{DEX_CONTRACT_ADDRESS, ONE, PAIR_CONTRACT_ADDRESS, SWAP_FEE_RATE, TEN};
 use crate::helpers::price::{FinBookResponse, FinPoolResponse, FinSimulationResponse};
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{
@@ -7,8 +7,10 @@ use cosmwasm_std::{
     SystemError, SystemResult, Timestamp, Uint256, WasmQuery,
 };
 use cw20::Denom;
+use exchange::msg::{OrderStatus, QueryMsg as LimitOrderQueryMsg};
 use kujira::fin::{
-    BookResponse, ConfigResponse, OrderResponse, PoolResponse, QueryMsg, SimulationResponse,
+    BookResponse, ConfigResponse, OrderResponse, PoolResponse, QueryMsg as FinQueryMsg,
+    SimulationResponse,
 };
 use kujira::precision::Precision;
 use serde::de::DeserializeOwned;
@@ -37,58 +39,66 @@ impl<C: DeserializeOwned> CalcMockQuerier<C> {
 
         querier.update_wasm(|query| {
             SystemResult::Ok(ContractResult::Ok(match query {
-                WasmQuery::Smart { msg, .. } => match from_binary::<QueryMsg>(msg).unwrap() {
-                    QueryMsg::Config {} => to_binary(&ConfigResponse {
-                        owner: Addr::unchecked("pair-admin"),
-                        denoms: [
-                            Denom::Native(DENOM_UKUJI.to_string()),
-                            Denom::Native(DENOM_UUSK.to_string()),
-                        ],
-                        price_precision: Precision::DecimalPlaces(3),
-                        decimal_delta: 0,
-                        is_bootstrapping: false,
-                        fee_taker: Decimal256::percent(1),
-                        fee_maker: Decimal256::percent(1),
-                        fee_maker_negative: false,
-                    })
-                    .unwrap(),
-                    QueryMsg::Book { .. } => to_binary(&BookResponse {
-                        base: vec![PoolResponse {
-                            quote_price: Decimal256::percent(100),
-                            offer_denom: Denom::Native(DENOM_UKUJI.to_string()),
-                            total_offer_amount: Uint256::from_uint128(TEN),
-                        }],
-                        quote: vec![PoolResponse {
-                            quote_price: Decimal256::percent(100),
+                WasmQuery::Smart { msg, contract_addr } => match contract_addr.as_str() {
+                    PAIR_CONTRACT_ADDRESS => match from_binary::<FinQueryMsg>(msg).unwrap() {
+                        FinQueryMsg::Config {} => to_binary(&ConfigResponse {
+                            owner: Addr::unchecked("pair-admin"),
+                            denoms: [
+                                Denom::Native(DENOM_UKUJI.to_string()),
+                                Denom::Native(DENOM_UUSK.to_string()),
+                            ],
+                            price_precision: Precision::DecimalPlaces(3),
+                            decimal_delta: 0,
+                            is_bootstrapping: false,
+                            fee_taker: Decimal256::percent(1),
+                            fee_maker: Decimal256::percent(1),
+                            fee_maker_negative: false,
+                        })
+                        .unwrap(),
+                        FinQueryMsg::Book { .. } => to_binary(&BookResponse {
+                            base: vec![PoolResponse {
+                                quote_price: Decimal256::percent(100),
+                                offer_denom: Denom::Native(DENOM_UKUJI.to_string()),
+                                total_offer_amount: Uint256::from_uint128(TEN),
+                            }],
+                            quote: vec![PoolResponse {
+                                quote_price: Decimal256::percent(100),
+                                offer_denom: Denom::Native(DENOM_UUSK.to_string()),
+                                total_offer_amount: Uint256::from_uint128(TEN),
+                            }],
+                        })
+                        .unwrap(),
+                        FinQueryMsg::Simulation { offer_asset } => to_binary(&SimulationResponse {
+                            return_amount: offer_asset.amount.into(),
+                            spread_amount: Uint256::from_uint128(
+                                offer_asset.amount * Decimal::percent(5),
+                            ),
+                            commission_amount: Uint256::from_uint128(
+                                offer_asset.amount * Decimal::from_str(SWAP_FEE_RATE).unwrap(),
+                            ),
+                        })
+                        .unwrap(),
+                        FinQueryMsg::Order { order_idx } => to_binary(&OrderResponse {
+                            idx: order_idx,
+                            owner: Addr::unchecked("pair-admin"),
+                            quote_price: Decimal256::percent(200),
                             offer_denom: Denom::Native(DENOM_UUSK.to_string()),
-                            total_offer_amount: Uint256::from_uint128(TEN),
-                        }],
-                    })
-                    .unwrap(),
-                    QueryMsg::Simulation { offer_asset } => to_binary(&SimulationResponse {
-                        return_amount: offer_asset.amount.into(),
-                        spread_amount: Uint256::from_uint128(
-                            offer_asset.amount * Decimal::percent(5),
-                        ),
-                        commission_amount: Uint256::from_uint128(
-                            offer_asset.amount * Decimal::from_str(SWAP_FEE_RATE).unwrap(),
-                        ),
-                    })
-                    .unwrap(),
-                    QueryMsg::Order { order_idx } => to_binary(&OrderResponse {
-                        idx: order_idx,
-                        owner: Addr::unchecked("pair-admin"),
-                        quote_price: Decimal256::percent(200),
-                        offer_denom: Denom::Native(DENOM_UUSK.to_string()),
-                        offer_amount: Uint256::zero(),
-                        filled_amount: ONE.into(),
-                        created_at: Timestamp::default(),
-                        original_offer_amount: ONE.into(),
-                    })
-                    .unwrap(),
-                    _ => panic!("Unsupported query"),
+                            offer_amount: Uint256::zero(),
+                            filled_amount: ONE.into(),
+                            created_at: Timestamp::default(),
+                            original_offer_amount: ONE.into(),
+                        })
+                        .unwrap(),
+                        _ => panic!("Unsupported fin query"),
+                    },
+                    DEX_CONTRACT_ADDRESS => match from_binary::<LimitOrderQueryMsg>(msg).unwrap() {
+                        LimitOrderQueryMsg::GetOrderStatus { .. } => {
+                            to_binary(&OrderStatus::Filled).unwrap()
+                        }
+                    },
+                    _ => panic!("Unsupported contract addr"),
                 },
-                _ => panic!("Unsupported query"),
+                _ => panic!("Unsupported contract addr"),
             }))
         });
 
@@ -145,8 +155,8 @@ impl<C: CustomQuery + DeserializeOwned> CalcMockQuerier<C> {
     pub fn update_fin_price(&mut self, price: &'static Decimal) {
         self.mock_querier.update_wasm(|query| {
             SystemResult::Ok(ContractResult::Ok(match query {
-                WasmQuery::Smart { msg, .. } => match from_binary::<QueryMsg>(msg).unwrap() {
-                    QueryMsg::Config {} => to_binary(&ConfigResponse {
+                WasmQuery::Smart { msg, .. } => match from_binary::<FinQueryMsg>(msg).unwrap() {
+                    FinQueryMsg::Config {} => to_binary(&ConfigResponse {
                         owner: Addr::unchecked("pair-admin"),
                         denoms: [
                             Denom::Native(DENOM_UKUJI.to_string()),
@@ -160,7 +170,7 @@ impl<C: CustomQuery + DeserializeOwned> CalcMockQuerier<C> {
                         fee_maker_negative: false,
                     })
                     .unwrap(),
-                    QueryMsg::Book { .. } => to_binary(&FinBookResponse {
+                    FinQueryMsg::Book { .. } => to_binary(&FinBookResponse {
                         base: vec![FinPoolResponse {
                             quote_price: *price,
                             total_offer_amount: TEN,
@@ -171,7 +181,7 @@ impl<C: CustomQuery + DeserializeOwned> CalcMockQuerier<C> {
                         }],
                     })
                     .unwrap(),
-                    QueryMsg::Simulation { offer_asset } => to_binary(&FinSimulationResponse {
+                    FinQueryMsg::Simulation { offer_asset } => to_binary(&FinSimulationResponse {
                         return_amount: offer_asset.amount * (Decimal::one() / *price),
                         spread_amount: offer_asset.amount
                             * (Decimal::one() / *price)

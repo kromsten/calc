@@ -24,6 +24,7 @@
         "default_page_limit",
         "default_slippage_tolerance",
         "default_swap_fee_percent",
+        "dex_contract_address",
         "executors",
         "fee_collectors",
         "old_staking_router_address",
@@ -49,6 +50,9 @@
         },
         "default_swap_fee_percent": {
           "$ref": "#/definitions/Decimal"
+        },
+        "dex_contract_address": {
+          "$ref": "#/definitions/Addr"
         },
         "executors": {
           "type": "array",

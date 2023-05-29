@@ -56,6 +56,7 @@ pub fn migrate_handler(deps: DepsMut, msg: MigrateMsg) -> Result<Response, Contr
             twap_period: msg.twap_period,
             default_slippage_tolerance: msg.default_slippage_tolerance,
             old_staking_router_address: msg.old_staking_router_address.clone(),
+            dex_contract_address: msg.dex_contract_address.clone(),
         },
     )?;
 

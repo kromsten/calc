@@ -13,7 +13,7 @@ use crate::types::trigger::TriggerConfiguration;
 use crate::types::vault::{Vault, VaultStatus};
 use cosmwasm_std::{to_binary, BankMsg, DepsMut, Response, Uint128, WasmMsg};
 use cosmwasm_std::{Env, MessageInfo, SubMsg};
-use kujira::fin::ExecuteMsg;
+use exchange::msg::ExecuteMsg;
 
 pub fn cancel_vault_handler(
     deps: DepsMut,
@@ -63,22 +63,13 @@ pub fn cancel_vault_handler(
 
             submessages.push(SubMsg::new(WasmMsg::Execute {
                 contract_addr: pair.address.to_string(),
-                msg: to_binary(&ExecuteMsg::WithdrawOrders {
-                    order_idxs: Some(vec![order_idx]),
-                    callback: None,
-                })
-                .unwrap(),
+                msg: to_binary(&ExecuteMsg::WithdrawOrder { order_idx }).unwrap(),
                 funds: vec![],
             }));
 
             submessages.push(SubMsg::new(WasmMsg::Execute {
                 contract_addr: pair.address.to_string(),
-                msg: to_binary(&ExecuteMsg::RetractOrder {
-                    order_idx,
-                    amount: None,
-                    callback: None,
-                })
-                .unwrap(),
+                msg: to_binary(&ExecuteMsg::RetractOrder { order_idx }).unwrap(),
                 funds: vec![],
             }));
         };
@@ -344,12 +335,7 @@ mod cancel_vault_tests {
             response.messages.get(2).unwrap(),
             &SubMsg::new(WasmMsg::Execute {
                 contract_addr: pair.address.to_string(),
-                msg: to_binary(&ExecuteMsg::RetractOrder {
-                    order_idx,
-                    amount: None,
-                    callback: None
-                })
-                .unwrap(),
+                msg: to_binary(&ExecuteMsg::RetractOrder { order_idx }).unwrap(),
                 funds: vec![]
             })
         );
@@ -385,11 +371,7 @@ mod cancel_vault_tests {
             response.messages.get(1).unwrap(),
             &SubMsg::new(WasmMsg::Execute {
                 contract_addr: pair.address.to_string(),
-                msg: to_binary(&ExecuteMsg::WithdrawOrders {
-                    order_idxs: Some(vec![order_idx]),
-                    callback: None
-                })
-                .unwrap(),
+                msg: to_binary(&ExecuteMsg::WithdrawOrder { order_idx }).unwrap(),
                 funds: vec![]
             })
         );

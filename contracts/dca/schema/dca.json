@@ -12,6 +12,7 @@
       "default_page_limit",
       "default_slippage_tolerance",
       "default_swap_fee_percent",
+      "dex_contract_address",
       "executors",
       "fee_collectors",
       "old_staking_router_address",
@@ -37,6 +38,9 @@
       },
       "default_swap_fee_percent": {
         "$ref": "#/definitions/Decimal"
+      },
+      "dex_contract_address": {
+        "$ref": "#/definitions/Addr"
       },
       "executors": {
         "type": "array",
@@ -459,6 +463,16 @@
                   }
                 ]
               },
+              "dex_contract_address": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Addr"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "executors": {
                 "type": [
                   "array",
@@ -660,29 +674,6 @@
               },
               "validator_address": {
                 "$ref": "#/definitions/Addr"
-              }
-            },
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
-      },
-      {
-        "type": "object",
-        "required": [
-          "migrate_vaults"
-        ],
-        "properties": {
-          "migrate_vaults": {
-            "type": "object",
-            "required": [
-              "limit"
-            ],
-            "properties": {
-              "limit": {
-                "type": "integer",
-                "format": "uint16",
-                "minimum": 0.0
               }
             },
             "additionalProperties": false
@@ -1304,6 +1295,7 @@
             "default_page_limit",
             "default_slippage_tolerance",
             "default_swap_fee_percent",
+            "dex_contract_address",
             "executors",
             "fee_collectors",
             "old_staking_router_address",
@@ -1329,6 +1321,9 @@
             },
             "default_swap_fee_percent": {
               "$ref": "#/definitions/Decimal"
+            },
+            "dex_contract_address": {
+              "$ref": "#/definitions/Addr"
             },
             "executors": {
               "type": "array",

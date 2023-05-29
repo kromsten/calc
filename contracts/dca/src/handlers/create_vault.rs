@@ -34,7 +34,7 @@ use crate::types::trigger::{Trigger, TriggerConfiguration};
 use crate::types::vault::{Vault, VaultBuilder, VaultStatus};
 use cosmwasm_std::{to_binary, Addr, Coin, Decimal, SubMsg, WasmMsg};
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Timestamp, Uint128, Uint64};
-use kujira::fin::ExecuteMsg as FinExecuteMsg;
+use exchange::msg::ExecuteMsg as LimitOrderExecuteMsg;
 
 pub fn create_vault_handler(
     deps: DepsMut,
@@ -267,8 +267,8 @@ pub fn create_vault_handler(
             Ok(response.add_submessage(SubMsg::reply_on_success(
                 WasmMsg::Execute {
                     contract_addr: pair.address.to_string(),
-                    msg: to_binary(&FinExecuteMsg::SubmitOrder {
-                        price: target_price.into(),
+                    msg: to_binary(&LimitOrderExecuteMsg::SubmitOrder {
+                        price: target_price,
                     })
                     .unwrap(),
                     funds: vec![Coin::new(TWO_MICRONS.into(), vault.get_swap_denom())],
@@ -1646,7 +1646,7 @@ mod create_vault_tests {
                 WasmMsg::Execute {
                     contract_addr: pair.address.to_string(),
                     funds: vec![Coin::new(TWO_MICRONS.into(), info.funds[0].denom.clone())],
-                    msg: to_binary(&FinExecuteMsg::SubmitOrder {
+                    msg: to_binary(&LimitOrderExecuteMsg::SubmitOrder {
                         price: Decimal::percent(200).into()
                     })
                     .unwrap()

@@ -1,6 +1,6 @@
 use super::mocks::{ADMIN, DENOM_UKUJI, DENOM_UUSK, USER, VALIDATOR};
 use crate::{
-    constants::{ONE, TEN},
+    constants::{DEX_CONTRACT_ADDRESS, ONE, PAIR_CONTRACT_ADDRESS, TEN},
     contract::instantiate,
     msg::{ExecuteMsg, InstantiateMsg},
     state::{
@@ -47,6 +47,7 @@ pub fn instantiate_contract(deps: DepsMut, env: Env, info: MessageInfo) {
         twap_period: 30,
         default_slippage_tolerance: Decimal::percent(2),
         old_staking_router_address: Addr::unchecked("staking-router"),
+        dex_contract_address: Addr::unchecked(DEX_CONTRACT_ADDRESS),
     };
 
     instantiate(deps, env, info, instantiate_message).unwrap();
@@ -71,6 +72,7 @@ pub fn instantiate_contract_with_multiple_fee_collectors(
         twap_period: 30,
         default_slippage_tolerance: Decimal::percent(2),
         old_staking_router_address: Addr::unchecked("staking-router"),
+        dex_contract_address: Addr::unchecked(DEX_CONTRACT_ADDRESS),
     };
 
     instantiate(deps, env, info, instantiate_message).unwrap();
@@ -94,6 +96,7 @@ impl Default for Config {
             twap_period: 30,
             default_slippage_tolerance: Decimal::percent(2),
             old_staking_router_address: Addr::unchecked("staking-router"),
+            dex_contract_address: Addr::unchecked(DEX_CONTRACT_ADDRESS),
         }
     }
 }
@@ -113,7 +116,7 @@ impl Default for Pair {
         Self {
             base_denom: DENOM_UKUJI.to_string(),
             quote_denom: DENOM_UUSK.to_string(),
-            address: Addr::unchecked("pair"),
+            address: Addr::unchecked(PAIR_CONTRACT_ADDRESS),
         }
     }
 }
