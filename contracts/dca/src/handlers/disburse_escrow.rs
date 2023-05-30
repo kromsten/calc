@@ -8,6 +8,7 @@ use crate::{
         validation::assert_sender_is_executor,
     },
     state::{
+        cache::VAULT_ID_CACHE,
         disburse_escrow_tasks::{delete_disburse_escrow_task, get_disburse_escrow_task_due_date},
         events::create_event,
         pairs::find_pair,
@@ -83,6 +84,8 @@ pub fn disburse_escrow_handler(
     )?;
 
     delete_disburse_escrow_task(deps.storage, vault.id)?;
+
+    VAULT_ID_CACHE.save(deps.storage, &vault.id)?;
 
     Ok(response
         .add_submessages(get_disbursement_messages(
@@ -160,6 +163,35 @@ mod disburse_escrow_tests {
             err.to_string(),
             "Error: Escrow is not available to be disbursed yet"
         );
+    }
+
+    #[test]
+    fn caches_vault_id_for_after_automation_handler() {
+        let mut deps = calc_mock_dependencies();
+        let env = mock_env();
+        let info = mock_info(ADMIN, &[]);
+
+        instantiate_contract(deps.as_mut(), env.clone(), info.clone());
+
+        let vault = setup_vault(
+            deps.as_mut(),
+            env.clone(),
+            Vault {
+                escrowed_amount: Coin::new(ONE.into(), DENOM_UUSK),
+                ..Vault::default()
+            },
+        );
+
+        save_disburse_escrow_task(
+            deps.as_mut().storage,
+            vault.id,
+            env.block.time.minus_seconds(10),
+        )
+        .unwrap();
+
+        let cached_vault_id = VAULT_ID_CACHE.load(deps.as_ref().storage).unwrap();
+
+        assert_eq!(vault.id, cached_vault_id)
     }
 
     #[test]

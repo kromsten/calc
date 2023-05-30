@@ -447,7 +447,7 @@ mod tests {
     }
 
     #[test]
-    fn assert_every_second_next_execution_times() {
+    fn assert_every_block_next_execution_times() {
         let last_execution_time = Utc.with_ymd_and_hms(2022, 1, 1, 1, 0, 0).unwrap();
         let scenarios = vec![
             (

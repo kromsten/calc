@@ -14,13 +14,21 @@ export type ExecuteMsg =
       };
     }
   | {
+      delete_pair: {
+        /**
+         * @minItems 2
+         * @maxItems 2
+         */
+        denoms: [string, string];
+      };
+    }
+  | {
       create_vault: {
         destinations?: Destination[] | null;
         label?: string | null;
         minimum_receive_amount?: Uint128 | null;
         owner?: Addr | null;
         performance_assessment_strategy?: PerformanceAssessmentStrategyParams | null;
-        position_type?: PositionType | null;
         slippage_tolerance?: Decimal | null;
         swap_adjustment_strategy?: SwapAdjustmentStrategyParams | null;
         swap_amount: Uint128;
@@ -40,6 +48,10 @@ export type ExecuteMsg =
       update_vault: {
         destinations?: Destination[] | null;
         label?: string | null;
+        minimum_receive_amount?: Uint128 | null;
+        slippage_tolerance?: Decimal | null;
+        swap_adjustment_strategy?: SwapAdjustmentStrategyParams | null;
+        time_interval?: TimeInterval | null;
         vault_id: Uint128;
       };
     }
@@ -59,6 +71,7 @@ export type ExecuteMsg =
         default_page_limit?: number | null;
         default_slippage_tolerance?: Decimal | null;
         default_swap_fee_percent?: Decimal | null;
+        dex_contract_address?: Addr | null;
         executors?: Addr[] | null;
         fee_collectors?: FeeCollector[] | null;
         paused?: boolean | null;
@@ -92,6 +105,14 @@ export type ExecuteMsg =
   | {
       z_delegate: {
         delegator_address: Addr;
+        validator_address: Addr;
+      };
+    }
+  | {
+      old_z_delegate: {
+        amount: Uint128;
+        delegator_address: Addr;
+        denom: string;
         validator_address: Addr;
       };
     };
@@ -132,7 +153,6 @@ export type Binary = string;
  */
 export type Uint128 = string;
 export type PerformanceAssessmentStrategyParams = "compare_to_standard_dca";
-export type PositionType = "enter" | "exit";
 export type SwapAdjustmentStrategyParams =
   | {
       risk_weighted_average: {
@@ -161,7 +181,7 @@ export type BaseDenom = "bitcoin";
 export type Uint64 = string;
 export type TimeInterval =
   | (
-      | "every_second"
+      | "every_block"
       | "every_minute"
       | "half_hourly"
       | "hourly"
@@ -191,6 +211,7 @@ export type SwapAdjustmentStrategy =
         multiplier: Decimal;
       };
     };
+export type PositionType = "enter" | "exit";
 
 export interface Destination {
   address: Addr;

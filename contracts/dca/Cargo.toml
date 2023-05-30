@@ -1,6 +1,6 @@
 [package]
 name = "dca"
-version = "2.0.0"
+version = "2.0.1"
 authors = ["aidan <aidan@calculated.fi>"]
 edition = "2021"
 
@@ -8,6 +8,17 @@ exclude = ["contract.wasm", "hash.txt"]
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
+incremental = false
+overflow-checks = true
 
 [features]
 backtraces = ["cosmwasm-std/backtraces"]
