@@ -35,6 +35,7 @@ kujira-fin = "0.8.1"
 kujira-std = "0.8.3"
 schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
+shared = { path = "../../../packages/shared" }
 thiserror = { version = "1.0.31" }
 exchange = { path = "../../../packages/exchange" }
 

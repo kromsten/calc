@@ -1,5 +1,4 @@
 use crate::error::ContractError;
-use crate::helpers::coin::{add_to, subtract};
 use crate::helpers::disbursement::get_disbursement_messages;
 use crate::helpers::fees::{get_automation_fee_rate, get_fee_messages, get_swap_fee_rate};
 use crate::helpers::math::checked_mul;
@@ -13,6 +12,7 @@ use crate::types::vault::{Vault, VaultStatus};
 use cosmwasm_std::{to_binary, SubMsg, SubMsgResult, Uint128, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{Attribute, Coin, DepsMut, Env, Reply, Response};
+use shared::coin::{add_to, subtract};
 
 pub fn disburse_funds_handler(
     deps: DepsMut,

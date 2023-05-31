@@ -26,7 +26,7 @@ pub struct InstantiateMsg {
     pub twap_period: u64,
     pub default_slippage_tolerance: Decimal,
     pub old_staking_router_address: Addr,
-    pub dex_contract_address: Addr,
+    pub exchange_contract_address: Addr,
 }
 
 #[cw_serde]
@@ -86,7 +86,7 @@ pub enum ExecuteMsg {
         risk_weighted_average_escrow_level: Option<Decimal>,
         twap_period: Option<u64>,
         default_slippage_tolerance: Option<Decimal>,
-        dex_contract_address: Option<Addr>,
+        exchange_contract_address: Option<Addr>,
     },
     CreateCustomSwapFee {
         denom: String,

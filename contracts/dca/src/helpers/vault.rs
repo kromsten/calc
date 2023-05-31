@@ -1,5 +1,4 @@
 use super::{
-    coin::add_to,
     fees::{get_automation_fee_rate, get_swap_fee_rate},
     price::{get_belief_price, get_price, get_slippage},
     time::get_total_execution_duration,
@@ -22,6 +21,7 @@ use cosmwasm_std::{
     Coin, Decimal, Deps, Env, QuerierWrapper, Response, StdError, StdResult, Storage, Timestamp,
     Uint128,
 };
+use shared::coin::add_to;
 use std::cmp::min;
 
 pub fn get_position_type(deps: &Deps, vault: &Vault) -> StdResult<PositionType> {

@@ -47,7 +47,7 @@ pub fn instantiate_handler(deps: DepsMut, msg: InstantiateMsg) -> Result<Respons
             twap_period: msg.twap_period,
             default_slippage_tolerance: msg.default_slippage_tolerance,
             old_staking_router_address: msg.old_staking_router_address,
-            dex_contract_address: msg.dex_contract_address,
+            exchange_contract_address: msg.exchange_contract_address,
         },
     )?;
 
@@ -60,7 +60,7 @@ pub fn instantiate_handler(deps: DepsMut, msg: InstantiateMsg) -> Result<Respons
 
 #[cfg(test)]
 mod instantiate_tests {
-    use crate::constants::DEX_CONTRACT_ADDRESS;
+    use crate::constants::EXCHANGE_CONTRACT_ADDRESS;
     use crate::contract::instantiate;
     use crate::msg::InstantiateMsg;
     use crate::types::fee_collector::FeeCollector;
@@ -93,7 +93,7 @@ mod instantiate_tests {
             twap_period: 30,
             default_slippage_tolerance: Decimal::percent(2),
             old_staking_router_address: Addr::unchecked("staking-router"),
-            dex_contract_address: Addr::unchecked(DEX_CONTRACT_ADDRESS),
+            exchange_contract_address: Addr::unchecked(EXCHANGE_CONTRACT_ADDRESS),
         };
 
         let result = instantiate(deps.as_mut(), env, info, instantiate_message).unwrap();
@@ -129,7 +129,7 @@ mod instantiate_tests {
             twap_period: 30,
             default_slippage_tolerance: Decimal::percent(2),
             old_staking_router_address: Addr::unchecked("staking-router"),
-            dex_contract_address: Addr::unchecked(DEX_CONTRACT_ADDRESS),
+            exchange_contract_address: Addr::unchecked(EXCHANGE_CONTRACT_ADDRESS),
         };
 
         let result = instantiate(deps.as_mut(), env, info, instantiate_message).unwrap_err();
@@ -162,7 +162,7 @@ mod instantiate_tests {
             twap_period: 30,
             default_slippage_tolerance: Decimal::percent(2),
             old_staking_router_address: Addr::unchecked("staking-router"),
-            dex_contract_address: Addr::unchecked(DEX_CONTRACT_ADDRESS),
+            exchange_contract_address: Addr::unchecked(EXCHANGE_CONTRACT_ADDRESS),
         };
 
         let result = instantiate(deps.as_mut(), env, info, instantiate_message).unwrap_err();
@@ -192,7 +192,7 @@ mod instantiate_tests {
             twap_period: 30,
             default_slippage_tolerance: Decimal::percent(2),
             old_staking_router_address: Addr::unchecked("staking-router"),
-            dex_contract_address: Addr::unchecked(DEX_CONTRACT_ADDRESS),
+            exchange_contract_address: Addr::unchecked(EXCHANGE_CONTRACT_ADDRESS),
         };
 
         let result = instantiate(deps.as_mut(), env, info, instantiate_message).unwrap_err();

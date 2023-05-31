@@ -8,6 +8,9 @@ pub struct InstantiateMsg {}
 
 #[cw_serde]
 pub enum ExecuteMsg {
+    Swap {
+        minimum_receive_amount: Coin,
+    },
     SubmitOrder {
         target_price: Decimal256,
         target_denom: String,
@@ -18,7 +21,9 @@ pub enum ExecuteMsg {
     WithdrawOrder {
         order_idx: Uint128,
     },
-    InternalMsg(Binary),
+    InternalMsg {
+        msg: Binary,
+    },
 }
 
 #[cw_serde]

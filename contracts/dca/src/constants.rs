@@ -23,4 +23,4 @@ pub const THREE_DECIMAL: Decimal = Decimal::new(Uint128::new(3000000000000000000
 pub const TEN_DECIMAL: Decimal = Decimal::new(Uint128::new(10000000000000000000));
 
 pub const PAIR_CONTRACT_ADDRESS: &str = "pair-contract";
-pub const DEX_CONTRACT_ADDRESS: &str = "swap-contract";
+pub const EXCHANGE_CONTRACT_ADDRESS: &str = "swap-contract";

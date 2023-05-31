@@ -15,7 +15,7 @@ export const getWallet = async (mnemonic: string, prefix: string): Promise<Direc
 };
 
 export const createAdminCosmWasmClient = async (config: Config): Promise<SigningCosmWasmClient> => {
-  const wallet = await getWallet(config.adminContractMnemonic, config.bech32AddressPrefix);
+  const wallet = await getWallet(config.adminWalletMnemonic, config.bech32AddressPrefix);
   return await SigningCosmWasmClient.connectWithSigner(config.netUrl, wallet, {
     prefix: config.bech32AddressPrefix,
     gasPrice: GasPrice.fromString(`${config.gasPrice}${config.feeDenom}`),

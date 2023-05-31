@@ -16,5 +16,5 @@ pub struct Config {
     pub twap_period: u64,
     pub default_slippage_tolerance: Decimal,
     pub old_staking_router_address: Addr,
-    pub dex_contract_address: Addr,
+    pub exchange_contract_address: Addr,
 }

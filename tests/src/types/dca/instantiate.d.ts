@@ -28,7 +28,7 @@ export interface InstantiateMsg {
   default_page_limit: number;
   default_slippage_tolerance: Decimal;
   default_swap_fee_percent: Decimal;
-  dex_contract_address: Addr;
+  exchange_contract_address: Addr;
   executors: Addr[];
   fee_collectors: FeeCollector[];
   old_staking_router_address: Addr;

@@ -3,7 +3,7 @@ export type Config = {
   netUrl: string;
   gasPrice: number;
   feeDenom: string;
-  adminContractMnemonic: string;
+  adminWalletMnemonic: string;
 };
 
 export const fetchConfig = async (): Promise<Config> => {
@@ -28,6 +28,6 @@ export const fetchConfig = async (): Promise<Config> => {
     netUrl: process.env.NET_URL,
     feeDenom: process.env.FEE_DENOM,
     gasPrice: parseFloat(process.env.GAS_PRICE),
-    adminContractMnemonic: process.env.ADMIN_CONTRACT_MNEMONIC,
+    adminWalletMnemonic: process.env.ADMIN_CONTRACT_MNEMONIC,
   };
 };

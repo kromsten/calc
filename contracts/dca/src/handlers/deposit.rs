@@ -1,5 +1,4 @@
 use crate::error::ContractError;
-use crate::helpers::coin::add;
 use crate::helpers::time::get_next_target_time;
 use crate::helpers::validation::{
     assert_contract_is_not_paused, assert_deposited_denom_matches_send_denom,
@@ -16,6 +15,7 @@ use crate::types::vault::{Vault, VaultStatus};
 use cosmwasm_std::{Addr, Env};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{DepsMut, MessageInfo, Response, Uint128};
+use shared::coin::add;
 
 pub fn deposit_handler(
     deps: DepsMut,
@@ -121,7 +121,6 @@ mod dposit_tests {
     use crate::constants::{ONE, ONE_HUNDRED, TEN};
     use crate::handlers::get_events_by_resource_id::get_events_by_resource_id_handler;
     use crate::handlers::get_vault::get_vault_handler;
-    use crate::helpers::coin::{add, subtract};
     use crate::state::config::{get_config, update_config};
     use crate::tests::helpers::{instantiate_contract, setup_vault};
     use crate::tests::mocks::{ADMIN, DENOM_UKUJI, DENOM_UUSK, USER};
@@ -132,6 +131,7 @@ mod dposit_tests {
     use crate::types::vault::{Vault, VaultStatus};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{Addr, Coin};
+    use shared::coin::subtract;
 
     #[test]
     fn updates_the_vault_balance() {
@@ -273,14 +273,8 @@ mod dposit_tests {
 
         let vault = setup_vault(deps.as_mut(), env.clone(), Vault::default());
 
-        let response = deposit_handler(
-            deps.as_mut(),
-            env,
-            info,
-            Addr::unchecked(USER),
-            vault.id,
-        )
-        .unwrap();
+        let response =
+            deposit_handler(deps.as_mut(), env, info, Addr::unchecked(USER), vault.id).unwrap();
 
         assert!(response.messages.is_empty())
     }
@@ -303,14 +297,8 @@ mod dposit_tests {
             },
         );
 
-        let response = deposit_handler(
-            deps.as_mut(),
-            env,
-            info,
-            Addr::unchecked(USER),
-            vault.id,
-        )
-        .unwrap();
+        let response =
+            deposit_handler(deps.as_mut(), env, info, Addr::unchecked(USER), vault.id).unwrap();
 
         assert!(response.messages.is_empty())
     }
@@ -333,8 +321,7 @@ mod dposit_tests {
             },
         );
 
-        let err =
-            deposit_handler(deps.as_mut(), env, info, vault.owner, vault.id).unwrap_err();
+        let err = deposit_handler(deps.as_mut(), env, info, vault.owner, vault.id).unwrap_err();
 
         assert_eq!(err.to_string(), "Error: vault is already cancelled");
     }
@@ -410,17 +397,13 @@ mod dposit_tests {
         let mut deps = mock_dependencies();
         let env = mock_env();
         let deposit_amount = Coin::new(TEN.into(), DENOM_UUSK);
-        let info = mock_info(
-            ADMIN,
-            &[deposit_amount, Coin::new(TEN.into(), DENOM_UKUJI)],
-        );
+        let info = mock_info(ADMIN, &[deposit_amount, Coin::new(TEN.into(), DENOM_UKUJI)]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 
         let vault = setup_vault(deps.as_mut(), env.clone(), Vault::default());
 
-        let err =
-            deposit_handler(deps.as_mut(), env, info, vault.owner, vault.id).unwrap_err();
+        let err = deposit_handler(deps.as_mut(), env, info, vault.owner, vault.id).unwrap_err();
 
         assert_eq!(
             err.to_string(),
@@ -433,10 +416,7 @@ mod dposit_tests {
         let mut deps = mock_dependencies();
         let env = mock_env();
         let deposit_amount = Coin::new(TEN.into(), DENOM_UUSK);
-        let info = mock_info(
-            ADMIN,
-            &[deposit_amount, Coin::new(TEN.into(), DENOM_UKUJI)],
-        );
+        let info = mock_info(ADMIN, &[deposit_amount, Coin::new(TEN.into(), DENOM_UKUJI)]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 
@@ -453,8 +433,7 @@ mod dposit_tests {
 
         let vault = setup_vault(deps.as_mut(), env.clone(), Vault::default());
 
-        let err =
-            deposit_handler(deps.as_mut(), env, info, vault.owner, vault.id).unwrap_err();
+        let err = deposit_handler(deps.as_mut(), env, info, vault.owner, vault.id).unwrap_err();
 
         assert_eq!(err.to_string(), "Error: contract is paused");
     }

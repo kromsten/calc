@@ -1,7 +1,6 @@
 use crate::{
     error::ContractError,
     helpers::{
-        coin::{empty_of, subtract},
         disbursement::get_disbursement_messages,
         fees::{get_fee_messages, get_performance_fee},
         price::get_belief_price,
@@ -20,6 +19,7 @@ use crate::{
     },
 };
 use cosmwasm_std::{Coin, DepsMut, Env, MessageInfo, Response, Uint128};
+use shared::coin::{empty_of, subtract};
 
 pub fn disburse_escrow_handler(
     deps: DepsMut,
@@ -110,7 +110,6 @@ mod disburse_escrow_tests {
     use crate::{
         constants::{AFTER_FAILED_AUTOMATION_REPLY_ID, ONE, TEN, TEN_DECIMAL},
         handlers::get_events_by_resource_id::get_events_by_resource_id_handler,
-        helpers::coin::add_to,
         state::{
             config::get_config,
             disburse_escrow_tasks::{get_disburse_escrow_tasks, save_disburse_escrow_task},
@@ -132,6 +131,7 @@ mod disburse_escrow_tests {
         testing::{mock_env, mock_info},
         BankMsg, Coin, Decimal, SubMsg, Uint128,
     };
+    use shared::coin::add_to;
 
     #[test]
     fn when_disburse_escrow_task_is_not_due_fails() {

@@ -68,7 +68,7 @@ pub fn execute_trigger_handler(
                 let config = get_config(deps.storage)?;
 
                 let order_status = deps.querier.query_wasm_smart::<OrderStatus>(
-                    config.dex_contract_address.clone(),
+                    config.exchange_contract_address.clone(),
                     &LimitOrderQueryMsg::GetOrderStatus { order_idx },
                 )?;
 
@@ -79,7 +79,7 @@ pub fn execute_trigger_handler(
                 }
 
                 response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
-                    contract_addr: config.dex_contract_address.to_string(),
+                    contract_addr: config.exchange_contract_address.to_string(),
                     msg: to_binary(&LimitOrderExecuteMsg::WithdrawOrder { order_idx }).unwrap(),
                     funds: vec![],
                 }));
@@ -517,7 +517,7 @@ mod execute_trigger_tests {
         assert_eq!(
             response.messages.first().unwrap(),
             &SubMsg::new(WasmMsg::Execute {
-                contract_addr: config.dex_contract_address.to_string(),
+                contract_addr: config.exchange_contract_address.to_string(),
                 msg: to_binary(&LimitOrderExecuteMsg::WithdrawOrder {
                     order_idx: order_idx,
                 })

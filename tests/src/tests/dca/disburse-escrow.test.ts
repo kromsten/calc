@@ -46,7 +46,7 @@ describe('when disbursing escrow', () => {
         ).fee.amount,
       );
 
-      await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+      await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
         disburse_escrow: { vault_id },
       });
 

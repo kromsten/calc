@@ -34,7 +34,7 @@ use crate::types::trigger::{Trigger, TriggerConfiguration};
 use crate::types::vault::{Vault, VaultBuilder, VaultStatus};
 use cosmwasm_std::{to_binary, Addr, Coin, Decimal, SubMsg, WasmMsg};
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Timestamp, Uint128, Uint64};
-use exchange::msg::ExecuteMsg as ExchangeExcuteMsg;
+use exchange::msg::ExecuteMsg as ExchangeExecuteMsg;
 
 pub fn create_vault_handler(
     deps: DepsMut,
@@ -266,8 +266,8 @@ pub fn create_vault_handler(
 
             Ok(response.add_submessage(SubMsg::reply_on_success(
                 WasmMsg::Execute {
-                    contract_addr: pair.address.to_string(),
-                    msg: to_binary(&ExchangeExcuteMsg::SubmitOrder {
+                    contract_addr: config.exchange_contract_address.to_string(),
+                    msg: to_binary(&ExchangeExecuteMsg::SubmitOrder {
                         target_price: target_price.into(),
                         target_denom: vault.target_denom.clone(),
                     })
@@ -1643,13 +1643,15 @@ mod create_vault_tests {
         )
         .unwrap();
 
+        let config = get_config(deps.as_ref().storage).unwrap();
+
         assert_eq!(
             response.messages.first().unwrap(),
             &SubMsg::reply_on_success(
                 WasmMsg::Execute {
-                    contract_addr: pair.address.to_string(),
+                    contract_addr: config.exchange_contract_address.to_string(),
                     funds: vec![Coin::new(TWO_MICRONS.into(), info.funds[0].denom.clone())],
-                    msg: to_binary(&ExchangeExcuteMsg::SubmitOrder {
+                    msg: to_binary(&ExchangeExecuteMsg::SubmitOrder {
                         target_price: Decimal256::percent(200),
                         target_denom: pair.base_denom.clone(),
                     })

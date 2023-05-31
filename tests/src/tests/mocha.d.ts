@@ -14,7 +14,7 @@ declare module 'mocha' {
     dcaContractAddress: Addr;
     calcSwapFee: number;
     automationFee: number;
-    adminContractAddress: Addr;
+    adminWalletAddress: Addr;
     feeCollectorAddress: Addr;
     userWalletAddress: Addr;
     finPairAddress: Addr;

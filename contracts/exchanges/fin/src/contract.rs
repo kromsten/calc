@@ -9,6 +9,7 @@ use exchange::msg::{ExecuteMsg, QueryMsg};
 use crate::error::ContractError;
 use crate::handlers::create_pairs::create_pairs_handler;
 use crate::handlers::submit_order::{return_order_idx, submit_order_handler};
+use crate::handlers::swap::return_funds;
 use crate::msg::{InstantiateMsg, InternalMsg};
 use crate::state::config::update_config;
 use crate::types::config::Config;
@@ -51,7 +52,7 @@ pub fn execute(
             target_price,
             target_denom,
         } => submit_order_handler(deps.as_ref(), info, target_price, target_denom),
-        ExecuteMsg::InternalMsg(msg) => match from_binary(&msg).unwrap() {
+        ExecuteMsg::InternalMsg { msg } => match from_binary(&msg).unwrap() {
             InternalMsg::CreatePairs { pairs } => create_pairs_handler(deps, info, pairs),
         },
         _ => unimplemented!(),
@@ -64,11 +65,13 @@ pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
 }
 
 pub const AFTER_SUBMIT_ORDER: u64 = 1;
+pub const AFTER_SWAP: u64 = 2;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(_deps: DepsMut, _env: Env, reply: Reply) -> Result<Response, ContractError> {
+pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, ContractError> {
     match reply.id {
         AFTER_SUBMIT_ORDER => return_order_idx(reply),
+        AFTER_SWAP => return_funds(deps.as_ref(), env),
         _ => Err(ContractError::MissingReplyId {}),
     }
 }

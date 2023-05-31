@@ -1,5 +1,4 @@
 use crate::error::ContractError;
-use crate::helpers::coin::empty_of;
 use crate::helpers::validation::{
     assert_sender_is_admin_or_vault_owner, assert_vault_is_not_cancelled,
 };
@@ -14,6 +13,7 @@ use crate::types::vault::{Vault, VaultStatus};
 use cosmwasm_std::{to_binary, BankMsg, DepsMut, Response, Uint128, WasmMsg};
 use cosmwasm_std::{Env, MessageInfo, SubMsg};
 use exchange::msg::ExecuteMsg;
+use shared::coin::empty_of;
 
 pub fn cancel_vault_handler(
     deps: DepsMut,

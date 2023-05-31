@@ -54,8 +54,9 @@ pub fn empty_of(this: Coin) -> Coin {
 
 #[cfg(test)]
 mod coin_helpers_tests {
-    use crate::helpers::coin::{add, add_to, empty_of, subtract, subtract_from};
     use cosmwasm_std::{Coin, Uint128};
+
+    use crate::coin::{add, add_to, empty_of, subtract, subtract_from};
 
     #[test]
     fn adds_two_coins_with_same_denom() {

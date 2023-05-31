@@ -22,7 +22,7 @@ export const createWallet = async (config: Config) =>
 export const createCosmWasmClientForWallet = async (
   config: Config,
   adminCosmWasmClient: SigningCosmWasmClient,
-  adminContractAddress: Addr,
+  adminWalletAddress: Addr,
   userWallet: DirectSecp256k1HdWallet,
 ): Promise<SigningCosmWasmClient> => {
   const userCosmWasmClient = await SigningCosmWasmClient.connectWithSigner(config.netUrl, userWallet, {
@@ -31,7 +31,7 @@ export const createCosmWasmClientForWallet = async (
   });
 
   const [userAccount] = await userWallet.getAccounts();
-  await adminCosmWasmClient.sendTokens(adminContractAddress, userAccount.address, [coin(1000000, 'ukuji')], 'auto');
+  await adminCosmWasmClient.sendTokens(adminWalletAddress, userAccount.address, [coin(1000000, 'ukuji')], 'auto');
 
   return userCosmWasmClient;
 };
@@ -42,7 +42,7 @@ export const createVault = async (
   deposit: Coin[] = [coin('1000000', context.pair.quote_denom)],
 ) => {
   if (deposit.length > 0) {
-    await context.cosmWasmClient.sendTokens(context.adminContractAddress, context.userWalletAddress, deposit, 'auto');
+    await context.cosmWasmClient.sendTokens(context.adminWalletAddress, context.userWalletAddress, deposit, 'auto');
   }
 
   const response = await execute(

@@ -12,6 +12,9 @@ pub enum ContractError {
     #[error("Invalid funds: {msg:?}")]
     InvalidFunds { msg: String },
 
+    #[error("Failed swap: {msg:?}")]
+    FailedSwap { msg: String },
+
     #[error("Missing reply id")]
     MissingReplyId {},
 }

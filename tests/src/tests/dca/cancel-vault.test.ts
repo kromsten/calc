@@ -40,7 +40,7 @@ describe('when cancelling a vault', () => {
         this.feeCollectorAddress,
       ]);
 
-      await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+      await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
         cancel_vault: {
           vault_id: vaultId,
         },
@@ -133,7 +133,7 @@ describe('when cancelling a vault', () => {
         this.feeCollectorAddress,
       ]);
 
-      await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+      await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
         cancel_vault: {
           vault_id: vaultId,
         },
@@ -214,7 +214,7 @@ describe('when cancelling a vault', () => {
         this.feeCollectorAddress,
       ]);
 
-      await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+      await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
         cancel_vault: {
           vault_id: vaultId,
         },
@@ -304,7 +304,7 @@ describe('when cancelling a vault', () => {
         this.feeCollectorAddress,
       ]);
 
-      await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+      await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
         cancel_vault: {
           vault_id: vaultId,
         },
@@ -388,7 +388,7 @@ describe('when cancelling a vault', () => {
           this.feeCollectorAddress,
         ]);
 
-        await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+        await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
           disburse_escrow: {
             vault_id: vaultBeforeExecution.id,
           },

@@ -33,7 +33,7 @@ describe('when depositing into a vault', () => {
 
       await execute(
         this.cosmWasmClient,
-        this.adminContractAddress,
+        this.adminWalletAddress,
         this.dcaContractAddress,
         {
           deposit: {
@@ -103,7 +103,7 @@ describe('when depositing into a vault', () => {
 
       await execute(
         this.cosmWasmClient,
-        this.adminContractAddress,
+        this.adminWalletAddress,
         this.dcaContractAddress,
         {
           deposit: {

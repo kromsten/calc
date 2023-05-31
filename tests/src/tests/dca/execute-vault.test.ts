@@ -49,7 +49,7 @@ describe('when executing a vault', () => {
         coin(vaultBeforeExecution.swap_amount, vaultBeforeExecution.balance.denom),
       );
 
-      await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+      await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
         execute_trigger: {
           trigger_id: vaultId,
         },
@@ -214,7 +214,7 @@ describe('when executing a vault', () => {
         await setTimeout(3000);
       }
 
-      await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+      await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
         execute_trigger: {
           trigger_id: vaultId,
         },
@@ -350,7 +350,7 @@ describe('when executing a vault', () => {
             msg: null,
           },
           {
-            address: this.adminContractAddress,
+            address: this.adminWalletAddress,
             allocation: '0.7',
             msg: Buffer.from(
               JSON.stringify({
@@ -375,7 +375,7 @@ describe('when executing a vault', () => {
         await setTimeout(3000);
       }
 
-      await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+      await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
         execute_trigger: {
           trigger_id: vaultId,
         },
@@ -432,7 +432,7 @@ describe('when executing a vault', () => {
       }
 
       while (vault.status == 'active') {
-        await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+        await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
           execute_trigger: {
             trigger_id: vaultId,
           },
@@ -478,7 +478,7 @@ describe('when executing a vault', () => {
 
     it('fails to execute with the correct error message', async function (this: Context) {
       await expect(
-        execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+        execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
           execute_trigger: {
             trigger_id: `${vaultId}`,
           },
@@ -499,7 +499,7 @@ describe('when executing a vault', () => {
 
     it('fails to execute with the correct error message', async function (this: Context) {
       await expect(
-        execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+        execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
           execute_trigger: {
             trigger_id: vaultId,
           },
@@ -555,7 +555,7 @@ describe('when executing a vault', () => {
         await setTimeout(3000);
       }
 
-      await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+      await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
         execute_trigger: {
           trigger_id: vaultId,
         },
@@ -718,7 +718,7 @@ describe('when executing a vault', () => {
         await setTimeout(3000);
       }
 
-      await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+      await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
         execute_trigger: {
           trigger_id: vaultId,
         },
@@ -860,7 +860,7 @@ describe('when executing a vault', () => {
         await setTimeout(3000);
       }
 
-      await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+      await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
         execute_trigger: {
           trigger_id: vault_id,
         },
@@ -932,7 +932,7 @@ describe('when executing a vault', () => {
       );
 
       for (const position_type of ['enter', 'exit']) {
-        await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+        await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
           update_swap_adjustment: {
             strategy: {
               risk_weighted_average: {
@@ -968,7 +968,7 @@ describe('when executing a vault', () => {
         await setTimeout(3000);
       }
 
-      await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+      await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
         execute_trigger: {
           trigger_id: vault_id,
         },
@@ -1037,7 +1037,7 @@ describe('when executing a vault', () => {
           blockTime = dayjs((await this.cosmWasmClient.getBlock()).header.time);
         }
 
-        await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+        await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
           execute_trigger: {
             trigger_id: vault.id,
           },
@@ -1107,7 +1107,7 @@ describe('when executing a vault', () => {
       );
 
       for (const position_type of ['enter', 'exit']) {
-        await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+        await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
           update_swap_adjustment: {
             strategy: {
               risk_weighted_average: {
@@ -1143,7 +1143,7 @@ describe('when executing a vault', () => {
         await setTimeout(3000);
       }
 
-      await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+      await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
         execute_trigger: {
           trigger_id: vault_id,
         },
@@ -1206,7 +1206,7 @@ describe('when executing a vault', () => {
           await setTimeout(3000);
         }
 
-        await execute(this.cosmWasmClient, this.adminContractAddress, this.dcaContractAddress, {
+        await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
           execute_trigger: {
             trigger_id: vault.id,
           },

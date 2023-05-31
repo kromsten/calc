@@ -1,5 +1,4 @@
 pub mod authz;
-pub mod coin;
 pub mod disbursement;
 pub mod fees;
 pub mod math;

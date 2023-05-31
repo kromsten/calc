@@ -26,7 +26,7 @@ pub fn update_config_handler(
     risk_weighted_average_escrow_level: Option<Decimal>,
     twap_period: Option<u64>,
     default_slippage_tolerance: Option<Decimal>,
-    dex_contract_address: Option<Addr>,
+    exchange_contract_address: Option<Addr>,
 ) -> Result<Response, ContractError> {
     assert_sender_is_admin(deps.storage, info.sender)?;
     let existing_config = get_config(deps.storage)?;
@@ -49,7 +49,8 @@ pub fn update_config_handler(
         default_slippage_tolerance: default_slippage_tolerance
             .unwrap_or(existing_config.default_slippage_tolerance),
         old_staking_router_address: existing_config.old_staking_router_address,
-        dex_contract_address: dex_contract_address.unwrap_or(existing_config.dex_contract_address),
+        exchange_contract_address: exchange_contract_address
+            .unwrap_or(existing_config.exchange_contract_address),
     };
 
     assert_fee_level_is_valid(&config.default_swap_fee_percent)?;

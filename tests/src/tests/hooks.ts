@@ -29,14 +29,14 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
   const queryClient = kujiraQueryClient({ client: tmClient });
   const cosmWasmClient = await createAdminCosmWasmClient(config);
 
-  const adminContractAddress = (
-    await (await getWallet(config.adminContractMnemonic, config.bech32AddressPrefix)).getAccounts()
+  const adminWalletAddress = (
+    await (await getWallet(config.adminWalletMnemonic, config.bech32AddressPrefix)).getAccounts()
   )[0].address;
 
   const feeCollectorWallet = await createWallet(config);
   const feeCollectorAddress = (await feeCollectorWallet.getAccounts())[0].address;
 
-  const finPairAddress = await instantiateFinPairContract(cosmWasmClient, adminContractAddress);
+  const finPairAddress = await instantiateFinPairContract(cosmWasmClient, adminWalletAddress);
 
   const pairConfig = {
     ...(await cosmWasmClient.queryContractSmart(finPairAddress, {
@@ -51,16 +51,22 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
     address: finPairAddress,
   };
 
-  const dcaContractAddress = await instantiateDCAContract(cosmWasmClient, adminContractAddress, feeCollectorAddress, [
-    finPairAddress,
-  ]);
+  const exchangeAddress = await instantiateExchangeContract(cosmWasmClient, adminWalletAddress, [finPairAddress]);
+
+  const dcaContractAddress = await instantiateDCAContract(
+    cosmWasmClient,
+    adminWalletAddress,
+    feeCollectorAddress,
+    exchangeAddress,
+    [finPairAddress],
+  );
 
   const userWallet = await createWallet(config);
   const userWalletAddress = (await userWallet.getAccounts())[0].address;
   const userCosmWasmClient = await createCosmWasmClientForWallet(
     config,
     cosmWasmClient,
-    adminContractAddress,
+    adminWalletAddress,
     userWallet,
   );
 
@@ -76,7 +82,7 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
         dcaContractAddress,
         calcSwapFee,
         automationFee,
-        adminContractAddress,
+        adminWalletAddress,
         feeCollectorAddress,
         userWalletAddress,
         finPairAddress,
@@ -96,17 +102,18 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
 
 const instantiateDCAContract = async (
   cosmWasmClient: SigningCosmWasmClient,
-  adminContractAddress: string,
+  adminWalletAddress: string,
   feeCollectorAdress: string,
+  exchangeAddress: string,
   pairAddress: string[] = [],
 ): Promise<string> => {
   const dcaContractAddress = await uploadAndInstantiate(
     '../artifacts/dca.wasm',
     cosmWasmClient,
-    adminContractAddress,
+    adminWalletAddress,
     {
-      admin: adminContractAddress,
-      executors: [adminContractAddress],
+      admin: adminWalletAddress,
+      executors: [adminWalletAddress],
       automation_fee_percent: `${automationFee}`,
       fee_collectors: [{ address: feeCollectorAdress, allocation: '1.0' }],
       default_page_limit: 30,
@@ -116,6 +123,8 @@ const instantiateDCAContract = async (
       default_swap_fee_percent: `${calcSwapFee}`,
       weighted_scale_swap_fee_percent: '0.01',
       risk_weighted_average_escrow_level: '0.05',
+      exchange_contract_address: exchangeAddress,
+      old_staking_router_address: adminWalletAddress,
     },
     'dca',
   );
@@ -125,7 +134,7 @@ const instantiateDCAContract = async (
       config: {},
     });
 
-    await execute(cosmWasmClient, adminContractAddress, dcaContractAddress, {
+    await execute(cosmWasmClient, adminWalletAddress, dcaContractAddress, {
       create_pair: {
         base_denom: pair.denoms[0].native,
         quote_denom: pair.denoms[1].native,
@@ -135,7 +144,7 @@ const instantiateDCAContract = async (
   }
 
   for (const position_type of ['enter', 'exit']) {
-    await execute(cosmWasmClient, adminContractAddress, dcaContractAddress, {
+    await execute(cosmWasmClient, adminWalletAddress, dcaContractAddress, {
       update_swap_adjustment: {
         strategy: {
           risk_weighted_average: {
@@ -152,17 +161,19 @@ const instantiateDCAContract = async (
   return dcaContractAddress;
 };
 
-export const instantiateFinExchangeWrapperContract = async (
+export const instantiateExchangeContract = async (
   cosmWasmClient: SigningCosmWasmClient,
-  adminContractAddress: string,
+  adminWalletAddress: string,
   pairAddress: string[] = [],
 ): Promise<string> => {
   const dcaContractAddress = await uploadAndInstantiate(
-    '../artifacts/dca.wasm',
+    '../artifacts/fin.wasm',
     cosmWasmClient,
-    adminContractAddress,
-    {},
-    'dca',
+    adminWalletAddress,
+    {
+      admin: adminWalletAddress,
+    },
+    'fin-exchange',
   );
 
   for (const address of pairAddress) {
@@ -170,11 +181,21 @@ export const instantiateFinExchangeWrapperContract = async (
       config: {},
     });
 
-    await execute(cosmWasmClient, adminContractAddress, dcaContractAddress, {
-      create_pair: {
-        base_denom: pair.denoms[0].native,
-        quote_denom: pair.denoms[1].native,
-        address,
+    await execute(cosmWasmClient, adminWalletAddress, dcaContractAddress, {
+      internal_msg: {
+        msg: Buffer.from(
+          JSON.stringify({
+            create_pairs: {
+              pairs: [
+                {
+                  base_denom: pair.denoms[0].native,
+                  quote_denom: pair.denoms[1].native,
+                  address,
+                },
+              ],
+            },
+          }),
+        ).toString('base64'),
       },
     });
   }
@@ -184,7 +205,7 @@ export const instantiateFinExchangeWrapperContract = async (
 
 export const instantiateFinPairContract = async (
   cosmWasmClient: SigningCosmWasmClient,
-  adminContractAddress: string,
+  adminWalletAddress: string,
   baseDenom: string = 'utest',
   quoteDenom: string = 'udemo',
   beliefPrice: number = 1.0,
@@ -193,16 +214,16 @@ export const instantiateFinPairContract = async (
   const finContractAddress = await uploadAndInstantiate(
     './src/artifacts/fin.wasm',
     cosmWasmClient,
-    adminContractAddress,
+    adminWalletAddress,
     {
-      owner: adminContractAddress,
+      owner: adminWalletAddress,
       denoms: [{ native: baseDenom }, { native: quoteDenom }],
       price_precision: { decimal_places: 3 },
     },
     'fin',
   );
 
-  await execute(cosmWasmClient, adminContractAddress, finContractAddress, {
+  await execute(cosmWasmClient, adminWalletAddress, finContractAddress, {
     launch: {},
   });
 
@@ -218,7 +239,7 @@ export const instantiateFinPairContract = async (
   for (const order of orders) {
     await execute(
       cosmWasmClient,
-      adminContractAddress,
+      adminWalletAddress,
       finContractAddress,
       {
         submit_order: { price: `${order.price}` },

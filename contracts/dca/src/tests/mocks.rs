@@ -1,4 +1,4 @@
-use crate::constants::{DEX_CONTRACT_ADDRESS, ONE, PAIR_CONTRACT_ADDRESS, SWAP_FEE_RATE, TEN};
+use crate::constants::{EXCHANGE_CONTRACT_ADDRESS, ONE, PAIR_CONTRACT_ADDRESS, SWAP_FEE_RATE, TEN};
 use crate::helpers::price::{FinBookResponse, FinPoolResponse, FinSimulationResponse};
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{
@@ -91,12 +91,14 @@ impl<C: DeserializeOwned> CalcMockQuerier<C> {
                         .unwrap(),
                         _ => panic!("Unsupported fin query"),
                     },
-                    DEX_CONTRACT_ADDRESS => match from_binary::<ExchangeQueryMsg>(msg).unwrap() {
-                        ExchangeQueryMsg::GetOrderStatus { .. } => {
-                            to_binary(&OrderStatus::Filled).unwrap()
+                    EXCHANGE_CONTRACT_ADDRESS => {
+                        match from_binary::<ExchangeQueryMsg>(msg).unwrap() {
+                            ExchangeQueryMsg::GetOrderStatus { .. } => {
+                                to_binary(&OrderStatus::Filled).unwrap()
+                            }
+                            _ => panic!("Unsupported exchange wrapper query"),
                         }
-                        _ => panic!("Unsupported exchange wrapper query"),
-                    },
+                    }
                     _ => panic!("Unsupported contract addr"),
                 },
                 _ => panic!("Unsupported contract addr"),

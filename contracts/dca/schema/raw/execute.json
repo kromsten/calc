@@ -361,7 +361,7 @@
                 }
               ]
             },
-            "dex_contract_address": {
+            "exchange_contract_address": {
               "anyOf": [
                 {
                   "$ref": "#/definitions/Addr"
