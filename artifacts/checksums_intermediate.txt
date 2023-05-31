@@ -1,2 +1,2 @@
-87720249247d69e82392742972ee14bdb21e71108f41d12470992e75df2132b6  target/wasm32-unknown-unknown/release/dca.wasm
-d803192650a1347bcc47f7c42dbe1d51f4f5dd37c958bce86870b0ed8250c66f  target/wasm32-unknown-unknown/release/fin.wasm
+7a41c6b3466de4d688ba6ac3f4a7e9a733e6e2bb196cf5a00745816a27f9c1f6  target/wasm32-unknown-unknown/release/dca.wasm
+35c5319b423af881c0bd57d1248bde09681680b6ab0e5c66273acb97ab7acbb9  target/wasm32-unknown-unknown/release/fin.wasm

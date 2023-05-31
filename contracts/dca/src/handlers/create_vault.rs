@@ -34,7 +34,7 @@ use crate::types::trigger::{Trigger, TriggerConfiguration};
 use crate::types::vault::{Vault, VaultBuilder, VaultStatus};
 use cosmwasm_std::{to_binary, Addr, Coin, Decimal, SubMsg, WasmMsg};
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Timestamp, Uint128, Uint64};
-use exchange::msg::ExecuteMsg as LimitOrderExecuteMsg;
+use exchange::msg::ExecuteMsg as ExchangeExcuteMsg;
 
 pub fn create_vault_handler(
     deps: DepsMut,
@@ -267,8 +267,8 @@ pub fn create_vault_handler(
             Ok(response.add_submessage(SubMsg::reply_on_success(
                 WasmMsg::Execute {
                     contract_addr: pair.address.to_string(),
-                    msg: to_binary(&LimitOrderExecuteMsg::SubmitOrder {
-                        price: target_price,
+                    msg: to_binary(&ExchangeExcuteMsg::SubmitOrder {
+                        target_price: target_price.into(),
                     })
                     .unwrap(),
                     funds: vec![Coin::new(TWO_MICRONS.into(), vault.get_swap_denom())],
@@ -306,7 +306,9 @@ mod create_vault_tests {
     use crate::types::trigger::TriggerConfiguration;
     use crate::types::vault::{Vault, VaultStatus};
     use cosmwasm_std::testing::{mock_env, mock_info};
-    use cosmwasm_std::{to_binary, Addr, Coin, Decimal, SubMsg, Timestamp, Uint128, WasmMsg};
+    use cosmwasm_std::{
+        to_binary, Addr, Coin, Decimal, Decimal256, SubMsg, Timestamp, Uint128, WasmMsg,
+    };
 
     #[test]
     fn with_no_assets_fails() {
@@ -1646,8 +1648,8 @@ mod create_vault_tests {
                 WasmMsg::Execute {
                     contract_addr: pair.address.to_string(),
                     funds: vec![Coin::new(TWO_MICRONS.into(), info.funds[0].denom.clone())],
-                    msg: to_binary(&LimitOrderExecuteMsg::SubmitOrder {
-                        price: Decimal::percent(200).into()
+                    msg: to_binary(&ExchangeExcuteMsg::SubmitOrder {
+                        target_price: Decimal256::percent(200)
                     })
                     .unwrap()
                 },

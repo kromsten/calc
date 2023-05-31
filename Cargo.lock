@@ -90,9 +90,9 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "chrono"
-version = "0.4.25"
+version = "0.4.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fdbc37d37da9e5bce8173f3a41b71d9bf3c674deebbaceacd0ebdabde76efb03"
+checksum = "ec837a71355b28f6556dbd569b37b3f363091c0bd4b2e735674521b4c5fd9bc5"
 dependencies = [
  "android-tzdata",
  "num-traits",
@@ -464,7 +464,10 @@ dependencies = [
  "cw-multi-test",
  "cw-storage-plus",
  "cw2",
+ "cw20",
  "exchange",
+ "kujira-fin",
+ "kujira-std",
  "schemars",
  "serde",
  "thiserror",
@@ -580,6 +583,32 @@ dependencies = [
  "hex",
  "schemars",
  "serde",
+ "sha2 0.10.6",
+ "thiserror",
+]
+
+[[package]]
+name = "kujira-fin"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "257a1e93bbd136dbf0be9ffba9fb95f6cd52d3d9bee38d3922c3083daf340f5d"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw20",
+ "kujira-std",
+]
+
+[[package]]
+name = "kujira-std"
+version = "0.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1081f4f84da507e81b3456504a3776d2fe77252fd9812cdd397d4936c0af1f5"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw20",
+ "hex",
  "sha2 0.10.6",
  "thiserror",
 ]

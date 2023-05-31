@@ -1,12 +1,12 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Coin, Decimal, Uint128};
+use cosmwasm_std::{Coin, Decimal256, Uint128};
 
 #[cw_serde]
 pub struct InstantiateMsg {}
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    SubmitOrder { price: Decimal },
+    SubmitOrder { target_price: Decimal256 },
     RetractOrder { order_idx: Uint128 },
     WithdrawOrder { order_idx: Uint128 },
 }
