@@ -7,7 +7,7 @@ use cosmwasm_std::{
     SystemError, SystemResult, Timestamp, Uint256, WasmQuery,
 };
 use cw20::Denom;
-use exchange::msg::{OrderStatus, QueryMsg as LimitOrderQueryMsg};
+use exchange::msg::{OrderStatus, QueryMsg as ExchangeQueryMsg};
 use kujira::fin::{
     BookResponse, ConfigResponse, OrderResponse, PoolResponse, QueryMsg as FinQueryMsg,
     SimulationResponse,
@@ -91,10 +91,11 @@ impl<C: DeserializeOwned> CalcMockQuerier<C> {
                         .unwrap(),
                         _ => panic!("Unsupported fin query"),
                     },
-                    DEX_CONTRACT_ADDRESS => match from_binary::<LimitOrderQueryMsg>(msg).unwrap() {
-                        LimitOrderQueryMsg::GetOrderStatus { .. } => {
+                    DEX_CONTRACT_ADDRESS => match from_binary::<ExchangeQueryMsg>(msg).unwrap() {
+                        ExchangeQueryMsg::GetOrderStatus { .. } => {
                             to_binary(&OrderStatus::Filled).unwrap()
                         }
+                        _ => panic!("Unsupported exchange wrapper query"),
                     },
                     _ => panic!("Unsupported contract addr"),
                 },

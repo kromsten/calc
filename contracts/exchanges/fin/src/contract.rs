@@ -1,12 +1,17 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult};
+use cosmwasm_std::{
+    from_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+};
 use exchange::msg::{ExecuteMsg, QueryMsg};
 // use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::execute::return_order_idx;
-use crate::msg::InstantiateMsg;
+use crate::handlers::create_pairs::create_pairs_handler;
+use crate::handlers::submit_order::{return_order_idx, submit_order_handler};
+use crate::msg::{InstantiateMsg, InternalMsg};
+use crate::state::config::update_config;
+use crate::types::config::Config;
 
 /*
 // version info for migration info
@@ -16,22 +21,41 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    _deps: DepsMut,
+    deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    _msg: InstantiateMsg,
+    msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    unimplemented!()
+    deps.api.addr_validate(&msg.admin.to_string())?;
+    update_config(
+        deps.storage,
+        Config {
+            admin: msg.admin.clone(),
+        },
+    )?;
+
+    Ok(Response::new()
+        .add_attribute("instantiate", "true")
+        .add_attribute("admin", msg.admin))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    _deps: DepsMut,
+    deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
-    _msg: ExecuteMsg,
+    info: MessageInfo,
+    msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    unimplemented!()
+    match msg {
+        ExecuteMsg::SubmitOrder {
+            target_price,
+            target_denom,
+        } => submit_order_handler(deps.as_ref(), info, target_price, target_denom),
+        ExecuteMsg::InternalMsg(msg) => match from_binary(&msg).unwrap() {
+            InternalMsg::CreatePairs { pairs } => create_pairs_handler(deps, info, pairs),
+        },
+        _ => unimplemented!(),
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

@@ -9,7 +9,7 @@ use crate::{
     ContractError,
 };
 
-pub fn submit_order(
+pub fn submit_order_handler(
     deps: Deps,
     info: MessageInfo,
     target_price: Decimal256,
@@ -69,17 +69,18 @@ mod submit_order_tests {
 
     use crate::{
         contract::AFTER_SUBMIT_ORDER,
-        execute::submit_order,
         state::pairs::save_pair,
         tests::helpers::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
         types::pair::Pair,
         ContractError,
     };
 
+    use super::*;
+
     #[test]
     fn with_no_assets_fails() {
         assert_eq!(
-            submit_order(
+            submit_order_handler(
                 mock_dependencies().as_ref(),
                 mock_info(ADMIN, &[]),
                 Decimal256::one(),
@@ -95,7 +96,7 @@ mod submit_order_tests {
     #[test]
     fn with_more_than_one_asset_fails() {
         assert_eq!(
-            submit_order(
+            submit_order_handler(
                 mock_dependencies().as_ref(),
                 mock_info(
                     ADMIN,
@@ -114,7 +115,7 @@ mod submit_order_tests {
     #[test]
     fn with_the_same_swap_and_target_denom_fails() {
         assert_eq!(
-            submit_order(
+            submit_order_handler(
                 mock_dependencies().as_ref(),
                 mock_info(ADMIN, &[Coin::new(43282, DENOM_UKUJI)]),
                 Decimal256::one(),
@@ -130,7 +131,7 @@ mod submit_order_tests {
     #[test]
     fn with_no_matching_pair_fails() {
         assert_eq!(
-            submit_order(
+            submit_order_handler(
                 mock_dependencies().as_ref(),
                 mock_info(ADMIN, &[Coin::new(43282, DENOM_UUSK)]),
                 Decimal256::one(),
@@ -173,7 +174,7 @@ mod submit_order_tests {
 
         let info = mock_info(ADMIN, &[Coin::new(123123, pair.quote_denom)]);
 
-        let response = submit_order(
+        let response = submit_order_handler(
             deps.as_ref(),
             info.clone(),
             target_price,
@@ -228,7 +229,7 @@ mod submit_order_tests {
 
         let info = mock_info(ADMIN, &[Coin::new(123123, pair.base_denom)]);
 
-        let response = submit_order(
+        let response = submit_order_handler(
             deps.as_ref(),
             info.clone(),
             target_price,

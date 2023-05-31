@@ -152,6 +152,36 @@ const instantiateDCAContract = async (
   return dcaContractAddress;
 };
 
+export const instantiateFinExchangeWrapperContract = async (
+  cosmWasmClient: SigningCosmWasmClient,
+  adminContractAddress: string,
+  pairAddress: string[] = [],
+): Promise<string> => {
+  const dcaContractAddress = await uploadAndInstantiate(
+    '../artifacts/dca.wasm',
+    cosmWasmClient,
+    adminContractAddress,
+    {},
+    'dca',
+  );
+
+  for (const address of pairAddress) {
+    const pair = await cosmWasmClient.queryContractSmart(address, {
+      config: {},
+    });
+
+    await execute(cosmWasmClient, adminContractAddress, dcaContractAddress, {
+      create_pair: {
+        base_denom: pair.denoms[0].native,
+        quote_denom: pair.denoms[1].native,
+        address,
+      },
+    });
+  }
+
+  return dcaContractAddress;
+};
+
 export const instantiateFinPairContract = async (
   cosmWasmClient: SigningCosmWasmClient,
   adminContractAddress: string,
@@ -161,7 +191,7 @@ export const instantiateFinPairContract = async (
   orders: Record<string, number | Coin>[] = [],
 ): Promise<string> => {
   const finContractAddress = await uploadAndInstantiate(
-    '../artifacts/fin.wasm',
+    './src/artifacts/fin.wasm',
     cosmWasmClient,
     adminContractAddress,
     {
@@ -199,53 +229,3 @@ export const instantiateFinPairContract = async (
 
   return finContractAddress;
 };
-
-export const instantiateSwapContract = async (
-  cosmWasmClient: SigningCosmWasmClient,
-  adminContractAddress: string,
-  finPairAddress?: string,
-): Promise<string> => {
-  const swapContractAddress = await uploadAndInstantiate(
-    '../artifacts/swap.wasm',
-    cosmWasmClient,
-    adminContractAddress,
-    {
-      admin: adminContractAddress,
-    },
-    'swap',
-  );
-
-  if (finPairAddress) {
-    let pair = await cosmWasmClient.queryContractSmart(finPairAddress, {
-      config: {},
-    });
-
-    await execute(cosmWasmClient, adminContractAddress, swapContractAddress, {
-      add_path: {
-        pair: {
-          fin: { address: finPairAddress, base_denom: pair.denoms[0].native, quote_denom: pair.denoms[1].native },
-        },
-      },
-    });
-  }
-
-  return swapContractAddress;
-};
-
-export const instantiateFundCoreContract = async (
-  cosmWasmClient: SigningCosmWasmClient,
-  routerContractAddress: string,
-  swapContractAddress: string,
-  baseAsset: string = 'uusk',
-): Promise<string> =>
-  uploadAndInstantiate(
-    '../artifacts/fund_core.wasm',
-    cosmWasmClient,
-    routerContractAddress,
-    {
-      router: routerContractAddress,
-      swapper: swapContractAddress,
-      base_denom: baseAsset,
-    },
-    'fund-core',
-  );

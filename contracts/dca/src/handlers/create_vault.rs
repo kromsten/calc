@@ -269,6 +269,7 @@ pub fn create_vault_handler(
                     contract_addr: pair.address.to_string(),
                     msg: to_binary(&ExchangeExcuteMsg::SubmitOrder {
                         target_price: target_price.into(),
+                        target_denom: vault.target_denom.clone(),
                     })
                     .unwrap(),
                     funds: vec![Coin::new(TWO_MICRONS.into(), vault.get_swap_denom())],
@@ -1649,7 +1650,8 @@ mod create_vault_tests {
                     contract_addr: pair.address.to_string(),
                     funds: vec![Coin::new(TWO_MICRONS.into(), info.funds[0].denom.clone())],
                     msg: to_binary(&ExchangeExcuteMsg::SubmitOrder {
-                        target_price: Decimal256::percent(200)
+                        target_price: Decimal256::percent(200),
+                        target_denom: pair.base_denom.clone(),
                     })
                     .unwrap()
                 },

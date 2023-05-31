@@ -106,38 +106,4 @@ mod create_pair_tests {
 
         assert_eq!(result.to_string(), "Unauthorized")
     }
-
-    #[test]
-    fn recreate_pair_with_switched_denoms_should_overwrite_it() {
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-        let info = mock_info(ADMIN, &[]);
-
-        instantiate_contract(deps.as_mut(), env.clone(), info.clone());
-
-        let original_message = ExecuteMsg::CreatePair {
-            base_denom: DENOM_UKUJI.to_string(),
-            quote_denom: DENOM_UUSK.to_string(),
-            address: Addr::unchecked("pair-1"),
-        };
-
-        let message = ExecuteMsg::CreatePair {
-            quote_denom: DENOM_UKUJI.to_string(),
-            base_denom: DENOM_UUSK.to_string(),
-            address: Addr::unchecked("pair-2"),
-        };
-
-        execute(deps.as_mut(), env.clone(), info.clone(), original_message).unwrap();
-
-        let denoms = [DENOM_UKUJI.to_string(), DENOM_UUSK.to_string()];
-
-        let original_pair = find_pair(deps.as_ref().storage, denoms.clone()).unwrap();
-
-        execute(deps.as_mut(), env, info, message).unwrap();
-
-        let pair = find_pair(deps.as_ref().storage, denoms).unwrap();
-
-        assert_eq!(original_pair.address, Addr::unchecked("pair-1"));
-        assert_eq!(pair.address, Addr::unchecked("pair-2"));
-    }
 }

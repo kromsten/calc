@@ -63,6 +63,6 @@ mod pairs_state_tests {
 
         let result = find_pair(&deps.storage, Pair::default().denoms()).unwrap_err();
 
-        assert_eq!(result.to_string(), "dca::types::pair::Pair not found");
+        assert_eq!(result.to_string(), "fin::types::pair::Pair not found");
     }
 }
