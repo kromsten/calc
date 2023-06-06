@@ -1,16 +1,17 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    from_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
 };
 use exchange::msg::{ExecuteMsg, QueryMsg};
 // use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::handlers::create_pairs::create_pairs_handler;
+use crate::handlers::get_pairs::get_pairs_handler;
 use crate::handlers::retract_order::{retract_order_handler, return_retracted_funds};
 use crate::handlers::submit_order::{return_order_idx, submit_order_handler};
-use crate::handlers::swap::{return_funds, swap_handler};
+use crate::handlers::swap::{return_swapped_funds, swap_handler};
 use crate::handlers::withdraw_order::{return_withdrawn_funds, withdraw_order_handler};
 use crate::msg::{InstantiateMsg, InternalMsg};
 use crate::state::config::update_config;
@@ -70,8 +71,13 @@ pub fn execute(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    unimplemented!()
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::GetPairs { start_after, limit } => {
+            Ok(to_binary(&get_pairs_handler(deps, start_after, limit)?).unwrap())
+        }
+        _ => unimplemented!(),
+    }
 }
 
 pub const AFTER_SWAP: u64 = 1;
@@ -82,7 +88,7 @@ pub const AFTER_WITHDRAW_ORDER: u64 = 4;
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, ContractError> {
     match reply.id {
-        AFTER_SWAP => return_funds(deps.as_ref(), env),
+        AFTER_SWAP => return_swapped_funds(deps.as_ref(), env),
         AFTER_SUBMIT_ORDER => return_order_idx(reply),
         AFTER_RETRACT_ORDER => return_retracted_funds(deps.as_ref(), env),
         AFTER_WITHDRAW_ORDER => return_withdrawn_funds(deps.as_ref(), env),

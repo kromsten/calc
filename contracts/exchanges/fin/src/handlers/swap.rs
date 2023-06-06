@@ -69,7 +69,7 @@ pub fn swap_handler(
         )))
 }
 
-pub fn return_funds(deps: Deps, env: Env) -> Result<Response, ContractError> {
+pub fn return_swapped_funds(deps: Deps, env: Env) -> Result<Response, ContractError> {
     let swap_cache = SWAP_CACHE.load(deps.storage)?;
 
     let updated_target_denom_balance = deps.querier.query_balance(
@@ -266,7 +266,7 @@ mod return_funds_tests {
     use shared::coin::{add, empty_of};
 
     use crate::{
-        handlers::swap::return_funds,
+        handlers::swap::return_swapped_funds,
         state::cache::{SwapCache, SWAP_CACHE},
         tests::helpers::DENOM_UKUJI,
         ContractError,
@@ -287,7 +287,7 @@ mod return_funds_tests {
         SWAP_CACHE.save(deps.as_mut().storage, &swap_cache).unwrap();
 
         assert_eq!(
-            return_funds(deps.as_ref(), mock_env()).unwrap_err(),
+            return_swapped_funds(deps.as_ref(), mock_env()).unwrap_err(),
             ContractError::FailedSwap {
                 msg: format!(
                     "{} is less than the minumum return amount of {}",
@@ -320,7 +320,7 @@ mod return_funds_tests {
             vec![add(target_denom_balance, return_amount.clone()).unwrap()],
         );
 
-        let response = return_funds(deps.as_ref(), env).unwrap();
+        let response = return_swapped_funds(deps.as_ref(), env).unwrap();
 
         assert_eq!(
             response.messages.first().unwrap(),

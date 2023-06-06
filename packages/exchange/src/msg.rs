@@ -33,7 +33,7 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     #[returns(Vec<Pair>)]
     GetPairs {
-        limit: u16,
+        limit: Option<u16>,
         start_after: Option<Pair>,
     },
     #[returns(OrderStatus)]

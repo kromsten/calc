@@ -1,5 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;
+use exchange::pair::Pair as ExchangePair;
 
 use super::position_type::PositionType;
 
@@ -28,6 +29,14 @@ impl Pair {
             self.base_denom.clone()
         } else {
             self.quote_denom.clone()
+        }
+    }
+}
+
+impl Into<ExchangePair> for Pair {
+    fn into(self) -> ExchangePair {
+        ExchangePair {
+            denoms: [self.base_denom, self.quote_denom],
         }
     }
 }
