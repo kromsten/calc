@@ -17,9 +17,11 @@ pub enum ExecuteMsg {
     },
     RetractOrder {
         order_idx: Uint128,
+        denoms: [String; 2],
     },
     WithdrawOrder {
         order_idx: Uint128,
+        denoms: [String; 2],
     },
     InternalMsg {
         msg: Binary,

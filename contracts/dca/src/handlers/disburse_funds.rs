@@ -70,9 +70,9 @@ pub fn disburse_funds_handler(
             vault = update_vault(
                 deps.storage,
                 Vault {
-                    swapped_amount: add_to(vault.swapped_amount, coin_sent.amount),
-                    received_amount: add_to(vault.received_amount, total_after_all_fees),
-                    escrowed_amount: add_to(vault.escrowed_amount, amount_to_escrow),
+                    swapped_amount: add_to(&vault.swapped_amount, coin_sent.amount),
+                    received_amount: add_to(&vault.received_amount, total_after_all_fees),
+                    escrowed_amount: add_to(&vault.escrowed_amount, amount_to_escrow),
                     status: if vault.balance.amount.is_zero() {
                         VaultStatus::Inactive
                     } else {
@@ -747,7 +747,7 @@ mod disburse_funds_tests {
             block_height: env.block.height,
             data: EventData::DcaVaultExecutionCompleted {
                 sent: updated_vault.swapped_amount,
-                received: add_to(updated_vault.received_amount, fee),
+                received: add_to(&updated_vault.received_amount, fee),
                 fee: Coin::new(fee.into(), vault.target_denom)
             }
         }))

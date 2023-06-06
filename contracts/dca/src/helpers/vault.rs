@@ -215,8 +215,8 @@ pub fn simulate_standard_dca_execution(
                 Vault {
                     performance_assessment_strategy: Some(
                         PerformanceAssessmentStrategy::CompareToStandardDca {
-                            swapped_amount: add_to(swapped_amount, swap_amount),
-                            received_amount: add_to(received_amount, received_amount_after_fee),
+                            swapped_amount: add_to(&swapped_amount, swap_amount),
+                            received_amount: add_to(&received_amount, received_amount_after_fee),
                         },
                     ),
                     ..vault

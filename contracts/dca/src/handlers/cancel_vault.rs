@@ -63,13 +63,21 @@ pub fn cancel_vault_handler(
 
             submessages.push(SubMsg::new(WasmMsg::Execute {
                 contract_addr: pair.address.to_string(),
-                msg: to_binary(&ExecuteMsg::WithdrawOrder { order_idx }).unwrap(),
+                msg: to_binary(&ExecuteMsg::WithdrawOrder {
+                    order_idx,
+                    denoms: vault.denoms(),
+                })
+                .unwrap(),
                 funds: vec![],
             }));
 
             submessages.push(SubMsg::new(WasmMsg::Execute {
                 contract_addr: pair.address.to_string(),
-                msg: to_binary(&ExecuteMsg::RetractOrder { order_idx }).unwrap(),
+                msg: to_binary(&ExecuteMsg::RetractOrder {
+                    order_idx,
+                    denoms: vault.denoms(),
+                })
+                .unwrap(),
                 funds: vec![],
             }));
         };
@@ -335,7 +343,11 @@ mod cancel_vault_tests {
             response.messages.get(2).unwrap(),
             &SubMsg::new(WasmMsg::Execute {
                 contract_addr: pair.address.to_string(),
-                msg: to_binary(&ExecuteMsg::RetractOrder { order_idx }).unwrap(),
+                msg: to_binary(&ExecuteMsg::RetractOrder {
+                    order_idx,
+                    denoms: vault.denoms()
+                })
+                .unwrap(),
                 funds: vec![]
             })
         );
@@ -371,7 +383,11 @@ mod cancel_vault_tests {
             response.messages.get(1).unwrap(),
             &SubMsg::new(WasmMsg::Execute {
                 contract_addr: pair.address.to_string(),
-                msg: to_binary(&ExecuteMsg::WithdrawOrder { order_idx }).unwrap(),
+                msg: to_binary(&ExecuteMsg::WithdrawOrder {
+                    order_idx,
+                    denoms: vault.denoms()
+                })
+                .unwrap(),
                 funds: vec![]
             })
         );

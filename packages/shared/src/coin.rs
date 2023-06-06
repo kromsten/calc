@@ -31,9 +31,9 @@ pub fn subtract(from: &Coin, other: &Coin) -> StdResult<Coin> {
     })
 }
 
-pub fn add_to(coin: Coin, amount: Uint128) -> Coin {
+pub fn add_to(coin: &Coin, amount: Uint128) -> Coin {
     Coin {
-        denom: coin.denom,
+        denom: coin.denom.clone(),
         amount: coin.amount + amount,
     }
 }
@@ -122,7 +122,7 @@ mod coin_helpers_tests {
             denom: "uusd".to_string(),
             amount: Uint128::new(100),
         };
-        let result = add_to(coin, Uint128::new(200));
+        let result = add_to(&coin, Uint128::new(200));
         assert_eq!(result.amount, Uint128::new(300));
         assert_eq!(result.denom, "uusd".to_string());
     }

@@ -379,7 +379,7 @@ mod disburse_escrow_tests {
                         .into(),
                         DENOM_UUSK
                     ),
-                    performance_fee: add_to(performance_fee, Uint128::one()),
+                    performance_fee: add_to(&performance_fee, Uint128::one()),
                 }
             }
         )

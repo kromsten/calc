@@ -25,7 +25,7 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
-chrono = { version = "0.4.22", default-features = false }
+chrono = { version = "0.4.26", default-features = false }
 cosmwasm-schema = "1.1.1"
 cosmos-sdk-proto = { version = "0.19.0", default-features = false }
 cosmwasm-std = { version = "1.2.5", features = ["stargate"] }
@@ -33,13 +33,13 @@ cosmwasm-storage = "1.1.1"
 cw-storage-plus = "1.0.1"
 cw2 = "1.0.1"
 cw20 = "1.0.1"
+exchange = { path = "../../packages/exchange" }
 kujira = "0.7.16"
 prost = "0.11.8"
 schemars = "0.8.10"
 serde = { version = "1.0.144", default-features = false, features = ["derive"] }
 shared = { path = "../../packages/shared" }
 thiserror = { version = "1.0.31" }
-exchange = { path = "../../packages/exchange" }
 
 [dev-dependencies]
 cw-multi-test = "0.16.4"

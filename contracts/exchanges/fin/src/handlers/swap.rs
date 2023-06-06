@@ -12,7 +12,7 @@ use crate::{
     ContractError,
 };
 
-pub fn swap(
+pub fn swap_handler(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -109,7 +109,7 @@ mod swap_tests {
 
     use crate::{
         contract::AFTER_SWAP,
-        handlers::swap::swap,
+        handlers::swap::swap_handler,
         state::{cache::SWAP_CACHE, pairs::save_pair},
         tests::helpers::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
         types::{contract::PairContract, pair::Pair},
@@ -119,7 +119,7 @@ mod swap_tests {
     #[test]
     fn with_no_assets_fails() {
         assert_eq!(
-            swap(
+            swap_handler(
                 mock_dependencies().as_mut(),
                 mock_env(),
                 mock_info(ADMIN, &[]),
@@ -135,7 +135,7 @@ mod swap_tests {
     #[test]
     fn with_multiple_assets_fails() {
         assert_eq!(
-            swap(
+            swap_handler(
                 mock_dependencies().as_mut(),
                 mock_env(),
                 mock_info(
@@ -154,7 +154,7 @@ mod swap_tests {
     #[test]
     fn with_zero_swap_amount_fails() {
         assert_eq!(
-            swap(
+            swap_handler(
                 mock_dependencies().as_mut(),
                 mock_env(),
                 mock_info(ADMIN, &[Coin::new(0, DENOM_UKUJI)]),
@@ -170,7 +170,7 @@ mod swap_tests {
     #[test]
     fn with_no_pair_fails() {
         assert_eq!(
-            swap(
+            swap_handler(
                 mock_dependencies().as_mut(),
                 mock_env(),
                 mock_info(ADMIN, &[Coin::new(12312, DENOM_UKUJI)]),
@@ -194,7 +194,7 @@ mod swap_tests {
         let info = mock_info(ADMIN, &[Coin::new(2347631, pair.quote_denom.clone())]);
         let minimum_receive_amount = Coin::new(3873213, pair.base_denom.clone());
 
-        swap(
+        swap_handler(
             deps.as_mut(),
             mock_env(),
             info.clone(),
@@ -228,7 +228,7 @@ mod swap_tests {
 
         let info = mock_info(ADMIN, &[Coin::new(2347631, pair.quote_denom.clone())]);
 
-        let response = swap(
+        let response = swap_handler(
             deps.as_mut(),
             mock_env(),
             info.clone(),

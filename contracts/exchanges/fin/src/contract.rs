@@ -8,8 +8,10 @@ use exchange::msg::{ExecuteMsg, QueryMsg};
 
 use crate::error::ContractError;
 use crate::handlers::create_pairs::create_pairs_handler;
+use crate::handlers::retract_order::{retract_order_handler, return_retracted_funds};
 use crate::handlers::submit_order::{return_order_idx, submit_order_handler};
-use crate::handlers::swap::return_funds;
+use crate::handlers::swap::{return_funds, swap_handler};
+use crate::handlers::withdraw_order::{return_withdrawn_funds, withdraw_order_handler};
 use crate::msg::{InstantiateMsg, InternalMsg};
 use crate::state::config::update_config;
 use crate::types::config::Config;
@@ -43,19 +45,27 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
+        ExecuteMsg::Swap {
+            minimum_receive_amount,
+        } => swap_handler(deps, env, info, minimum_receive_amount),
         ExecuteMsg::SubmitOrder {
             target_price,
             target_denom,
         } => submit_order_handler(deps.as_ref(), info, target_price, target_denom),
+        ExecuteMsg::RetractOrder { order_idx, denoms } => {
+            retract_order_handler(deps, env, info, order_idx, denoms)
+        }
+        ExecuteMsg::WithdrawOrder { order_idx, denoms } => {
+            withdraw_order_handler(deps, env, info, order_idx, denoms)
+        }
         ExecuteMsg::InternalMsg { msg } => match from_binary(&msg).unwrap() {
             InternalMsg::CreatePairs { pairs } => create_pairs_handler(deps, info, pairs),
         },
-        _ => unimplemented!(),
     }
 }
 
@@ -64,14 +74,18 @@ pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
     unimplemented!()
 }
 
-pub const AFTER_SUBMIT_ORDER: u64 = 1;
-pub const AFTER_SWAP: u64 = 2;
+pub const AFTER_SWAP: u64 = 1;
+pub const AFTER_SUBMIT_ORDER: u64 = 2;
+pub const AFTER_RETRACT_ORDER: u64 = 3;
+pub const AFTER_WITHDRAW_ORDER: u64 = 4;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, ContractError> {
     match reply.id {
-        AFTER_SUBMIT_ORDER => return_order_idx(reply),
         AFTER_SWAP => return_funds(deps.as_ref(), env),
+        AFTER_SUBMIT_ORDER => return_order_idx(reply),
+        AFTER_RETRACT_ORDER => return_retracted_funds(deps.as_ref(), env),
+        AFTER_WITHDRAW_ORDER => return_withdrawn_funds(deps.as_ref(), env),
         _ => Err(ContractError::MissingReplyId {}),
     }
 }

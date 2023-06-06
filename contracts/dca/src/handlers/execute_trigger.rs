@@ -80,7 +80,11 @@ pub fn execute_trigger_handler(
 
                 response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
                     contract_addr: config.exchange_contract_address.to_string(),
-                    msg: to_binary(&LimitOrderExecuteMsg::WithdrawOrder { order_idx }).unwrap(),
+                    msg: to_binary(&LimitOrderExecuteMsg::WithdrawOrder {
+                        order_idx,
+                        denoms: vault.denoms(),
+                    })
+                    .unwrap(),
                     funds: vec![],
                 }));
             } else {
@@ -519,7 +523,8 @@ mod execute_trigger_tests {
             &SubMsg::new(WasmMsg::Execute {
                 contract_addr: config.exchange_contract_address.to_string(),
                 msg: to_binary(&LimitOrderExecuteMsg::WithdrawOrder {
-                    order_idx: order_idx,
+                    order_idx,
+                    denoms: vault.denoms()
                 })
                 .unwrap(),
                 funds: vec![]
