@@ -39,7 +39,7 @@ mod create_pairs_tests {
         handlers::create_pairs::create_pairs_handler,
         msg::InstantiateMsg,
         state::pairs::{find_pair, save_pair},
-        tests::helpers::ADMIN,
+        tests::constants::ADMIN,
         types::pair::Pair,
         ContractError,
     };

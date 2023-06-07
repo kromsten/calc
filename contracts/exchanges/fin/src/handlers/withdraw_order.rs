@@ -10,7 +10,7 @@ use crate::{
         cache::{LimitOrderCache, LIMIT_ORDER_CACHE},
         pairs::find_pair,
     },
-    types::contract::PairContract,
+    types::pair_contract::PairContract,
     ContractError,
 };
 
@@ -107,8 +107,8 @@ mod withdraw_order_handler_tests {
         contract::AFTER_WITHDRAW_ORDER,
         handlers::withdraw_order::withdraw_order_handler,
         state::{cache::LIMIT_ORDER_CACHE, pairs::save_pair},
-        tests::helpers::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
-        types::{contract::PairContract, pair::Pair},
+        tests::constants::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
+        types::{pair::Pair, pair_contract::PairContract},
         ContractError,
     };
 
@@ -220,7 +220,7 @@ mod return_withdrawn_funds_tests {
     use crate::{
         handlers::withdraw_order::return_withdrawn_funds,
         state::cache::{LimitOrderCache, LIMIT_ORDER_CACHE},
-        tests::helpers::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
+        tests::constants::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
     };
 
     #[test]

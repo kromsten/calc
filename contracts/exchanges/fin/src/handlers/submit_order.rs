@@ -5,7 +5,7 @@ use crate::{
     contract::AFTER_SUBMIT_ORDER,
     helpers::{message::get_attribute_in_event, price::get_fin_price},
     state::pairs::find_pair,
-    types::contract::PairContract,
+    types::pair_contract::PairContract,
     ContractError,
 };
 
@@ -70,7 +70,7 @@ mod submit_order_tests {
     use crate::{
         contract::AFTER_SUBMIT_ORDER,
         state::pairs::save_pair,
-        tests::helpers::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
+        tests::constants::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
         types::pair::Pair,
         ContractError,
     };

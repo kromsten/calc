@@ -10,7 +10,7 @@ use crate::{
         cache::{LimitOrderCache, LIMIT_ORDER_CACHE},
         pairs::find_pair,
     },
-    types::contract::PairContract,
+    types::pair_contract::PairContract,
     ContractError,
 };
 
@@ -107,8 +107,8 @@ mod retract_order_handler_tests {
     use crate::{
         contract::AFTER_RETRACT_ORDER,
         state::{cache::LIMIT_ORDER_CACHE, pairs::save_pair},
-        tests::helpers::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
-        types::{contract::PairContract, pair::Pair},
+        tests::constants::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
+        types::{pair::Pair, pair_contract::PairContract},
         ContractError,
     };
 
@@ -222,7 +222,7 @@ mod return_retracted_funds_tests {
 
     use crate::{
         state::cache::{LimitOrderCache, LIMIT_ORDER_CACHE},
-        tests::helpers::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
+        tests::constants::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
     };
 
     use super::return_retracted_funds;

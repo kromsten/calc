@@ -2,10 +2,7 @@ use cosmwasm_std::Addr;
 
 use crate::types::pair::Pair;
 
-pub const ADMIN: &str = "admin";
-
-pub const DENOM_UKUJI: &str = "ukuji";
-pub const DENOM_UUSK: &str = "uusk";
+use super::constants::{DENOM_UKUJI, DENOM_UUSK};
 
 impl Default for Pair {
     fn default() -> Self {

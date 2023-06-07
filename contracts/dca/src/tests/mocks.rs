@@ -4,10 +4,11 @@ use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{
     from_binary, from_slice, to_binary, Addr, Binary, ContractResult, CustomQuery, Decimal,
     Decimal256, Empty, OwnedDeps, Querier, QuerierResult, QueryRequest, StdError, StdResult,
-    SystemError, SystemResult, Timestamp, Uint256, WasmQuery,
+    SystemError, SystemResult, Timestamp, Uint128, Uint256, WasmQuery,
 };
 use cw20::Denom;
-use exchange::msg::{OrderStatus, QueryMsg as ExchangeQueryMsg};
+use exchange::msg::QueryMsg as ExchangeQueryMsg;
+use exchange::order::Order;
 use kujira::fin::{
     BookResponse, ConfigResponse, OrderResponse, PoolResponse, QueryMsg as FinQueryMsg,
     SimulationResponse,
@@ -93,9 +94,13 @@ impl<C: DeserializeOwned> CalcMockQuerier<C> {
                     },
                     EXCHANGE_CONTRACT_ADDRESS => {
                         match from_binary::<ExchangeQueryMsg>(msg).unwrap() {
-                            ExchangeQueryMsg::GetOrderStatus { .. } => {
-                                to_binary(&OrderStatus::Filled).unwrap()
-                            }
+                            ExchangeQueryMsg::GetOrder { .. } => to_binary(&Order {
+                                order_idx: Uint128::new(328472),
+                                original_offer_amount: Uint256::from_u128(124412u128).into(),
+                                remaining_offer_amount: Uint256::zero(),
+                                filled_amount: Uint256::from_u128(428734u128),
+                            })
+                            .unwrap(),
                             _ => panic!("Unsupported exchange wrapper query"),
                         }
                     }

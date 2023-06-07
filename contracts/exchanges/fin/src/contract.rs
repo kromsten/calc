@@ -8,7 +8,9 @@ use exchange::msg::{ExecuteMsg, QueryMsg};
 
 use crate::error::ContractError;
 use crate::handlers::create_pairs::create_pairs_handler;
+use crate::handlers::get_order::get_order_handler;
 use crate::handlers::get_pairs::get_pairs_handler;
+use crate::handlers::get_twap_to_now::get_twap_to_now_handler;
 use crate::handlers::retract_order::{retract_order_handler, return_retracted_funds};
 use crate::handlers::submit_order::{return_order_idx, submit_order_handler};
 use crate::handlers::swap::{return_swapped_funds, swap_handler};
@@ -74,9 +76,21 @@ pub fn execute(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetPairs { start_after, limit } => {
-            Ok(to_binary(&get_pairs_handler(deps, start_after, limit)?).unwrap())
+            to_binary(&get_pairs_handler(deps, start_after, limit)?)
         }
-        _ => unimplemented!(),
+        QueryMsg::GetOrder { order_idx, denoms } => {
+            to_binary(&get_order_handler(deps, order_idx, denoms)?)
+        }
+        QueryMsg::GetTwapToNow {
+            swap_denom,
+            target_denom,
+            period,
+        } => to_binary(&get_twap_to_now_handler(
+            deps,
+            swap_denom,
+            target_denom,
+            period,
+        )?),
     }
 }
 

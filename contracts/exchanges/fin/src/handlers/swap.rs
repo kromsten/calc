@@ -8,7 +8,7 @@ use crate::{
         cache::{SwapCache, SWAP_CACHE},
         pairs::find_pair,
     },
-    types::contract::PairContract,
+    types::pair_contract::PairContract,
     ContractError,
 };
 
@@ -111,8 +111,8 @@ mod swap_tests {
         contract::AFTER_SWAP,
         handlers::swap::swap_handler,
         state::{cache::SWAP_CACHE, pairs::save_pair},
-        tests::helpers::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
-        types::{contract::PairContract, pair::Pair},
+        tests::constants::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
+        types::{pair::Pair, pair_contract::PairContract},
         ContractError,
     };
 
@@ -258,7 +258,7 @@ mod swap_tests {
 }
 
 #[cfg(test)]
-mod return_funds_tests {
+mod return_swapped_funds_tests {
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env},
         Addr, BankMsg, Coin,
@@ -268,7 +268,7 @@ mod return_funds_tests {
     use crate::{
         handlers::swap::return_swapped_funds,
         state::cache::{SwapCache, SWAP_CACHE},
-        tests::helpers::DENOM_UKUJI,
+        tests::constants::DENOM_UKUJI,
         ContractError,
     };
 

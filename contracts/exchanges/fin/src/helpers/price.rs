@@ -54,7 +54,7 @@ mod calculate_target_price_tests {
     use cw20::Denom;
     use kujira_std::Precision;
 
-    use crate::tests::helpers::{DENOM_UKUJI, DENOM_UUSK};
+    use crate::tests::constants::{DENOM_UKUJI, DENOM_UUSK};
 
     use super::*;
 

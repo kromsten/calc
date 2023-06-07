@@ -18,9 +18,8 @@ use crate::types::vault::{Vault, VaultStatus};
 use cosmwasm_std::{to_binary, SubMsg, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{DepsMut, Env, Response, Uint128};
-use exchange::msg::{
-    ExecuteMsg as LimitOrderExecuteMsg, OrderStatus, QueryMsg as LimitOrderQueryMsg,
-};
+use exchange::msg::{ExecuteMsg as LimitOrderExecuteMsg, QueryMsg as LimitOrderQueryMsg};
+use exchange::order::Order;
 use kujira::fin::ExecuteMsg as FinExecuteMsg;
 
 pub fn execute_trigger_handler(
@@ -67,12 +66,15 @@ pub fn execute_trigger_handler(
             if let Some(order_idx) = order_idx {
                 let config = get_config(deps.storage)?;
 
-                let order_status = deps.querier.query_wasm_smart::<OrderStatus>(
+                let order = deps.querier.query_wasm_smart::<Order>(
                     config.exchange_contract_address.clone(),
-                    &LimitOrderQueryMsg::GetOrderStatus { order_idx },
+                    &LimitOrderQueryMsg::GetOrder {
+                        order_idx,
+                        denoms: vault.denoms(),
+                    },
                 )?;
 
-                if order_status == OrderStatus::Unfilled {
+                if !order.remaining_offer_amount.is_zero() {
                     return Err(ContractError::CustomError {
                         val: String::from("target price has not been met"),
                     });
