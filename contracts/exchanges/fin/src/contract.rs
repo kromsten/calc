@@ -8,6 +8,7 @@ use exchange::msg::{ExecuteMsg, QueryMsg};
 
 use crate::error::ContractError;
 use crate::handlers::create_pairs::create_pairs_handler;
+use crate::handlers::get_expected_receive_amount::get_expected_receive_amount_handler;
 use crate::handlers::get_order::get_order_handler;
 use crate::handlers::get_pairs::get_pairs_handler;
 use crate::handlers::get_twap_to_now::get_twap_to_now_handler;
@@ -28,8 +29,8 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    _env: Env,
-    _info: MessageInfo,
+    _: Env,
+    _: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     deps.api.addr_validate(&msg.admin.to_string())?;
@@ -73,7 +74,7 @@ pub fn execute(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetPairs { start_after, limit } => {
             to_binary(&get_pairs_handler(deps, start_after, limit)?)
@@ -90,6 +91,14 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             swap_denom,
             target_denom,
             period,
+        )?),
+        QueryMsg::GetExpectedReceiveAmount {
+            swap_amount,
+            target_denom,
+        } => to_binary(&get_expected_receive_amount_handler(
+            deps,
+            swap_amount,
+            target_denom,
         )?),
     }
 }

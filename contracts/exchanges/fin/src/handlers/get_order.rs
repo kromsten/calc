@@ -1,28 +1,35 @@
-use cosmwasm_std::{Deps, StdResult, Uint128};
+use cosmwasm_std::{Coin, Deps, StdResult, Uint128};
+use cw20::Denom;
 use exchange::order::Order;
 use kujira_fin::{OrderResponse, QueryMsg};
 
 use crate::state::pairs::find_pair;
 
 pub fn get_order_handler(deps: Deps, order_idx: Uint128, denoms: [String; 2]) -> StdResult<Order> {
-    let pair = find_pair(deps.storage, denoms)?;
+    let pair = find_pair(deps.storage, denoms.clone())?;
 
     let order = deps
         .querier
         .query_wasm_smart::<OrderResponse>(pair.address, &QueryMsg::Order { order_idx })?;
 
+    let offer_denom = match order.offer_denom {
+        Denom::Native(denom) => denom,
+        Denom::Cw20(denom) => denom.to_string(),
+    };
+
     Ok(Order {
         order_idx,
-        original_offer_amount: order.original_offer_amount,
-        remaining_offer_amount: order.offer_amount,
-        filled_amount: order.filled_amount,
+        remaining_offer_amount: Coin {
+            amount: order.offer_amount.try_into()?,
+            denom: offer_denom,
+        },
     })
 }
 
 #[cfg(test)]
 mod get_order_handler_tests {
     use cosmwasm_std::{
-        testing::mock_dependencies, to_binary, Addr, ContractResult, Decimal256, StdError,
+        testing::mock_dependencies, to_binary, Addr, Coin, ContractResult, Decimal256, StdError,
         SystemResult, Timestamp, Uint128, Uint256,
     };
     use cw20::Denom;
@@ -104,9 +111,10 @@ mod get_order_handler_tests {
             order,
             Order {
                 order_idx: ONE,
-                original_offer_amount: Uint256::from_u128(13123213u128),
-                remaining_offer_amount: Uint256::from_u128(2u128),
-                filled_amount: Uint256::from_u128(3223423u128),
+                remaining_offer_amount: Coin {
+                    amount: Uint256::from_u128(2u128).try_into().unwrap(),
+                    denom: DENOM_UKUJI.to_string(),
+                },
             }
         );
     }

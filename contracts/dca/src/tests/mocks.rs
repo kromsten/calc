@@ -2,7 +2,7 @@ use crate::constants::{EXCHANGE_CONTRACT_ADDRESS, ONE, PAIR_CONTRACT_ADDRESS, SW
 use crate::helpers::price::{FinBookResponse, FinPoolResponse, FinSimulationResponse};
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{
-    from_binary, from_slice, to_binary, Addr, Binary, ContractResult, CustomQuery, Decimal,
+    from_binary, from_slice, to_binary, Addr, Binary, Coin, ContractResult, CustomQuery, Decimal,
     Decimal256, Empty, OwnedDeps, Querier, QuerierResult, QueryRequest, StdError, StdResult,
     SystemError, SystemResult, Timestamp, Uint128, Uint256, WasmQuery,
 };
@@ -96,9 +96,10 @@ impl<C: DeserializeOwned> CalcMockQuerier<C> {
                         match from_binary::<ExchangeQueryMsg>(msg).unwrap() {
                             ExchangeQueryMsg::GetOrder { .. } => to_binary(&Order {
                                 order_idx: Uint128::new(328472),
-                                original_offer_amount: Uint256::from_u128(124412u128).into(),
-                                remaining_offer_amount: Uint256::zero(),
-                                filled_amount: Uint256::from_u128(428734u128),
+                                remaining_offer_amount: Coin {
+                                    amount: Uint256::zero().try_into().unwrap(),
+                                    denom: DENOM_UUSK.to_string(),
+                                },
                             })
                             .unwrap(),
                             _ => panic!("Unsupported exchange wrapper query"),

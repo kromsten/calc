@@ -74,7 +74,7 @@ pub fn execute_trigger_handler(
                     },
                 )?;
 
-                if !order.remaining_offer_amount.is_zero() {
+                if !order.remaining_offer_amount.amount.is_zero() {
                     return Err(ContractError::CustomError {
                         val: String::from("target price has not been met"),
                     });

@@ -47,4 +47,9 @@ pub enum QueryMsg {
         target_denom: String,
         period: u64,
     },
+    #[returns(Coin)]
+    GetExpectedReceiveAmount {
+        swap_amount: Coin,
+        target_denom: String,
+    },
 }
