@@ -1,11 +1,10 @@
 use super::mocks::{ADMIN, DENOM_UKUJI, DENOM_UUSK, USER, VALIDATOR};
 use crate::{
-    constants::{EXCHANGE_CONTRACT_ADDRESS, ONE, PAIR_CONTRACT_ADDRESS, TEN},
+    constants::{EXCHANGE_CONTRACT_ADDRESS, ONE, TEN},
     contract::instantiate,
     msg::{ExecuteMsg, InstantiateMsg},
     state::{
         cache::VAULT_ID_CACHE,
-        pairs::save_pair,
         triggers::save_trigger,
         vaults::{get_vault, update_vault},
     },
@@ -14,7 +13,6 @@ use crate::{
         destination::Destination,
         event::{EventBuilder, EventData},
         fee_collector::FeeCollector,
-        pair::Pair,
         performance_assessment_strategy::PerformanceAssessmentStrategy,
         position_type::PositionType,
         swap_adjustment_strategy::{
@@ -111,15 +109,15 @@ impl Default for Destination {
     }
 }
 
-impl Default for Pair {
-    fn default() -> Self {
-        Self {
-            base_denom: DENOM_UKUJI.to_string(),
-            quote_denom: DENOM_UUSK.to_string(),
-            address: Addr::unchecked(PAIR_CONTRACT_ADDRESS),
-        }
-    }
-}
+// impl Default for Pair {
+//     fn default() -> Self {
+//         Self {
+//             base_denom: DENOM_UKUJI.to_string(),
+//             quote_denom: DENOM_UUSK.to_string(),
+//             address: Addr::unchecked(PAIR_CONTRACT_ADDRESS),
+//         }
+//     }
+// }
 
 impl Default for Vault {
     fn default() -> Self {
@@ -175,6 +173,7 @@ impl Default for SwapAdjustmentStrategyParams {
     fn default() -> Self {
         Self::RiskWeightedAverage {
             base_denom: BaseDenom::Bitcoin,
+            position_type: PositionType::Enter,
         }
     }
 }
@@ -213,15 +212,15 @@ impl Default for EventData {
 }
 
 pub fn setup_vault(deps: DepsMut, env: Env, mut vault: Vault) -> Vault {
-    save_pair(
-        deps.storage,
-        &Pair {
-            quote_denom: vault.balance.denom.clone(),
-            base_denom: vault.target_denom.clone(),
-            ..Pair::default()
-        },
-    )
-    .unwrap();
+    // save_pair(
+    //     deps.as_mut().storage,
+    //     &Pair {
+    //         quote_denom: vault.balance.denom.clone(),
+    //         base_denom: vault.target_denom.clone(),
+    //         ..Pair::default()
+    //     },
+    // )
+    // .unwrap();
 
     let mut existing_vault = get_vault(deps.storage, vault.id);
 

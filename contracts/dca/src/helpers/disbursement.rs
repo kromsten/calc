@@ -95,7 +95,7 @@ mod get_disbursement_messages_tests {
         assert!(messages.contains(&SubMsg::reply_always(
             BankMsg::Send {
                 to_address: destination.address.to_string(),
-                amount: vec![Coin::new(ONE.into(), vault.target_denom)],
+                amount: vec![Coin::new(ONE.into(), vault.target_denom.clone())],
             },
             AFTER_FAILED_AUTOMATION_REPLY_ID
         )))

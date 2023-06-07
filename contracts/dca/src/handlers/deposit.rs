@@ -386,7 +386,7 @@ mod dposit_tests {
             err.to_string(),
             format!(
                 "Error: received asset with denom {}, but needed {}",
-                vault.target_denom,
+                vault.target_denom.clone(),
                 vault.get_swap_denom()
             )
         );

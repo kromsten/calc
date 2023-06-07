@@ -21,6 +21,7 @@ pub enum SwapAdjustmentStrategy {
 pub enum SwapAdjustmentStrategyParams {
     RiskWeightedAverage {
         base_denom: BaseDenom,
+        position_type: PositionType,
     },
     WeightedScale {
         base_receive_amount: Uint128,

@@ -2,9 +2,9 @@ use crate::error::ContractError;
 use crate::helpers::validation::{
     assert_sender_is_admin_or_vault_owner, assert_vault_is_not_cancelled,
 };
+use crate::state::config::get_config;
 use crate::state::disburse_escrow_tasks::save_disburse_escrow_task;
 use crate::state::events::create_event;
-use crate::state::pairs::find_pair;
 use crate::state::triggers::delete_trigger;
 use crate::state::vaults::{get_vault, update_vault};
 use crate::types::event::{EventBuilder, EventData};
@@ -48,7 +48,7 @@ pub fn cancel_vault_handler(
         }));
     }
 
-    let updated_vault = update_vault(
+    update_vault(
         deps.storage,
         Vault {
             status: VaultStatus::Cancelled,
@@ -59,10 +59,10 @@ pub fn cancel_vault_handler(
 
     if let Some(TriggerConfiguration::Price { order_idx, .. }) = vault.trigger {
         if let Some(order_idx) = order_idx {
-            let pair = find_pair(deps.storage, updated_vault.denoms()).unwrap();
+            let config = get_config(deps.storage)?;
 
             submessages.push(SubMsg::new(WasmMsg::Execute {
-                contract_addr: pair.address.to_string(),
+                contract_addr: config.exchange_contract_address.to_string(),
                 msg: to_binary(&ExecuteMsg::WithdrawOrder {
                     order_idx,
                     denoms: vault.denoms(),
@@ -72,7 +72,7 @@ pub fn cancel_vault_handler(
             }));
 
             submessages.push(SubMsg::new(WasmMsg::Execute {
-                contract_addr: pair.address.to_string(),
+                contract_addr: config.exchange_contract_address.to_string(),
                 msg: to_binary(&ExecuteMsg::RetractOrder {
                     order_idx,
                     denoms: vault.denoms(),
@@ -337,12 +337,12 @@ mod cancel_vault_tests {
 
         let response = cancel_vault_handler(deps.as_mut(), env, info, vault.id).unwrap();
 
-        let pair = find_pair(deps.as_ref().storage, vault.denoms()).unwrap();
+        let config = get_config(deps.as_ref().storage).unwrap();
 
         assert_eq!(
             response.messages.get(2).unwrap(),
             &SubMsg::new(WasmMsg::Execute {
-                contract_addr: pair.address.to_string(),
+                contract_addr: config.exchange_contract_address.to_string(),
                 msg: to_binary(&ExecuteMsg::RetractOrder {
                     order_idx,
                     denoms: vault.denoms()
@@ -377,12 +377,12 @@ mod cancel_vault_tests {
 
         let response = cancel_vault_handler(deps.as_mut(), env, info, vault.id).unwrap();
 
-        let pair = find_pair(deps.as_ref().storage, vault.denoms()).unwrap();
+        let config = get_config(deps.as_ref().storage).unwrap();
 
         assert_eq!(
             response.messages.get(1).unwrap(),
             &SubMsg::new(WasmMsg::Execute {
-                contract_addr: pair.address.to_string(),
+                contract_addr: config.exchange_contract_address.to_string(),
                 msg: to_binary(&ExecuteMsg::WithdrawOrder {
                     order_idx,
                     denoms: vault.denoms()

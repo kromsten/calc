@@ -3,14 +3,14 @@ use crate::{
     helpers::{
         disbursement::get_disbursement_messages,
         fees::{get_fee_messages, get_performance_fee},
-        price::get_belief_price,
+        price::get_twap_to_now,
         validation::assert_sender_is_executor,
     },
     state::{
         cache::VAULT_ID_CACHE,
+        config::get_config,
         disburse_escrow_tasks::{delete_disburse_escrow_task, get_disburse_escrow_task_due_date},
         events::create_event,
-        pairs::find_pair,
         vaults::{get_vault, update_vault},
     },
     types::{
@@ -44,7 +44,7 @@ pub fn disburse_escrow_handler(
             )
             .add_attribute(
                 "escrow_disbursed",
-                format!("{:?}", Coin::new(0, vault.target_denom)),
+                format!("{:?}", Coin::new(0, vault.target_denom.clone())),
             ));
     }
 
@@ -58,8 +58,16 @@ pub fn disburse_escrow_handler(
         }
     }
 
-    let pair = find_pair(deps.storage, vault.denoms())?;
-    let current_price = get_belief_price(&deps.querier, &pair, vault.get_swap_denom())?;
+    let config = get_config(deps.storage)?;
+
+    let current_price = get_twap_to_now(
+        &deps.querier,
+        config.exchange_contract_address.clone(),
+        vault.get_swap_denom(),
+        vault.target_denom.clone(),
+        config.twap_period,
+    )?;
+
     let performance_fee = get_performance_fee(&vault, current_price)?;
     let amount_to_disburse = subtract(&vault.escrowed_amount, &performance_fee)?;
 
@@ -97,7 +105,7 @@ pub fn disburse_escrow_handler(
             deps.as_ref(),
             env,
             vec![performance_fee.amount],
-            vault.target_denom,
+            vault.target_denom.clone(),
             true,
         )?)
         .add_attribute("performance_fee", format!("{:?}", performance_fee))
@@ -362,7 +370,7 @@ mod disburse_escrow_tests {
 
         let performance_fee = Coin::new(
             (ONE * Decimal::percent(20) - Uint128::one()).into(),
-            vault.target_denom,
+            vault.target_denom.clone(),
         );
 
         assert_eq!(
@@ -417,7 +425,10 @@ mod disburse_escrow_tests {
 
         let vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
 
-        assert_eq!(vault.escrowed_amount, Coin::new(0, vault.target_denom));
+        assert_eq!(
+            vault.escrowed_amount,
+            Coin::new(0, vault.target_denom.clone())
+        );
     }
 
     #[test]

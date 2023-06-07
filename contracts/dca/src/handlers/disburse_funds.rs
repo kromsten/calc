@@ -243,7 +243,10 @@ mod disburse_funds_tests {
         assert!(response.messages.contains(&SubMsg::reply_always(
             BankMsg::Send {
                 to_address: vault.destinations.first().unwrap().address.to_string(),
-                amount: vec![Coin::new(disbursal_amount.into(), vault.target_denom,)],
+                amount: vec![Coin::new(
+                    disbursal_amount.into(),
+                    vault.target_denom.clone(),
+                )],
             },
             AFTER_FAILED_AUTOMATION_REPLY_ID
         )));
@@ -291,7 +294,7 @@ mod disburse_funds_tests {
 
         assert!(response.messages.contains(&SubMsg::new(BankMsg::Send {
             to_address: config.fee_collectors[0].address.to_string(),
-            amount: vec![Coin::new(swap_fee.into(), vault.target_denom)]
+            amount: vec![Coin::new(swap_fee.into(), vault.target_denom.clone())]
         })));
     }
 
@@ -648,7 +651,7 @@ mod disburse_funds_tests {
                     .to_string(),
                 amount: vec![Coin::new(
                     (receive_amount_after_fee - escrow_amount).into(),
-                    updated_vault.target_denom,
+                    updated_vault.target_denom.clone(),
                 )],
             },
             AFTER_FAILED_AUTOMATION_REPLY_ID
@@ -748,7 +751,7 @@ mod disburse_funds_tests {
             data: EventData::DcaVaultExecutionCompleted {
                 sent: updated_vault.swapped_amount,
                 received: add_to(&updated_vault.received_amount, fee),
-                fee: Coin::new(fee.into(), vault.target_denom)
+                fee: Coin::new(fee.into(), vault.target_denom.clone())
             }
         }))
     }
@@ -844,7 +847,7 @@ mod disburse_funds_tests {
             data: EventData::DcaVaultExecutionCompleted {
                 sent: updated_vault.swapped_amount,
                 received: updated_vault.received_amount,
-                fee: Coin::new(0, vault.target_denom)
+                fee: Coin::new(0, vault.target_denom.clone())
             }
         }))
     }
@@ -999,7 +1002,7 @@ mod disburse_funds_tests {
 
         assert!(response.messages.contains(&SubMsg::new(BankMsg::Send {
             to_address: config.fee_collectors[0].address.to_string(),
-            amount: vec![Coin::new(swap_fee.into(), vault.target_denom)]
+            amount: vec![Coin::new(swap_fee.into(), vault.target_denom.clone())]
         })));
     }
 
@@ -1055,7 +1058,7 @@ mod disburse_funds_tests {
 
         assert!(response.messages.contains(&SubMsg::new(BankMsg::Send {
             to_address: config.fee_collectors[0].address.to_string(),
-            amount: vec![Coin::new(swap_fee.into(), vault.target_denom)]
+            amount: vec![Coin::new(swap_fee.into(), vault.target_denom.clone())]
         })));
     }
 
@@ -1119,7 +1122,7 @@ mod disburse_funds_tests {
 
         assert!(response.messages.contains(&SubMsg::new(BankMsg::Send {
             to_address: config.fee_collectors[0].address.to_string(),
-            amount: vec![Coin::new(swap_fee.into(), vault.target_denom)]
+            amount: vec![Coin::new(swap_fee.into(), vault.target_denom.clone())]
         })));
     }
 

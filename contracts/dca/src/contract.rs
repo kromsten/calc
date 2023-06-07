@@ -4,10 +4,7 @@ use crate::constants::{
 };
 use crate::error::ContractError;
 use crate::handlers::cancel_vault::cancel_vault_handler;
-use crate::handlers::create_custom_swap_fee::create_custom_swap_fee_handler;
-use crate::handlers::create_pair::create_pair_handler;
 use crate::handlers::create_vault::create_vault_handler;
-use crate::handlers::delete_pair::delete_pair_handler;
 use crate::handlers::deposit::deposit_handler;
 use crate::handlers::disburse_escrow::disburse_escrow_handler;
 use crate::handlers::disburse_funds::disburse_funds_handler;
@@ -28,8 +25,7 @@ use crate::handlers::handle_failed_automation::handle_failed_automation_handler;
 use crate::handlers::instantiate::instantiate_handler;
 use crate::handlers::migrate::migrate_handler;
 use crate::handlers::old_z_delegate_handler::old_z_delegate_handler;
-use crate::handlers::remove_custom_swap_fee::remove_custom_swap_fee_handler;
-use crate::handlers::save_limit_order_id::save_limit_order_id;
+use crate::handlers::save_limit_order_id::save_price_trigger;
 use crate::handlers::update_config::update_config_handler;
 use crate::handlers::update_swap_adjustment_handler::update_swap_adjustment_handler;
 use crate::handlers::update_vault::update_vault_handler;
@@ -66,12 +62,6 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::CreatePair {
-            base_denom,
-            quote_denom,
-            address,
-        } => create_pair_handler(deps, info, base_denom, quote_denom, address),
-        ExecuteMsg::DeletePair { denoms } => delete_pair_handler(deps, denoms),
         ExecuteMsg::CreateVault {
             owner,
             label,
@@ -153,13 +143,6 @@ pub fn execute(
             default_slippage_tolerance,
             exchange_contract_address,
         ),
-        ExecuteMsg::CreateCustomSwapFee {
-            denom,
-            swap_fee_percent,
-        } => create_custom_swap_fee_handler(deps, info, denom, swap_fee_percent),
-        ExecuteMsg::RemoveCustomSwapFee { denom } => {
-            remove_custom_swap_fee_handler(deps, info, denom)
-        }
         ExecuteMsg::UpdateSwapAdjustment { strategy, value } => {
             update_swap_adjustment_handler(deps, env, info, strategy, value)
         }
@@ -187,7 +170,7 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, ContractError> {
     match reply.id {
-        AFTER_LIMIT_ORDER_PLACED_REPLY_ID => save_limit_order_id(deps, reply),
+        AFTER_LIMIT_ORDER_PLACED_REPLY_ID => save_price_trigger(deps, reply),
         AFTER_SWAP_REPLY_ID => disburse_funds_handler(deps, &env, reply),
         AFTER_FAILED_AUTOMATION_REPLY_ID => handle_failed_automation_handler(deps, env, reply),
         AFTER_DELEGATION_REPLY_ID => log_delegation_result(reply),
@@ -200,7 +183,9 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, Contract
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetPairs {} => to_binary(&get_pairs_handler(deps)?),
+        QueryMsg::GetPairs { limit, start_after } => {
+            to_binary(&get_pairs_handler(deps, limit, start_after)?)
+        }
         QueryMsg::GetTimeTriggerIds { limit } => {
             to_binary(&get_time_trigger_ids_handler(deps, env, limit)?)
         }

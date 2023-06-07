@@ -985,7 +985,7 @@ describe('when executing a vault', () => {
       balancesAfterExecution = await getBalances(
         this.cosmWasmClient,
         [this.userWalletAddress],
-        [vault.target_denom, vault.balance.denom],
+        [vault.target_denom.clone(), vault.balance.denom],
       );
     });
 
@@ -1223,7 +1223,7 @@ describe('when executing a vault', () => {
         balancesAfterExecution = await getBalances(
           this.cosmWasmClient,
           [this.userWalletAddress, this.feeCollectorAddress],
-          [vault.target_denom, vault.balance.denom],
+          [vault.target_denom.clone(), vault.balance.denom],
         );
 
         performanceFee = Math.floor(

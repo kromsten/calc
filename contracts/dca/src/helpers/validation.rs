@@ -1,7 +1,6 @@
 use crate::error::ContractError;
 use crate::msg::ExecuteMsg;
 use crate::state::config::get_config;
-use crate::state::pairs::{find_pair, get_pairs};
 use crate::types::destination::Destination;
 use crate::types::fee_collector::FeeCollector;
 use crate::types::performance_assessment_strategy::PerformanceAssessmentStrategyParams;
@@ -11,6 +10,7 @@ use crate::types::swap_adjustment_strategy::{
 use crate::types::time_interval::TimeInterval;
 use crate::types::vault::{Vault, VaultStatus};
 use cosmwasm_std::{from_binary, Addr, Coin, Decimal, Deps, Env, Storage, Timestamp, Uint128};
+use exchange::msg::QueryMsg;
 
 pub fn assert_exactly_one_asset(funds: Vec<Coin>) -> Result<(), ContractError> {
     if funds.is_empty() || funds.len() > 1 {
@@ -302,16 +302,6 @@ pub fn assert_denom_is_bond_denom(denom: String) -> Result<(), ContractError> {
     Ok(())
 }
 
-pub fn assert_denom_exists(storage: &dyn Storage, denom: String) -> Result<(), ContractError> {
-    let pairs = get_pairs(storage);
-    if !pairs.iter().any(|p| p.denoms().contains(&denom)) {
-        return Err(ContractError::CustomError {
-            val: format!("{} is not supported", denom),
-        });
-    }
-    Ok(())
-}
-
 pub fn assert_contract_destination_callbacks_are_valid(
     destinations: &[Destination],
     contract_address: &Addr,
@@ -358,11 +348,21 @@ pub fn assert_pair_exists_for_denoms(
     swap_denom: String,
     target_denom: String,
 ) -> Result<(), ContractError> {
-    find_pair(deps.storage, [swap_denom.clone(), target_denom.clone()])
-        .map(|_| ())
-        .map_err(|_| ContractError::CustomError {
+    let config = get_config(deps.storage)?;
+    let twap_request = deps.querier.query_wasm_smart::<Decimal>(
+        config.exchange_contract_address.clone(),
+        &QueryMsg::GetTwapToNow {
+            swap_denom: swap_denom.clone(),
+            target_denom: target_denom.clone(),
+            period: config.twap_period,
+        },
+    );
+    if twap_request.is_err() {
+        return Err(ContractError::CustomError {
             val: format!("swapping {} to {} not supported", swap_denom, target_denom),
-        })
+        });
+    }
+    Ok(())
 }
 
 pub fn assert_swap_adjusment_and_performance_assessment_strategies_are_compatible(

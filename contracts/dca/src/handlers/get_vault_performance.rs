@@ -1,7 +1,7 @@
 use crate::{
-    helpers::{fees::get_performance_fee, price::get_belief_price, vault::get_performance_factor},
+    helpers::{fees::get_performance_fee, price::get_twap_to_now, vault::get_performance_factor},
     msg::VaultPerformanceResponse,
-    state::{pairs::find_pair, vaults::get_vault},
+    state::{config::get_config, vaults::get_vault},
 };
 use cosmwasm_std::{Deps, StdError, StdResult, Uint128};
 
@@ -11,9 +11,15 @@ pub fn get_vault_performance_handler(
 ) -> StdResult<VaultPerformanceResponse> {
     let vault = get_vault(deps.storage, vault_id)?;
 
-    let pair = find_pair(deps.storage, vault.denoms())?;
+    let config = get_config(deps.storage)?;
 
-    let current_price = get_belief_price(&deps.querier, &pair, vault.get_swap_denom())?;
+    let current_price = get_twap_to_now(
+        &deps.querier,
+        config.exchange_contract_address.clone(),
+        vault.get_swap_denom(),
+        vault.target_denom.clone(),
+        config.twap_period,
+    )?;
 
     vault.performance_assessment_strategy.clone().map_or(
         Err(StdError::GenericErr {

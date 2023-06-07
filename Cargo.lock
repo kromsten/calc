@@ -243,9 +243,9 @@ dependencies = [
 
 [[package]]
 name = "cw-multi-test"
-version = "0.16.4"
+version = "0.16.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a18afd2e201221c6d72a57f0886ef2a22151bbc9e6db7af276fde8a91081042"
+checksum = "127c7bb95853b8e828bdab97065c81cb5ddc20f7339180b61b2300565aaa99d1"
 dependencies = [
  "anyhow",
  "cosmwasm-std",
@@ -326,7 +326,6 @@ dependencies = [
  "cw2",
  "cw20",
  "exchange",
- "kujira",
  "prost 0.11.9",
  "rand",
  "schemars",
@@ -571,22 +570,6 @@ dependencies = [
  "ecdsa",
  "elliptic-curve",
  "sha2 0.10.6",
-]
-
-[[package]]
-name = "kujira"
-version = "0.7.25"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b69b49819362f0ab701d4c322e86a0b2735b6129ca857b3b982b2a6ec5431b22"
-dependencies = [
- "anyhow",
- "cosmwasm-std",
- "cw20",
- "hex",
- "schemars",
- "serde",
- "sha2 0.10.6",
- "thiserror",
 ]
 
 [[package]]

@@ -10,6 +10,8 @@ impl Default for Pair {
             base_denom: DENOM_UKUJI.to_string(),
             quote_denom: DENOM_UUSK.to_string(),
             address: Addr::unchecked("pair-address"),
+            decimal_delta: 0,
+            price_precision: 3,
         }
     }
 }

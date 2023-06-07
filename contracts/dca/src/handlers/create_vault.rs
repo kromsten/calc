@@ -1,6 +1,5 @@
 use crate::constants::{AFTER_LIMIT_ORDER_PLACED_REPLY_ID, TWO_MICRONS};
 use crate::error::ContractError;
-use crate::helpers::price::get_target_price;
 use crate::helpers::validation::{
     assert_address_is_valid, assert_contract_destination_callbacks_are_valid,
     assert_contract_is_not_paused, assert_destination_allocations_add_up_to_one,
@@ -18,7 +17,6 @@ use crate::msg::ExecuteMsg;
 use crate::state::cache::VAULT_ID_CACHE;
 use crate::state::config::get_config;
 use crate::state::events::create_event;
-use crate::state::pairs::find_pair;
 use crate::state::triggers::save_trigger;
 use crate::state::vaults::{save_vault, update_vault};
 use crate::types::destination::Destination;
@@ -105,22 +103,23 @@ pub fn create_vault_handler(
 
     let swap_denom = info.funds[0].denom.clone();
 
-    let pair = find_pair(deps.storage, [swap_denom.clone(), target_denom.clone()])?;
+    // let pair = find_pair(deps.storage, [swap_denom.clone(), target_denom.clone()])?;
 
     let swap_adjustment_strategy = if let Some(params) = swap_adjustment_strategy_params {
         Some(match params {
-            SwapAdjustmentStrategyParams::RiskWeightedAverage { base_denom } => {
-                SwapAdjustmentStrategy::RiskWeightedAverage {
-                    model_id: get_risk_weighted_average_model_id(
-                        &env.block.time,
-                        &info.funds[0],
-                        &swap_amount,
-                        &time_interval,
-                    ),
-                    base_denom,
-                    position_type: pair.position_type(swap_denom.clone()),
-                }
-            }
+            SwapAdjustmentStrategyParams::RiskWeightedAverage {
+                base_denom,
+                position_type,
+            } => SwapAdjustmentStrategy::RiskWeightedAverage {
+                model_id: get_risk_weighted_average_model_id(
+                    &env.block.time,
+                    &info.funds[0],
+                    &swap_amount,
+                    &time_interval,
+                ),
+                base_denom,
+                position_type,
+            },
             SwapAdjustmentStrategyParams::WeightedScale {
                 base_receive_amount,
                 multiplier,
@@ -235,20 +234,6 @@ pub fn create_vault_handler(
             Ok(response)
         }
         (None, Some(target_receive_amount)) => {
-            let target_price =
-                get_target_price(&deps.querier, &vault, &pair, target_receive_amount)?;
-
-            save_trigger(
-                deps.storage,
-                Trigger {
-                    vault_id: vault.id,
-                    configuration: TriggerConfiguration::Price {
-                        order_idx: None,
-                        target_price,
-                    },
-                },
-            )?;
-
             let vault = update_vault(
                 deps.storage,
                 Vault {
@@ -268,7 +253,8 @@ pub fn create_vault_handler(
                 WasmMsg::Execute {
                     contract_addr: config.exchange_contract_address.to_string(),
                     msg: to_binary(&ExchangeExecuteMsg::SubmitOrder {
-                        target_price: target_price.into(),
+                        target_price: Decimal::from_ratio(swap_amount, target_receive_amount)
+                            .into(),
                         target_denom: vault.target_denom.clone(),
                     })
                     .unwrap(),
@@ -289,7 +275,6 @@ pub fn create_vault_handler(
 mod create_vault_tests {
     use super::*;
     use crate::constants::{ONE, TEN};
-    use crate::handlers::create_pair::create_pair_handler;
     use crate::handlers::get_events_by_resource_id::get_events_by_resource_id_handler;
     use crate::handlers::get_vault::get_vault_handler;
     use crate::msg::ExecuteMsg;
@@ -301,15 +286,16 @@ mod create_vault_tests {
     use crate::types::config::Config;
     use crate::types::destination::Destination;
     use crate::types::event::{EventBuilder, EventData};
-    use crate::types::pair::Pair;
     use crate::types::swap_adjustment_strategy::SwapAdjustmentStrategy;
     use crate::types::time_interval::TimeInterval;
     use crate::types::trigger::TriggerConfiguration;
     use crate::types::vault::{Vault, VaultStatus};
     use cosmwasm_std::testing::{mock_env, mock_info};
     use cosmwasm_std::{
-        to_binary, Addr, Coin, Decimal, Decimal256, SubMsg, Timestamp, Uint128, WasmMsg,
+        to_binary, Addr, Coin, ContractResult, Decimal, Decimal256, SubMsg, SystemResult,
+        Timestamp, Uint128, WasmMsg,
     };
+    use exchange::pair::Pair;
 
     #[test]
     fn with_no_assets_fails() {
@@ -388,6 +374,10 @@ mod create_vault_tests {
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 
+        deps.querier.update_wasm(|_| {
+            SystemResult::Ok(ContractResult::Ok(to_binary::<Vec<Pair>>(&vec![]).unwrap()))
+        });
+
         let err = create_vault_handler(
             deps.as_mut(),
             env,
@@ -423,17 +413,6 @@ mod create_vault_tests {
         let admin_info = mock_info(ADMIN, &[]);
 
         instantiate_contract(deps.as_mut(), env.clone(), admin_info.clone());
-
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            admin_info,
-            pair.base_denom.clone(),
-            pair.quote_denom.clone(),
-            pair.address,
-        )
-        .unwrap();
 
         let user_info = mock_info(USER, &[Coin::new(10000, DENOM_UUSK)]);
 
@@ -473,17 +452,6 @@ mod create_vault_tests {
         let admin_info = mock_info(ADMIN, &[]);
 
         instantiate_contract(deps.as_mut(), env.clone(), admin_info.clone());
-
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            admin_info,
-            pair.base_denom.clone(),
-            pair.quote_denom.clone(),
-            pair.address,
-        )
-        .unwrap();
 
         let user_info = mock_info(USER, &[Coin::new(10000, DENOM_UUSK)]);
 
@@ -604,17 +572,6 @@ mod create_vault_tests {
 
         instantiate_contract(deps.as_mut(), env.clone(), admin_info.clone());
 
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            admin_info,
-            pair.base_denom.clone(),
-            pair.quote_denom.clone(),
-            pair.address,
-        )
-        .unwrap();
-
         let user_info = mock_info(USER, &[Coin::new(10000, DENOM_UUSK)]);
 
         let err = create_vault_handler(
@@ -695,17 +652,6 @@ mod create_vault_tests {
 
         instantiate_contract(deps.as_mut(), env.clone(), admin_info.clone());
 
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            admin_info,
-            pair.base_denom.clone(),
-            pair.quote_denom.clone(),
-            pair.address,
-        )
-        .unwrap();
-
         let user_info = mock_info(USER, &[Coin::new(10000, DENOM_UUSK)]);
 
         let err = create_vault_handler(
@@ -776,23 +722,14 @@ mod create_vault_tests {
 
         let pair = Pair::default();
 
-        create_pair_handler(
-            deps.as_mut(),
-            info.clone(),
-            pair.base_denom.clone(),
-            pair.quote_denom.clone(),
-            pair.address,
-        )
-        .unwrap();
-
         let err = create_vault_handler(
             deps.as_mut(),
             env.clone(),
-            &mock_info(ADMIN, &[Coin::new(1233123, pair.base_denom.clone())]),
+            &mock_info(ADMIN, &[Coin::new(1233123, pair.denoms[0].clone())]),
             info.sender,
             None,
             vec![],
-            pair.quote_denom,
+            pair.denoms[1].clone(),
             None,
             None,
             Uint128::new(100000),
@@ -817,17 +754,6 @@ mod create_vault_tests {
         let mut info = mock_info(ADMIN, &[]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
-
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            info.clone(),
-            pair.base_denom.clone(),
-            pair.quote_denom.clone(),
-            pair.address,
-        )
-        .unwrap();
 
         let swap_amount = Uint128::new(100000);
         info = mock_info(USER, &[Coin::new(100000, DENOM_UUSK)]);
@@ -865,17 +791,6 @@ mod create_vault_tests {
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            info.clone(),
-            pair.base_denom.clone(),
-            pair.quote_denom.clone(),
-            pair.address,
-        )
-        .unwrap();
-
         let swap_amount = Uint128::new(100000);
         info = mock_info(USER, &[Coin::new(100000, DENOM_UUSK)]);
 
@@ -911,17 +826,6 @@ mod create_vault_tests {
         let mut info = mock_info(ADMIN, &[]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
-
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            info.clone(),
-            pair.base_denom.clone(),
-            pair.quote_denom.clone(),
-            pair.address,
-        )
-        .unwrap();
 
         let swap_amount = Uint128::new(100000);
         info = mock_info(USER, &[Coin::new(100000, DENOM_UUSK)]);
@@ -963,17 +867,6 @@ mod create_vault_tests {
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            info.clone(),
-            pair.base_denom.clone(),
-            pair.quote_denom.clone(),
-            pair.address,
-        )
-        .unwrap();
-
         let swap_amount = Uint128::new(100000);
         info = mock_info(USER, &[Coin::new(100000, DENOM_UUSK)]);
 
@@ -1009,17 +902,6 @@ mod create_vault_tests {
         let mut info = mock_info(ADMIN, &[]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
-
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            info.clone(),
-            pair.base_denom.clone(),
-            pair.quote_denom.clone(),
-            pair.address,
-        )
-        .unwrap();
 
         let swap_amount = Uint128::new(100000);
         info = mock_info(USER, &[Coin::new(100000, DENOM_UUSK)]);
@@ -1080,23 +962,12 @@ mod create_vault_tests {
     }
 
     #[test]
-    fn should_create_vault_with_price_trigger() {
+    fn should_create_vault_with_pending_price_trigger() {
         let mut deps = calc_mock_dependencies();
         let env = mock_env();
         let mut info = mock_info(ADMIN, &[]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
-
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            info.clone(),
-            pair.base_denom.clone(),
-            pair.quote_denom.clone(),
-            pair.address,
-        )
-        .unwrap();
 
         let swap_amount = ONE;
         info = mock_info(USER, &[Coin::new(TEN.into(), DENOM_UUSK)]);
@@ -1155,10 +1026,7 @@ mod create_vault_tests {
                 escrowed_amount: Coin::new(0, DENOM_UKUJI.to_string()),
                 swap_adjustment_strategy: None,
                 performance_assessment_strategy: None,
-                trigger: Some(TriggerConfiguration::Price {
-                    target_price: Decimal::percent(200),
-                    order_idx: None
-                }),
+                trigger: None,
             }
         );
     }
@@ -1170,17 +1038,6 @@ mod create_vault_tests {
         let mut info = mock_info(ADMIN, &[]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
-
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            info.clone(),
-            pair.base_denom,
-            pair.quote_denom,
-            pair.address,
-        )
-        .unwrap();
 
         info = mock_info(USER, &[Coin::new(100000, DENOM_UUSK)]);
 
@@ -1228,17 +1085,6 @@ mod create_vault_tests {
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            info.clone(),
-            pair.base_denom,
-            pair.quote_denom,
-            pair.address,
-        )
-        .unwrap();
-
         let owner = Addr::unchecked(USER);
         info = mock_info(ADMIN, &[Coin::new(100000, DENOM_UUSK)]);
 
@@ -1275,17 +1121,6 @@ mod create_vault_tests {
         let mut info = mock_info(ADMIN, &[]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
-
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            info.clone(),
-            pair.base_denom,
-            pair.quote_denom,
-            pair.address,
-        )
-        .unwrap();
 
         info = mock_info(USER, &[Coin::new(100000, DENOM_UUSK)]);
 
@@ -1348,17 +1183,6 @@ mod create_vault_tests {
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            info.clone(),
-            pair.base_denom,
-            pair.quote_denom,
-            pair.address,
-        )
-        .unwrap();
-
         info = mock_info(USER, &[Coin::new(100000, DENOM_UUSK)]);
 
         create_vault_handler(
@@ -1397,17 +1221,6 @@ mod create_vault_tests {
         let mut info = mock_info(ADMIN, &[]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
-
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            info.clone(),
-            pair.base_denom,
-            pair.quote_denom,
-            pair.address,
-        )
-        .unwrap();
 
         info = mock_info(USER, &[Coin::new(100000, DENOM_UUSK)]);
 
@@ -1448,17 +1261,6 @@ mod create_vault_tests {
         let mut info = mock_info(ADMIN, &[]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
-
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            info.clone(),
-            pair.base_denom,
-            pair.quote_denom,
-            pair.address,
-        )
-        .unwrap();
 
         info = mock_info(USER, &[Coin::new(100000, DENOM_UUSK)]);
 
@@ -1501,17 +1303,6 @@ mod create_vault_tests {
         let mut info = mock_info(ADMIN, &[]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
-
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            info.clone(),
-            pair.base_denom,
-            pair.quote_denom,
-            pair.address,
-        )
-        .unwrap();
 
         info = mock_info(USER, &[Coin::new(1000000000, DENOM_UUSK)]);
 
@@ -1557,17 +1348,6 @@ mod create_vault_tests {
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            info.clone(),
-            pair.base_denom,
-            pair.quote_denom,
-            pair.address,
-        )
-        .unwrap();
-
         info = mock_info(USER, &[Coin::new(100000, DENOM_UUSK)]);
 
         let response = create_vault_handler(
@@ -1612,17 +1392,8 @@ mod create_vault_tests {
 
         let pair = Pair::default();
 
-        create_pair_handler(
-            deps.as_mut(),
-            info.clone(),
-            pair.base_denom.clone(),
-            pair.quote_denom.clone(),
-            pair.address.clone(),
-        )
-        .unwrap();
-
         let swap_amount = ONE;
-        info = mock_info(USER, &[Coin::new(TEN.into(), pair.quote_denom)]);
+        info = mock_info(USER, &[Coin::new(TEN.into(), pair.denoms[1].clone())]);
 
         let response = create_vault_handler(
             deps.as_mut(),
@@ -1631,7 +1402,7 @@ mod create_vault_tests {
             info.sender.clone(),
             None,
             vec![],
-            pair.base_denom.to_string(),
+            pair.denoms[0].to_string(),
             None,
             None,
             swap_amount,
@@ -1653,7 +1424,7 @@ mod create_vault_tests {
                     funds: vec![Coin::new(TWO_MICRONS.into(), info.funds[0].denom.clone())],
                     msg: to_binary(&ExchangeExecuteMsg::SubmitOrder {
                         target_price: Decimal256::percent(200),
-                        target_denom: pair.base_denom.clone(),
+                        target_denom: pair.denoms[0].clone(),
                     })
                     .unwrap()
                 },
@@ -1669,17 +1440,6 @@ mod create_vault_tests {
         let mut info = mock_info(ADMIN, &[]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
-
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            info.clone(),
-            pair.base_denom,
-            pair.quote_denom,
-            pair.address,
-        )
-        .unwrap();
 
         info = mock_info(USER, &[Coin::new(100000, DENOM_UUSK)]);
 
@@ -1722,17 +1482,6 @@ mod create_vault_tests {
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            info.clone(),
-            pair.base_denom,
-            pair.quote_denom,
-            pair.address,
-        )
-        .unwrap();
-
         info = mock_info(USER, &[Coin::new(100000, DENOM_UUSK)]);
 
         create_vault_handler(
@@ -1768,17 +1517,6 @@ mod create_vault_tests {
         let mut info = mock_info(ADMIN, &[]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
-
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            info.clone(),
-            pair.base_denom,
-            pair.quote_denom,
-            pair.address,
-        )
-        .unwrap();
 
         info = mock_info(USER, &[Coin::new(100000, DENOM_UUSK)]);
 
@@ -1823,17 +1561,6 @@ mod create_vault_tests {
         let mut info = mock_info(ADMIN, &[]);
 
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
-
-        let pair = Pair::default();
-
-        create_pair_handler(
-            deps.as_mut(),
-            info.clone(),
-            pair.base_denom,
-            pair.quote_denom,
-            pair.address,
-        )
-        .unwrap();
 
         info = mock_info(USER, &[Coin::new(100000, DENOM_UUSK)]);
 

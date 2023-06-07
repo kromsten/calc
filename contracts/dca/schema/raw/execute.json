@@ -5,61 +5,6 @@
     {
       "type": "object",
       "required": [
-        "create_pair"
-      ],
-      "properties": {
-        "create_pair": {
-          "type": "object",
-          "required": [
-            "address",
-            "base_denom",
-            "quote_denom"
-          ],
-          "properties": {
-            "address": {
-              "$ref": "#/definitions/Addr"
-            },
-            "base_denom": {
-              "type": "string"
-            },
-            "quote_denom": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "delete_pair"
-      ],
-      "properties": {
-        "delete_pair": {
-          "type": "object",
-          "required": [
-            "denoms"
-          ],
-          "properties": {
-            "denoms": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "maxItems": 2,
-              "minItems": 2
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
         "create_vault"
       ],
       "properties": {
@@ -432,52 +377,6 @@
     {
       "type": "object",
       "required": [
-        "create_custom_swap_fee"
-      ],
-      "properties": {
-        "create_custom_swap_fee": {
-          "type": "object",
-          "required": [
-            "denom",
-            "swap_fee_percent"
-          ],
-          "properties": {
-            "denom": {
-              "type": "string"
-            },
-            "swap_fee_percent": {
-              "$ref": "#/definitions/Decimal"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "remove_custom_swap_fee"
-      ],
-      "properties": {
-        "remove_custom_swap_fee": {
-          "type": "object",
-          "required": [
-            "denom"
-          ],
-          "properties": {
-            "denom": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
         "update_swap_adjustment"
       ],
       "properties": {
@@ -729,11 +628,15 @@
             "risk_weighted_average": {
               "type": "object",
               "required": [
-                "base_denom"
+                "base_denom",
+                "position_type"
               ],
               "properties": {
                 "base_denom": {
                   "$ref": "#/definitions/BaseDenom"
+                },
+                "position_type": {
+                  "$ref": "#/definitions/PositionType"
                 }
               },
               "additionalProperties": false

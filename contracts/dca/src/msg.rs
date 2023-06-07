@@ -2,7 +2,6 @@ use crate::types::config::Config;
 use crate::types::destination::Destination;
 use crate::types::event::Event;
 use crate::types::fee_collector::FeeCollector;
-use crate::types::pair::Pair;
 use crate::types::performance_assessment_strategy::PerformanceAssessmentStrategyParams;
 use crate::types::swap_adjustment_strategy::{
     SwapAdjustmentStrategy, SwapAdjustmentStrategyParams,
@@ -11,6 +10,7 @@ use crate::types::time_interval::TimeInterval;
 use crate::types::vault::{Vault, VaultStatus};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Coin, Decimal, Uint128, Uint64};
+use exchange::pair::Pair;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -34,14 +34,6 @@ pub struct MigrateMsg {}
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    CreatePair {
-        base_denom: String,
-        quote_denom: String,
-        address: Addr,
-    },
-    DeletePair {
-        denoms: [String; 2],
-    },
     CreateVault {
         owner: Option<Addr>,
         label: Option<String>,
@@ -88,13 +80,6 @@ pub enum ExecuteMsg {
         default_slippage_tolerance: Option<Decimal>,
         exchange_contract_address: Option<Addr>,
     },
-    CreateCustomSwapFee {
-        denom: String,
-        swap_fee_percent: Decimal,
-    },
-    RemoveCustomSwapFee {
-        denom: String,
-    },
     UpdateSwapAdjustment {
         strategy: SwapAdjustmentStrategy,
         value: Decimal,
@@ -120,7 +105,10 @@ pub enum QueryMsg {
     #[returns(ConfigResponse)]
     GetConfig {},
     #[returns(PairsResponse)]
-    GetPairs {},
+    GetPairs {
+        start_after: Option<Pair>,
+        limit: Option<u16>,
+    },
     #[returns(TriggerIdsResponse)]
     GetTimeTriggerIds { limit: Option<u16> },
     #[returns(TriggerIdResponse)]

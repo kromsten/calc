@@ -33,6 +33,7 @@ pub fn submit_order_handler(
 
     Ok(Response::new()
         .add_attribute("submit_order", "true")
+        .add_attribute("target_price", price.to_string())
         .add_submessage(SubMsg::reply_on_success(
             PairContract(pair.address).call(
                 ExecuteMsg::SubmitOrder {

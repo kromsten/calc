@@ -1,6 +1,6 @@
 use crate::constants::AFTER_SWAP_REPLY_ID;
 use crate::error::ContractError;
-use crate::helpers::price::{get_belief_price, get_slippage};
+use crate::helpers::price::{get_slippage, get_twap_to_now};
 use crate::helpers::time::get_next_target_time;
 use crate::helpers::validation::{assert_contract_is_not_paused, assert_target_time_is_in_past};
 use crate::helpers::vault::{get_swap_amount, simulate_standard_dca_execution};
@@ -8,19 +8,17 @@ use crate::msg::ExecuteMsg;
 use crate::state::cache::{SwapCache, SWAP_CACHE, VAULT_ID_CACHE};
 use crate::state::config::get_config;
 use crate::state::events::create_event;
-use crate::state::pairs::find_pair;
 use crate::state::triggers::{delete_trigger, save_trigger};
 use crate::state::vaults::{get_vault, update_vault};
 use crate::types::event::{EventBuilder, EventData, ExecutionSkippedReason};
 use crate::types::swap_adjustment_strategy::SwapAdjustmentStrategy;
 use crate::types::trigger::{Trigger, TriggerConfiguration};
 use crate::types::vault::{Vault, VaultStatus};
-use cosmwasm_std::{to_binary, SubMsg, WasmMsg};
+use cosmwasm_std::{to_binary, Coin, SubMsg, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{DepsMut, Env, Response, Uint128};
-use exchange::msg::{ExecuteMsg as LimitOrderExecuteMsg, QueryMsg as LimitOrderQueryMsg};
+use exchange::msg::{ExecuteMsg as ExchangeExecuteMsg, QueryMsg as ExchangeQueryMsg};
 use exchange::order::Order;
-use kujira::fin::ExecuteMsg as FinExecuteMsg;
 
 pub fn execute_trigger_handler(
     deps: DepsMut,
@@ -56,8 +54,6 @@ pub fn execute_trigger_handler(
         });
     }
 
-    let pair = find_pair(deps.storage, vault.denoms())?;
-
     match vault.trigger {
         Some(TriggerConfiguration::Time { target_time }) => {
             assert_target_time_is_in_past(env.block.time, target_time)?;
@@ -68,7 +64,7 @@ pub fn execute_trigger_handler(
 
                 let order = deps.querier.query_wasm_smart::<Order>(
                     config.exchange_contract_address.clone(),
-                    &LimitOrderQueryMsg::GetOrder {
+                    &ExchangeQueryMsg::GetOrder {
                         order_idx,
                         denoms: vault.denoms(),
                     },
@@ -82,7 +78,7 @@ pub fn execute_trigger_handler(
 
                 response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
                     contract_addr: config.exchange_contract_address.to_string(),
-                    msg: to_binary(&LimitOrderExecuteMsg::WithdrawOrder {
+                    msg: to_binary(&ExchangeExecuteMsg::WithdrawOrder {
                         order_idx,
                         denoms: vault.denoms(),
                     })
@@ -116,7 +112,15 @@ pub fn execute_trigger_handler(
         )?;
     }
 
-    let belief_price = get_belief_price(&deps.querier, &pair, vault.get_swap_denom())?;
+    let config = get_config(deps.storage)?;
+
+    let belief_price = get_twap_to_now(
+        &deps.querier,
+        config.exchange_contract_address.clone(),
+        vault.get_swap_denom(),
+        vault.target_denom.clone(),
+        config.twap_period,
+    )?;
 
     create_event(
         deps.storage,
@@ -124,8 +128,8 @@ pub fn execute_trigger_handler(
             vault.id,
             env.block.to_owned(),
             EventData::DcaVaultExecutionTriggered {
-                base_denom: pair.base_denom.clone(),
-                quote_denom: pair.quote_denom.clone(),
+                base_denom: vault.target_denom.clone(),
+                quote_denom: vault.get_swap_denom(),
                 asset_price: belief_price,
             },
         ),
@@ -217,7 +221,14 @@ pub fn execute_trigger_handler(
         return Ok(response.add_attribute("execution_skipped", "price_threshold_exceeded"));
     };
 
-    if get_slippage(&deps.querier, &pair, &adjusted_swap_amount)? > vault.slippage_tolerance {
+    if get_slippage(
+        &deps.querier,
+        config.exchange_contract_address.clone(),
+        adjusted_swap_amount.clone(),
+        vault.target_denom.clone(),
+        belief_price,
+    )? > vault.slippage_tolerance
+    {
         create_event(
             deps.storage,
             EventBuilder::new(
@@ -242,19 +253,18 @@ pub fn execute_trigger_handler(
                 .query_balance(&env.contract.address, vault.get_swap_denom())?,
             receive_denom_balance: deps
                 .querier
-                .query_balance(&env.contract.address, vault.target_denom)?,
+                .query_balance(&env.contract.address, vault.target_denom.clone())?,
         },
     )?;
 
     Ok(response.add_submessage(SubMsg::reply_always(
         WasmMsg::Execute {
-            contract_addr: pair.address.to_string(),
-            msg: to_binary(&FinExecuteMsg::Swap {
-                offer_asset: None,
-                belief_price: Some(belief_price.into()),
-                max_spread: Some(vault.slippage_tolerance.into()),
-                to: None,
-                callback: None,
+            contract_addr: config.exchange_contract_address.to_string(),
+            msg: to_binary(&ExchangeExecuteMsg::Swap {
+                minimum_receive_amount: Coin {
+                    amount: vault.minimum_receive_amount.unwrap_or(Uint128::zero()),
+                    denom: vault.target_denom.clone(),
+                },
             })?,
             funds: vec![adjusted_swap_amount],
         },
@@ -287,7 +297,6 @@ mod execute_trigger_tests {
     use crate::types::vault::{Vault, VaultStatus};
     use cosmwasm_std::testing::{mock_env, mock_info};
     use cosmwasm_std::{to_binary, Coin, Decimal, SubMsg, Uint128, WasmMsg};
-    use kujira::fin::ExecuteMsg as FinExecuteMsg;
 
     #[test]
     fn when_contract_is_paused_should_fail() {
@@ -476,8 +485,6 @@ mod execute_trigger_tests {
             .unwrap()
             .events;
 
-        let pair = find_pair(deps.as_ref().storage, vault.denoms()).unwrap();
-
         assert_eq!(
             events.first().unwrap(),
             &Event {
@@ -486,8 +493,8 @@ mod execute_trigger_tests {
                 timestamp: env.block.time,
                 block_height: env.block.height,
                 data: EventData::DcaVaultExecutionTriggered {
-                    base_denom: pair.base_denom,
-                    quote_denom: pair.quote_denom,
+                    base_denom: vault.target_denom.clone(),
+                    quote_denom: vault.get_swap_denom(),
                     asset_price: Decimal::one()
                 }
             }
@@ -524,7 +531,7 @@ mod execute_trigger_tests {
             response.messages.first().unwrap(),
             &SubMsg::new(WasmMsg::Execute {
                 contract_addr: config.exchange_contract_address.to_string(),
-                msg: to_binary(&LimitOrderExecuteMsg::WithdrawOrder {
+                msg: to_binary(&ExchangeExecuteMsg::WithdrawOrder {
                     order_idx,
                     denoms: vault.denoms()
                 })
@@ -565,7 +572,7 @@ mod execute_trigger_tests {
         .unwrap()
             + get_automation_fee_rate(deps.as_mut().storage, &vault).unwrap();
 
-        let received_amount_before_fee = vault.swap_amount * Decimal::one();
+        let received_amount_before_fee = vault.swap_amount * Decimal::percent(95);
         let fee_amount = received_amount_before_fee * fee_rate;
         let received_amount_after_fee = received_amount_before_fee - fee_amount;
 
@@ -585,7 +592,7 @@ mod execute_trigger_tests {
                     received_amount, ..
                 } => received_amount,
             },
-            Coin::new(received_amount_after_fee.into(), vault.target_denom)
+            Coin::new(received_amount_after_fee.into(), vault.target_denom.clone())
         );
     }
 
@@ -733,29 +740,18 @@ mod execute_trigger_tests {
 
         let response = execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap();
 
-        let pair = find_pair(
-            deps.as_ref().storage,
-            [vault.get_swap_denom(), vault.target_denom.clone()],
-        )
-        .unwrap();
-
-        println!("{:?}", response.messages);
+        let config = get_config(deps.as_ref().storage).unwrap();
 
         assert_eq!(
             response.messages.first().unwrap(),
             &SubMsg::reply_always(
                 WasmMsg::Execute {
-                    contract_addr: pair.address.to_string(),
-                    msg: to_binary(&FinExecuteMsg::Swap {
-                        offer_asset: None,
-                        belief_price: Some(
-                            get_belief_price(&deps.as_ref().querier, &pair, vault.get_swap_denom())
-                                .unwrap()
-                                .into()
-                        ),
-                        max_spread: Some(vault.slippage_tolerance.into()),
-                        to: None,
-                        callback: None
+                    contract_addr: config.exchange_contract_address.to_string(),
+                    msg: to_binary(&ExchangeExecuteMsg::Swap {
+                        minimum_receive_amount: Coin {
+                            amount: vault.minimum_receive_amount.unwrap_or(Uint128::zero()),
+                            denom: vault.target_denom.clone(),
+                        },
                     })
                     .unwrap(),
                     funds: vec![Coin::new(
@@ -915,7 +911,7 @@ mod execute_trigger_tests {
         .unwrap()
             + get_automation_fee_rate(deps.as_ref().storage, &vault).unwrap();
 
-        let received_amount_before_fee = vault.swap_amount;
+        let received_amount_before_fee = vault.swap_amount * Decimal::percent(95);
         let fee_amount = received_amount_before_fee * fee_rate;
         let received_amount_after_fee = received_amount_before_fee - fee_amount;
 
@@ -935,7 +931,7 @@ mod execute_trigger_tests {
                     received_amount, ..
                 } => received_amount,
             },
-            Coin::new(received_amount_after_fee.into(), vault.target_denom)
+            Coin::new(received_amount_after_fee.into(), vault.target_denom.clone())
         );
     }
 
@@ -1200,27 +1196,18 @@ mod execute_trigger_tests {
 
         let response = execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap();
 
-        let pair = find_pair(
-            deps.as_ref().storage,
-            [vault.get_swap_denom(), vault.target_denom.clone()],
-        )
-        .unwrap();
+        let config = get_config(deps.as_ref().storage).unwrap();
 
         assert_eq!(
             response.messages.first().unwrap(),
             &SubMsg::reply_always(
                 WasmMsg::Execute {
-                    contract_addr: pair.address.to_string(),
-                    msg: to_binary(&FinExecuteMsg::Swap {
-                        offer_asset: None,
-                        belief_price: Some(
-                            get_belief_price(&deps.as_ref().querier, &pair, vault.get_swap_denom())
-                                .unwrap()
-                                .into()
-                        ),
-                        max_spread: Some(vault.slippage_tolerance.into()),
-                        to: None,
-                        callback: None
+                    contract_addr: config.exchange_contract_address.to_string(),
+                    msg: to_binary(&ExchangeExecuteMsg::Swap {
+                        minimum_receive_amount: Coin {
+                            amount: vault.minimum_receive_amount.unwrap_or(Uint128::zero()),
+                            denom: vault.target_denom.clone(),
+                        },
                     })
                     .unwrap(),
                     funds: vec![Coin::new(vault.swap_amount.into(), vault.get_swap_denom())]
@@ -1250,27 +1237,18 @@ mod execute_trigger_tests {
 
         let response = execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap();
 
-        let pair = find_pair(
-            deps.as_ref().storage,
-            [vault.get_swap_denom(), vault.target_denom.clone()],
-        )
-        .unwrap();
+        let config = get_config(deps.as_ref().storage).unwrap();
 
         assert_eq!(
             response.messages.first().unwrap(),
             &SubMsg::reply_always(
                 WasmMsg::Execute {
-                    contract_addr: pair.address.to_string(),
-                    msg: to_binary(&FinExecuteMsg::Swap {
-                        offer_asset: None,
-                        belief_price: Some(
-                            get_belief_price(&deps.as_ref().querier, &pair, vault.get_swap_denom())
-                                .unwrap()
-                                .into()
-                        ),
-                        max_spread: Some(vault.slippage_tolerance.into()),
-                        to: None,
-                        callback: None
+                    contract_addr: config.exchange_contract_address.to_string(),
+                    msg: to_binary(&ExchangeExecuteMsg::Swap {
+                        minimum_receive_amount: Coin {
+                            amount: vault.minimum_receive_amount.unwrap_or(Uint128::zero()),
+                            denom: vault.target_denom.clone(),
+                        },
                     })
                     .unwrap(),
                     funds: vec![vault.balance]
@@ -1299,27 +1277,18 @@ mod execute_trigger_tests {
 
         let response = execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
 
-        let pair = find_pair(
-            deps.as_ref().storage,
-            [vault.get_swap_denom(), vault.target_denom.clone()],
-        )
-        .unwrap();
+        let config = get_config(deps.as_ref().storage).unwrap();
 
         assert_eq!(
             response.messages.first().unwrap(),
             &SubMsg::reply_always(
                 WasmMsg::Execute {
-                    contract_addr: pair.address.to_string(),
-                    msg: to_binary(&FinExecuteMsg::Swap {
-                        offer_asset: None,
-                        belief_price: Some(
-                            get_belief_price(&deps.as_ref().querier, &pair, vault.get_swap_denom())
-                                .unwrap()
-                                .into()
-                        ),
-                        max_spread: Some(vault.slippage_tolerance.into()),
-                        to: None,
-                        callback: None
+                    contract_addr: config.exchange_contract_address.to_string(),
+                    msg: to_binary(&ExchangeExecuteMsg::Swap {
+                        minimum_receive_amount: Coin {
+                            amount: vault.minimum_receive_amount.unwrap_or(Uint128::zero()),
+                            denom: vault.target_denom.clone(),
+                        },
                     })
                     .unwrap(),
                     funds: vec![get_swap_amount(&deps.as_ref(), &env, &vault).unwrap()]
@@ -1428,27 +1397,18 @@ mod execute_trigger_tests {
 
         let response = execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap();
 
-        let pair = find_pair(
-            deps.as_ref().storage,
-            [vault.get_swap_denom(), vault.target_denom.clone()],
-        )
-        .unwrap();
+        let config = get_config(deps.as_ref().storage).unwrap();
 
         assert_eq!(
             response.messages.first().unwrap(),
             &SubMsg::reply_always(
                 WasmMsg::Execute {
-                    contract_addr: pair.address.to_string(),
-                    msg: to_binary(&FinExecuteMsg::Swap {
-                        offer_asset: None,
-                        belief_price: Some(
-                            get_belief_price(&deps.as_ref().querier, &pair, vault.get_swap_denom())
-                                .unwrap()
-                                .into()
-                        ),
-                        max_spread: Some(vault.slippage_tolerance.into()),
-                        to: None,
-                        callback: None
+                    contract_addr: config.exchange_contract_address.to_string(),
+                    msg: to_binary(&ExchangeExecuteMsg::Swap {
+                        minimum_receive_amount: Coin {
+                            amount: vault.minimum_receive_amount.unwrap_or(Uint128::zero()),
+                            denom: vault.target_denom.clone(),
+                        },
                     })
                     .unwrap(),
                     funds: vec![Coin::new(vault.swap_amount.into(), vault.get_swap_denom())]

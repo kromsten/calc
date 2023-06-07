@@ -9,6 +9,8 @@ pub struct Pair {
     pub base_denom: String,
     pub quote_denom: String,
     pub address: Addr,
+    pub decimal_delta: i8,
+    pub price_precision: u8,
 }
 
 impl Pair {

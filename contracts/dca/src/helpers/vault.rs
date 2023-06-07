@@ -1,17 +1,16 @@
 use super::{
     fees::{get_automation_fee_rate, get_swap_fee_rate},
-    price::{get_belief_price, get_price, get_slippage},
+    price::{get_price, get_slippage, get_twap_to_now},
     time::get_total_execution_duration,
 };
 use crate::{
     state::{
-        events::create_event, pairs::find_pair, swap_adjustments::get_swap_adjustment,
+        config::get_config, events::create_event, swap_adjustments::get_swap_adjustment,
         vaults::update_vault,
     },
     types::{
         event::{EventBuilder, EventData, ExecutionSkippedReason},
         performance_assessment_strategy::PerformanceAssessmentStrategy,
-        position_type::PositionType,
         swap_adjustment_strategy::SwapAdjustmentStrategy,
         time_interval::TimeInterval,
         vault::Vault,
@@ -24,11 +23,6 @@ use cosmwasm_std::{
 use shared::coin::add_to;
 use std::cmp::min;
 
-pub fn get_position_type(deps: &Deps, vault: &Vault) -> StdResult<PositionType> {
-    let pair = find_pair(deps.storage, vault.denoms())?;
-    Ok(pair.position_type(vault.get_swap_denom()))
-}
-
 pub fn get_swap_amount(deps: &Deps, env: &Env, vault: &Vault) -> StdResult<Coin> {
     let swap_adjustment = match vault.swap_adjustment_strategy.clone() {
         Some(SwapAdjustmentStrategy::WeightedScale {
@@ -36,8 +30,16 @@ pub fn get_swap_amount(deps: &Deps, env: &Env, vault: &Vault) -> StdResult<Coin>
             multiplier,
             increase_only,
         }) => {
-            let pair = find_pair(deps.storage, vault.denoms())?;
-            let belief_price = get_belief_price(&deps.querier, &pair, vault.get_swap_denom())?;
+            let config = get_config(deps.storage)?;
+
+            let belief_price = get_twap_to_now(
+                &deps.querier,
+                config.exchange_contract_address.clone(),
+                vault.get_swap_denom(),
+                vault.target_denom.clone(),
+                config.twap_period,
+            )?;
+
             let base_price = Decimal::from_ratio(vault.swap_amount, base_receive_amount);
             let scaled_price_delta = base_price.abs_diff(belief_price) / base_price * multiplier;
 
@@ -147,12 +149,13 @@ pub fn simulate_standard_dca_execution(
                 return Ok((vault, response));
             }
 
-            let pair = find_pair(storage, vault.denoms())?;
+            let config = get_config(storage)?;
 
             let actual_price = get_price(
                 querier,
-                &pair,
-                &Coin::new(swap_amount.into(), vault.get_swap_denom()),
+                config.exchange_contract_address.clone(),
+                Coin::new(swap_amount.into(), vault.get_swap_denom()),
+                vault.target_denom.clone(),
             )?;
 
             if vault.price_threshold_exceeded(belief_price)? {
@@ -177,8 +180,10 @@ pub fn simulate_standard_dca_execution(
 
             let slippage = get_slippage(
                 querier,
-                &pair,
-                &Coin::new(swap_amount.into(), vault.get_swap_denom()),
+                config.exchange_contract_address.clone(),
+                Coin::new(swap_amount.into(), vault.get_swap_denom()),
+                vault.target_denom.clone(),
+                belief_price,
             )?;
 
             if slippage > vault.slippage_tolerance {
@@ -1058,20 +1063,23 @@ mod simulate_standard_dca_execution_tests {
         .unwrap()
             + get_automation_fee_rate(storage_deps.as_ref().storage, &vault).unwrap();
 
-        let received_amount = vault.swap_amount * Decimal::one();
+        let received_amount = vault.swap_amount * Decimal::percent(95);
         let fee_amount = received_amount * fee_rate;
 
-        assert!(events.contains(&Event {
-            id: 1,
-            resource_id: vault.id,
-            timestamp: env.block.time,
-            block_height: env.block.height,
-            data: EventData::SimulatedDcaVaultExecutionCompleted {
-                sent: Coin::new(vault.swap_amount.into(), vault.get_swap_denom()),
-                received: Coin::new(received_amount.into(), vault.target_denom.clone()),
-                fee: Coin::new(fee_amount.into(), vault.target_denom)
+        assert_eq!(
+            events.first().unwrap(),
+            &Event {
+                id: 1,
+                resource_id: vault.id,
+                timestamp: env.block.time,
+                block_height: env.block.height,
+                data: EventData::SimulatedDcaVaultExecutionCompleted {
+                    sent: Coin::new(vault.swap_amount.into(), vault.get_swap_denom()),
+                    received: Coin::new(received_amount.into(), vault.target_denom.clone()),
+                    fee: Coin::new(fee_amount.into(), vault.target_denom.clone())
+                }
             }
-        }));
+        );
     }
 
     #[test]
@@ -1115,7 +1123,7 @@ mod simulate_standard_dca_execution_tests {
         .unwrap()
             + get_automation_fee_rate(storage_deps.as_ref().storage, &vault).unwrap();
 
-        let received_amount_before_fee = vault.swap_amount * Decimal::one();
+        let received_amount_before_fee = vault.swap_amount * Decimal::percent(95);
         let fee_amount = received_amount_before_fee * fee_rate;
         let received_amount_after_fee = received_amount_before_fee - fee_amount;
 
@@ -1135,7 +1143,7 @@ mod simulate_standard_dca_execution_tests {
                     received_amount, ..
                 } => received_amount,
             },
-            Coin::new(received_amount_after_fee.into(), vault.target_denom)
+            Coin::new(received_amount_after_fee.into(), vault.target_denom.clone())
         );
     }
 }

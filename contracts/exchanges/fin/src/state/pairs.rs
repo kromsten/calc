@@ -94,6 +94,8 @@ mod get_pairs_tests {
                 base_denom: format!("base_denom_{}", i),
                 quote_denom: format!("quote_denom_{}", i),
                 address: Addr::unchecked(format!("address_{}", i)),
+                decimal_delta: 0,
+                price_precision: 3,
             };
 
             save_pair(deps.as_mut().storage, &pair).unwrap();
@@ -113,6 +115,8 @@ mod get_pairs_tests {
                 base_denom: format!("base_denom_{}", i),
                 quote_denom: format!("quote_denom_{}", i),
                 address: Addr::unchecked(format!("address_{}", i)),
+                decimal_delta: 0,
+                price_precision: 3,
             };
 
             save_pair(deps.as_mut().storage, &pair).unwrap();
@@ -132,6 +136,8 @@ mod get_pairs_tests {
                 base_denom: format!("base_denom_{}", i),
                 quote_denom: format!("quote_denom_{}", i),
                 address: Addr::unchecked(format!("address_{}", i)),
+                decimal_delta: 0,
+                price_precision: 3,
             };
 
             save_pair(deps.as_mut().storage, &pair).unwrap();
@@ -156,6 +162,8 @@ mod get_pairs_tests {
                 base_denom: format!("base_denom_{}", i),
                 quote_denom: format!("quote_denom_{}", i),
                 address: Addr::unchecked(format!("address_{}", i)),
+                decimal_delta: 0,
+                price_precision: 3,
             };
 
             save_pair(deps.as_mut().storage, &pair).unwrap();

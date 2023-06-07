@@ -458,6 +458,7 @@ mod update_vault_tests {
 
         let new_swap_adjustment_strategy = SwapAdjustmentStrategyParams::RiskWeightedAverage {
             base_denom: BaseDenom::Bitcoin,
+            position_type: PositionType::Enter,
         };
 
         let err = update_vault_handler(

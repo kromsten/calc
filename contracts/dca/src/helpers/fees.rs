@@ -252,7 +252,7 @@ mod tests {
         let vault = get_vault(TEN, TEN, TEN, TEN + TEN, TEN);
 
         let fee = get_performance_fee(&vault, Decimal::one()).unwrap();
-        assert_eq!(fee.denom, vault.target_denom);
+        assert_eq!(fee.denom, vault.target_denom.clone());
     }
 
     #[test]
@@ -260,7 +260,7 @@ mod tests {
         let vault = get_vault(TEN, TEN, TEN, TEN, TEN);
 
         let fee = get_performance_fee(&vault, Decimal::one()).unwrap();
-        assert_eq!(fee.denom, vault.target_denom);
+        assert_eq!(fee.denom, vault.target_denom.clone());
     }
 
     #[test]
@@ -430,7 +430,7 @@ mod tests {
         let fee_rate = get_swap_fee_rate(
             deps.as_ref().storage,
             vault.get_swap_denom(),
-            vault.target_denom,
+            vault.target_denom.clone(),
             &vault.swap_adjustment_strategy,
         )
         .unwrap();

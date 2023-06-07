@@ -141,7 +141,7 @@ impl From<Vault> for VaultData {
             label: vault.label,
             status: vault.status,
             balance: vault.balance,
-            target_denom: vault.target_denom,
+            target_denom: vault.target_denom.clone(),
             destinations: vault.destinations,
             swap_amount: vault.swap_amount,
             slippage_tolerance: vault.slippage_tolerance,
