@@ -41,7 +41,7 @@ mod get_trigger_id_by_fin_limit_order_idx_handler_tests {
                 vault_id: Uint128::one(),
                 configuration: TriggerConfiguration::Price {
                     target_price: Decimal::percent(200),
-                    order_idx: Some(order_idx),
+                    order_idx,
                 },
             },
         )
@@ -65,7 +65,7 @@ mod get_trigger_id_by_fin_limit_order_idx_handler_tests {
                 vault_id: Uint128::one(),
                 configuration: TriggerConfiguration::Price {
                     target_price: Decimal::percent(200),
-                    order_idx: Some(order_idx),
+                    order_idx,
                 },
             },
         )

@@ -24,7 +24,7 @@ pub fn save_price_trigger(deps: DepsMut, reply: Reply) -> Result<Response, Contr
         Trigger {
             vault_id,
             configuration: TriggerConfiguration::Price {
-                order_idx: Some(order_idx),
+                order_idx,
                 target_price,
             },
         },
@@ -39,10 +39,7 @@ pub fn save_price_trigger(deps: DepsMut, reply: Reply) -> Result<Response, Contr
 mod save_limit_order_id_tests {
     use super::save_price_trigger;
     use crate::{
-        state::{
-            cache::VAULT_ID_CACHE,
-            triggers::{get_trigger, save_trigger},
-        },
+        state::{cache::VAULT_ID_CACHE, triggers::get_trigger},
         types::trigger::{Trigger, TriggerConfiguration},
     };
     use cosmwasm_std::{
@@ -59,18 +56,6 @@ mod save_limit_order_id_tests {
         VAULT_ID_CACHE
             .save(deps.as_mut().storage, &vault_id)
             .unwrap();
-
-        save_trigger(
-            deps.as_mut().storage,
-            Trigger {
-                vault_id,
-                configuration: TriggerConfiguration::Price {
-                    target_price: Decimal::percent(200),
-                    order_idx: None,
-                },
-            },
-        )
-        .unwrap();
 
         let reply = Reply {
             id: 1,
@@ -92,7 +77,7 @@ mod save_limit_order_id_tests {
                 vault_id,
                 configuration: TriggerConfiguration::Price {
                     target_price: Decimal::percent(200),
-                    order_idx: Some(order_idx),
+                    order_idx,
                 },
             })
         );

@@ -58,29 +58,27 @@ pub fn cancel_vault_handler(
     )?;
 
     if let Some(TriggerConfiguration::Price { order_idx, .. }) = vault.trigger {
-        if let Some(order_idx) = order_idx {
-            let config = get_config(deps.storage)?;
+        let config = get_config(deps.storage)?;
 
-            submessages.push(SubMsg::new(WasmMsg::Execute {
-                contract_addr: config.exchange_contract_address.to_string(),
-                msg: to_binary(&ExecuteMsg::WithdrawOrder {
-                    order_idx,
-                    denoms: vault.denoms(),
-                })
-                .unwrap(),
-                funds: vec![],
-            }));
+        submessages.push(SubMsg::new(WasmMsg::Execute {
+            contract_addr: config.exchange_contract_address.to_string(),
+            msg: to_binary(&ExecuteMsg::WithdrawOrder {
+                order_idx,
+                denoms: vault.denoms(),
+            })
+            .unwrap(),
+            funds: vec![],
+        }));
 
-            submessages.push(SubMsg::new(WasmMsg::Execute {
-                contract_addr: config.exchange_contract_address.to_string(),
-                msg: to_binary(&ExecuteMsg::RetractOrder {
-                    order_idx,
-                    denoms: vault.denoms(),
-                })
-                .unwrap(),
-                funds: vec![],
-            }));
-        };
+        submessages.push(SubMsg::new(WasmMsg::Execute {
+            contract_addr: config.exchange_contract_address.to_string(),
+            msg: to_binary(&ExecuteMsg::RetractOrder {
+                order_idx,
+                denoms: vault.denoms(),
+            })
+            .unwrap(),
+            funds: vec![],
+        }));
     };
 
     delete_trigger(deps.storage, vault.id)?;
@@ -139,7 +137,7 @@ mod cancel_vault_tests {
             Vault {
                 trigger: Some(TriggerConfiguration::Price {
                     target_price: Decimal::percent(200),
-                    order_idx: Some(Uint128::new(28)),
+                    order_idx: Uint128::new(28),
                 }),
                 ..Vault::default()
             },
@@ -329,7 +327,7 @@ mod cancel_vault_tests {
             Vault {
                 trigger: Some(TriggerConfiguration::Price {
                     target_price: Decimal::percent(200),
-                    order_idx: Some(order_idx),
+                    order_idx,
                 }),
                 ..Vault::default()
             },
@@ -369,7 +367,7 @@ mod cancel_vault_tests {
             Vault {
                 trigger: Some(TriggerConfiguration::Price {
                     target_price: Decimal::percent(200),
-                    order_idx: Some(order_idx),
+                    order_idx,
                 }),
                 ..Vault::default()
             },

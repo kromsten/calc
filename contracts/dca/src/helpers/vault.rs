@@ -180,7 +180,7 @@ pub fn simulate_standard_dca_execution(
 
             let slippage = get_slippage(
                 querier,
-                config.exchange_contract_address.clone(),
+                config.exchange_contract_address,
                 Coin::new(swap_amount.into(), vault.get_swap_denom()),
                 vault.target_denom.clone(),
                 belief_price,
@@ -1070,7 +1070,7 @@ mod simulate_standard_dca_execution_tests {
                 data: EventData::SimulatedDcaVaultExecutionCompleted {
                     sent: Coin::new(vault.swap_amount.into(), vault.get_swap_denom()),
                     received: Coin::new(received_amount.into(), vault.target_denom.clone()),
-                    fee: Coin::new(fee_amount.into(), vault.target_denom.clone())
+                    fee: Coin::new(fee_amount.into(), vault.target_denom)
                 }
             }
         );
@@ -1135,7 +1135,7 @@ mod simulate_standard_dca_execution_tests {
                     received_amount, ..
                 } => received_amount,
             },
-            Coin::new(received_amount_after_fee.into(), vault.target_denom.clone())
+            Coin::new(received_amount_after_fee.into(), vault.target_denom)
         );
     }
 }

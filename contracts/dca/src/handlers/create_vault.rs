@@ -412,7 +412,7 @@ mod create_vault_tests {
         let env = mock_env();
         let admin_info = mock_info(ADMIN, &[]);
 
-        instantiate_contract(deps.as_mut(), env.clone(), admin_info.clone());
+        instantiate_contract(deps.as_mut(), env.clone(), admin_info);
 
         let user_info = mock_info(USER, &[Coin::new(10000, DENOM_UUSK)]);
 
@@ -451,7 +451,7 @@ mod create_vault_tests {
         let env = mock_env();
         let admin_info = mock_info(ADMIN, &[]);
 
-        instantiate_contract(deps.as_mut(), env.clone(), admin_info.clone());
+        instantiate_contract(deps.as_mut(), env.clone(), admin_info);
 
         let user_info = mock_info(USER, &[Coin::new(10000, DENOM_UUSK)]);
 
@@ -506,7 +506,6 @@ mod create_vault_tests {
             info.sender.clone(),
             None,
             (0..20)
-                .into_iter()
                 .map(|i| Destination {
                     allocation: Decimal::percent(5),
                     address: Addr::unchecked(format!("destination-{}", i)),
@@ -570,7 +569,7 @@ mod create_vault_tests {
         let env = mock_env();
         let admin_info = mock_info(ADMIN, &[]);
 
-        instantiate_contract(deps.as_mut(), env.clone(), admin_info.clone());
+        instantiate_contract(deps.as_mut(), env.clone(), admin_info);
 
         let user_info = mock_info(USER, &[Coin::new(10000, DENOM_UUSK)]);
 
@@ -650,7 +649,7 @@ mod create_vault_tests {
         let env = mock_env();
         let admin_info = mock_info(ADMIN, &[]);
 
-        instantiate_contract(deps.as_mut(), env.clone(), admin_info.clone());
+        instantiate_contract(deps.as_mut(), env.clone(), admin_info);
 
         let user_info = mock_info(USER, &[Coin::new(10000, DENOM_UUSK)]);
 

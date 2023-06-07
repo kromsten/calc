@@ -252,18 +252,12 @@
             "price": {
               "type": "object",
               "required": [
+                "order_idx",
                 "target_price"
               ],
               "properties": {
                 "order_idx": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/definitions/Uint128"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
+                  "$ref": "#/definitions/Uint128"
                 },
                 "target_price": {
                   "$ref": "#/definitions/Decimal"

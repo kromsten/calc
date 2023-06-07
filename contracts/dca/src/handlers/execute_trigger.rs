@@ -59,42 +59,36 @@ pub fn execute_trigger_handler(
             assert_target_time_is_in_past(env.block.time, target_time)?;
         }
         Some(TriggerConfiguration::Price { order_idx, .. }) => {
-            if let Some(order_idx) = order_idx {
-                let config = get_config(deps.storage)?;
+            let config = get_config(deps.storage)?;
 
-                let order = deps.querier.query_wasm_smart::<Order>(
-                    config.exchange_contract_address.clone(),
-                    &ExchangeQueryMsg::GetOrder {
-                        order_idx,
-                        denoms: vault.denoms(),
-                    },
-                )?;
+            let order = deps.querier.query_wasm_smart::<Order>(
+                config.exchange_contract_address.clone(),
+                &ExchangeQueryMsg::GetOrder {
+                    order_idx,
+                    denoms: vault.denoms(),
+                },
+            )?;
 
-                if !order.remaining_offer_amount.amount.is_zero() {
-                    return Err(ContractError::CustomError {
-                        val: String::from("target price has not been met"),
-                    });
-                }
-
-                response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
-                    contract_addr: config.exchange_contract_address.to_string(),
-                    msg: to_binary(&ExchangeExecuteMsg::WithdrawOrder {
-                        order_idx,
-                        denoms: vault.denoms(),
-                    })
-                    .unwrap(),
-                    funds: vec![],
-                }));
-            } else {
+            if !order.remaining_offer_amount.amount.is_zero() {
                 return Err(ContractError::CustomError {
-                    val: String::from("price trigger has not been created"),
+                    val: String::from("target price has not been met"),
                 });
             }
+
+            response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
+                contract_addr: config.exchange_contract_address.to_string(),
+                msg: to_binary(&ExchangeExecuteMsg::WithdrawOrder {
+                    order_idx,
+                    denoms: vault.denoms(),
+                })
+                .unwrap(),
+                funds: vec![],
+            }));
         }
         _ => {
             return Err(ContractError::CustomError {
                 val: format!(
-                    "vault with id {} has no time trigger attached, and is not available for execution",
+                    "vault with id {} has no trigger attached, and is not available for execution",
                     vault.id
                 ),
             });
@@ -263,7 +257,7 @@ pub fn execute_trigger_handler(
             msg: to_binary(&ExchangeExecuteMsg::Swap {
                 minimum_receive_amount: Coin {
                     amount: vault.minimum_receive_amount.unwrap_or(Uint128::zero()),
-                    denom: vault.target_denom.clone(),
+                    denom: vault.target_denom,
                 },
             })?,
             funds: vec![adjusted_swap_amount],
@@ -517,7 +511,7 @@ mod execute_trigger_tests {
             Vault {
                 trigger: Some(TriggerConfiguration::Price {
                     target_price: Decimal::percent(200),
-                    order_idx: Some(order_idx),
+                    order_idx,
                 }),
                 ..Vault::default()
             },
@@ -587,7 +581,7 @@ mod execute_trigger_tests {
                     received_amount, ..
                 } => received_amount,
             },
-            Coin::new(received_amount_after_fee.into(), vault.target_denom.clone())
+            Coin::new(received_amount_after_fee.into(), vault.target_denom)
         );
     }
 
@@ -921,7 +915,7 @@ mod execute_trigger_tests {
                     received_amount, ..
                 } => received_amount,
             },
-            Coin::new(received_amount_after_fee.into(), vault.target_denom.clone())
+            Coin::new(received_amount_after_fee.into(), vault.target_denom)
         );
     }
 

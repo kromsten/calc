@@ -10,7 +10,7 @@ pub fn get_pairs_handler(
     let config = get_config(deps.storage)?;
     Ok(PairsResponse {
         pairs: deps.querier.query_wasm_smart::<Vec<Pair>>(
-            config.exchange_contract_address.clone(),
+            config.exchange_contract_address,
             &QueryMsg::GetPairs { limit, start_after },
         )?,
     })
@@ -39,7 +39,7 @@ mod get_pairs_tests {
         let env = mock_env();
         let info = mock_info(ADMIN, &[]);
 
-        instantiate_contract(deps.as_mut(), env.clone(), info.clone());
+        instantiate_contract(deps.as_mut(), env.clone(), info);
 
         let pair = Pair::default();
 

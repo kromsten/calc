@@ -44,7 +44,7 @@ pub fn disburse_escrow_handler(
             )
             .add_attribute(
                 "escrow_disbursed",
-                format!("{:?}", Coin::new(0, vault.target_denom.clone())),
+                format!("{:?}", Coin::new(0, vault.target_denom)),
             ));
     }
 
@@ -179,7 +179,7 @@ mod disburse_escrow_tests {
         let env = mock_env();
         let info = mock_info(ADMIN, &[]);
 
-        instantiate_contract(deps.as_mut(), env.clone(), info.clone());
+        instantiate_contract(deps.as_mut(), env.clone(), info);
 
         let vault = setup_vault(
             deps.as_mut(),

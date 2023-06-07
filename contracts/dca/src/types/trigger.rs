@@ -8,7 +8,7 @@ pub enum TriggerConfiguration {
     },
     Price {
         target_price: Decimal,
-        order_idx: Option<Uint128>,
+        order_idx: Uint128,
     },
 }
 

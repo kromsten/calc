@@ -238,7 +238,7 @@ mod tests {
         let vault = get_vault(TEN, TEN, TEN, TEN + TEN, TEN);
 
         let fee = get_performance_fee(&vault, Decimal::one()).unwrap();
-        assert_eq!(fee.denom, vault.target_denom.clone());
+        assert_eq!(fee.denom, vault.target_denom);
     }
 
     #[test]
@@ -246,7 +246,7 @@ mod tests {
         let vault = get_vault(TEN, TEN, TEN, TEN, TEN);
 
         let fee = get_performance_fee(&vault, Decimal::one()).unwrap();
-        assert_eq!(fee.denom, vault.target_denom.clone());
+        assert_eq!(fee.denom, vault.target_denom);
     }
 
     #[test]
