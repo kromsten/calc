@@ -6,6 +6,7 @@ pub enum ExecutionSkippedReason {
     SlippageToleranceExceeded,
     PriceThresholdExceeded { price: Decimal },
     SwapAmountAdjustedToZero,
+    InsufficientLiquidity,
 }
 
 #[cw_serde]

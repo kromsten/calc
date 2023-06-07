@@ -1850,7 +1850,8 @@
               "type": "string",
               "enum": [
                 "slippage_tolerance_exceeded",
-                "swap_amount_adjusted_to_zero"
+                "swap_amount_adjusted_to_zero",
+                "insufficient_liquidity"
               ]
             },
             {
@@ -2938,7 +2939,8 @@
               "type": "string",
               "enum": [
                 "slippage_tolerance_exceeded",
-                "swap_amount_adjusted_to_zero"
+                "swap_amount_adjusted_to_zero",
+                "insufficient_liquidity"
               ]
             },
             {

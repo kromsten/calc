@@ -215,21 +215,37 @@ pub fn execute_trigger_handler(
         return Ok(response.add_attribute("execution_skipped", "price_threshold_exceeded"));
     };
 
-    if get_slippage(
+    let get_slippage_result = get_slippage(
         &deps.querier,
         config.exchange_contract_address.clone(),
         adjusted_swap_amount.clone(),
         vault.target_denom.clone(),
         belief_price,
-    )? > vault.slippage_tolerance
-    {
+    );
+
+    if get_slippage_result.is_err() {
         create_event(
             deps.storage,
             EventBuilder::new(
                 vault.id,
                 env.block,
                 EventData::DcaVaultExecutionSkipped {
-                    reason: ExecutionSkippedReason::SlippageToleranceExceeded {},
+                    reason: ExecutionSkippedReason::InsufficientLiquidity,
+                },
+            ),
+        )?;
+
+        return Ok(response.add_attribute("execution_skipped", "insufficient_liquidity"));
+    }
+
+    if get_slippage_result? > vault.slippage_tolerance {
+        create_event(
+            deps.storage,
+            EventBuilder::new(
+                vault.id,
+                env.block,
+                EventData::DcaVaultExecutionSkipped {
+                    reason: ExecutionSkippedReason::SlippageToleranceExceeded,
                 },
             ),
         )?;
