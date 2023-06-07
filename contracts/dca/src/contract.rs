@@ -10,7 +10,6 @@ use crate::handlers::disburse_escrow::disburse_escrow_handler;
 use crate::handlers::disburse_funds::disburse_funds_handler;
 use crate::handlers::execute_trigger::execute_trigger_handler;
 use crate::handlers::get_config::get_config_handler;
-use crate::handlers::get_custom_swap_fees::get_custom_swap_fees_handler;
 use crate::handlers::get_disburse_escrow_tasks::get_disburse_escrow_tasks_handler;
 use crate::handlers::get_events::get_events_handler;
 use crate::handlers::get_events_by_resource_id::get_events_by_resource_id_handler;
@@ -227,7 +226,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             limit,
             reverse,
         } => to_binary(&get_events_handler(deps, start_after, limit, reverse)?),
-        QueryMsg::GetCustomSwapFees {} => to_binary(&get_custom_swap_fees_handler(deps)?),
         QueryMsg::GetConfig {} => to_binary(&get_config_handler(deps)?),
         QueryMsg::GetVaultPerformance { vault_id } => {
             to_binary(&get_vault_performance_handler(deps, vault_id)?)

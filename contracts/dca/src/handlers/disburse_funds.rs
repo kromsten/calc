@@ -40,12 +40,7 @@ pub fn disburse_funds_handler(
             let coin_sent = subtract(&swap_cache.swap_denom_balance, swap_denom_balance)?;
             let coin_received = subtract(receive_denom_balance, &swap_cache.receive_denom_balance)?;
 
-            let swap_fee_rate = get_swap_fee_rate(
-                deps.storage,
-                vault.get_swap_denom(),
-                vault.target_denom.clone(),
-                &vault.swap_adjustment_strategy,
-            )?;
+            let swap_fee_rate = get_swap_fee_rate(deps.storage, &vault.swap_adjustment_strategy)?;
             let automation_fee_rate = get_automation_fee_rate(deps.storage, &vault)?;
 
             let swap_fee = checked_mul(coin_received.amount, swap_fee_rate)?;
@@ -150,7 +145,6 @@ mod disburse_funds_tests {
         state::{
             cache::{SwapCache, SWAP_CACHE},
             config::get_config,
-            custom_fees::create_custom_fee,
             swap_adjustments::update_swap_adjustment,
             vaults::get_vault,
         },
@@ -175,7 +169,7 @@ mod disburse_funds_tests {
         testing::{mock_dependencies, mock_env, mock_info},
         BankMsg, Coin, Decimal, Reply, SubMsg, SubMsgResponse, SubMsgResult, Uint128,
     };
-    use std::{cmp::min, str::FromStr};
+    use std::str::FromStr;
 
     #[test]
     fn with_succcesful_swap_returns_funds_to_destination() {
@@ -948,182 +942,6 @@ mod disburse_funds_tests {
         let vault = get_vault(&deps.storage, vault.id).unwrap();
 
         assert_eq!(vault.balance, Coin::new(TEN.into(), vault.get_swap_denom()));
-    }
-
-    #[test]
-    fn with_custom_fee_for_base_denom_takes_custom_fee() {
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-        instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
-
-        let vault = setup_vault(deps.as_mut(), env.clone(), Vault::default());
-
-        let custom_fee_percent = Decimal::percent(20);
-
-        create_custom_fee(
-            &mut deps.storage,
-            vault.get_swap_denom(),
-            custom_fee_percent,
-        )
-        .unwrap();
-
-        let receive_amount = Uint128::new(234312312);
-
-        SWAP_CACHE
-            .save(
-                deps.as_mut().storage,
-                &SwapCache {
-                    swap_denom_balance: vault.balance.clone(),
-                    receive_denom_balance: Coin::new(0, vault.target_denom.clone()),
-                },
-            )
-            .unwrap();
-
-        deps.querier.update_balance(
-            "cosmos2contract",
-            vec![Coin::new(receive_amount.into(), vault.target_denom.clone())],
-        );
-
-        let response = disburse_funds_handler(
-            deps.as_mut(),
-            &env,
-            Reply {
-                id: AFTER_SWAP_REPLY_ID,
-                result: SubMsgResult::Ok(SubMsgResponse {
-                    events: vec![],
-                    data: None,
-                }),
-            },
-        )
-        .unwrap();
-
-        let config = get_config(&deps.storage).unwrap();
-        let swap_fee = custom_fee_percent * receive_amount;
-
-        assert!(response.messages.contains(&SubMsg::new(BankMsg::Send {
-            to_address: config.fee_collectors[0].address.to_string(),
-            amount: vec![Coin::new(swap_fee.into(), vault.target_denom.clone())]
-        })));
-    }
-
-    #[test]
-    fn with_custom_fee_for_quote_denom_takes_custom_fee() {
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-        instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
-
-        let vault = setup_vault(deps.as_mut(), env.clone(), Vault::default());
-
-        let custom_fee_percent = Decimal::percent(20);
-
-        create_custom_fee(
-            &mut deps.storage,
-            vault.target_denom.clone(),
-            custom_fee_percent,
-        )
-        .unwrap();
-
-        let receive_amount = Uint128::new(234312312);
-
-        SWAP_CACHE
-            .save(
-                deps.as_mut().storage,
-                &SwapCache {
-                    swap_denom_balance: vault.balance.clone(),
-                    receive_denom_balance: Coin::new(0, vault.target_denom.clone()),
-                },
-            )
-            .unwrap();
-
-        deps.querier.update_balance(
-            "cosmos2contract",
-            vec![Coin::new(receive_amount.into(), vault.target_denom.clone())],
-        );
-
-        let response = disburse_funds_handler(
-            deps.as_mut(),
-            &env,
-            Reply {
-                id: AFTER_SWAP_REPLY_ID,
-                result: SubMsgResult::Ok(SubMsgResponse {
-                    events: vec![],
-                    data: None,
-                }),
-            },
-        )
-        .unwrap();
-
-        let config = get_config(&deps.storage).unwrap();
-        let swap_fee = custom_fee_percent * receive_amount;
-
-        assert!(response.messages.contains(&SubMsg::new(BankMsg::Send {
-            to_address: config.fee_collectors[0].address.to_string(),
-            amount: vec![Coin::new(swap_fee.into(), vault.target_denom.clone())]
-        })));
-    }
-
-    #[test]
-    fn with_custom_fee_for_both_denoms_takes_lower_fee() {
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-        instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
-
-        let vault = setup_vault(deps.as_mut(), env.clone(), Vault::default());
-
-        let swap_denom_fee_percent = Decimal::percent(20);
-        let receive_denom_fee_percent = Decimal::percent(40);
-
-        create_custom_fee(
-            &mut deps.storage,
-            vault.get_swap_denom(),
-            swap_denom_fee_percent,
-        )
-        .unwrap();
-
-        create_custom_fee(
-            &mut deps.storage,
-            vault.target_denom.clone(),
-            receive_denom_fee_percent,
-        )
-        .unwrap();
-
-        let receive_amount = Uint128::new(234312312);
-
-        SWAP_CACHE
-            .save(
-                deps.as_mut().storage,
-                &SwapCache {
-                    swap_denom_balance: vault.balance.clone(),
-                    receive_denom_balance: Coin::new(0, vault.target_denom.clone()),
-                },
-            )
-            .unwrap();
-
-        deps.querier.update_balance(
-            "cosmos2contract",
-            vec![Coin::new(receive_amount.into(), vault.target_denom.clone())],
-        );
-
-        let response = disburse_funds_handler(
-            deps.as_mut(),
-            &env,
-            Reply {
-                id: AFTER_SWAP_REPLY_ID,
-                result: SubMsgResult::Ok(SubMsgResponse {
-                    events: vec![],
-                    data: None,
-                }),
-            },
-        )
-        .unwrap();
-
-        let config = get_config(&deps.storage).unwrap();
-        let swap_fee = min(swap_denom_fee_percent, receive_denom_fee_percent) * receive_amount;
-
-        assert!(response.messages.contains(&SubMsg::new(BankMsg::Send {
-            to_address: config.fee_collectors[0].address.to_string(),
-            amount: vec![Coin::new(swap_fee.into(), vault.target_denom.clone())]
-        })));
     }
 
     #[test]

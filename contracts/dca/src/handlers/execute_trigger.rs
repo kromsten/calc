@@ -563,13 +563,8 @@ mod execute_trigger_tests {
 
         let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
 
-        let fee_rate = get_swap_fee_rate(
-            deps.as_mut().storage,
-            vault.get_swap_denom(),
-            vault.target_denom.clone(),
-            &vault.swap_adjustment_strategy,
-        )
-        .unwrap()
+        let fee_rate = get_swap_fee_rate(deps.as_mut().storage, &vault.swap_adjustment_strategy)
+            .unwrap()
             + get_automation_fee_rate(deps.as_mut().storage, &vault).unwrap();
 
         let received_amount_before_fee = vault.swap_amount * Decimal::percent(95);
@@ -902,13 +897,8 @@ mod execute_trigger_tests {
 
         let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
 
-        let fee_rate = get_swap_fee_rate(
-            deps.as_ref().storage,
-            vault.get_swap_denom(),
-            vault.target_denom.clone(),
-            &vault.swap_adjustment_strategy,
-        )
-        .unwrap()
+        let fee_rate = get_swap_fee_rate(deps.as_ref().storage, &vault.swap_adjustment_strategy)
+            .unwrap()
             + get_automation_fee_rate(deps.as_ref().storage, &vault).unwrap();
 
         let received_amount_before_fee = vault.swap_amount * Decimal::percent(95);

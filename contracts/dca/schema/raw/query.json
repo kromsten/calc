@@ -284,19 +284,6 @@
     {
       "type": "object",
       "required": [
-        "get_custom_swap_fees"
-      ],
-      "properties": {
-        "get_custom_swap_fees": {
-          "type": "object",
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
         "get_vault_performance"
       ],
       "properties": {

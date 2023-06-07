@@ -141,8 +141,6 @@ pub enum QueryMsg {
         limit: Option<u16>,
         reverse: Option<bool>,
     },
-    #[returns(CustomFeesResponse)]
-    GetCustomSwapFees {},
     #[returns(VaultPerformanceResponse)]
     GetVaultPerformance { vault_id: Uint128 },
     #[returns(DisburseEscrowTasksResponse)]

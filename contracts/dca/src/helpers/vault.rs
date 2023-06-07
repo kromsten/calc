@@ -204,12 +204,8 @@ pub fn simulate_standard_dca_execution(
                 return Ok((vault, response));
             }
 
-            let fee_rate = get_swap_fee_rate(
-                storage,
-                vault.get_swap_denom(),
-                vault.target_denom.clone(),
-                &vault.swap_adjustment_strategy,
-            )? + get_automation_fee_rate(storage, &vault)?;
+            let fee_rate = get_swap_fee_rate(storage, &vault.swap_adjustment_strategy)?
+                + get_automation_fee_rate(storage, &vault)?;
 
             let received_amount_before_fee = swap_amount * (Decimal::one() / actual_price);
             let fee_amount = received_amount_before_fee * fee_rate;
@@ -1056,8 +1052,6 @@ mod simulate_standard_dca_execution_tests {
 
         let fee_rate = get_swap_fee_rate(
             storage_deps.as_ref().storage,
-            vault.get_swap_denom(),
-            vault.target_denom.clone(),
             &vault.swap_adjustment_strategy,
         )
         .unwrap()
@@ -1116,8 +1110,6 @@ mod simulate_standard_dca_execution_tests {
 
         let fee_rate = get_swap_fee_rate(
             storage_deps.as_ref().storage,
-            vault.get_swap_denom(),
-            vault.target_denom.clone(),
             &vault.swap_adjustment_strategy,
         )
         .unwrap()

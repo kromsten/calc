@@ -1,6 +1,5 @@
 pub mod cache;
 pub mod config;
-pub mod custom_fees;
 pub mod data_fixes;
 pub mod disburse_escrow_tasks;
 pub mod events;
