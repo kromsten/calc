@@ -1,17 +1,26 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::Addr;
 use exchange::pair::Pair as ExchangePair;
+
+use super::position_type::PositionType;
 
 #[cw_serde]
 pub struct Pair {
     pub base_denom: String,
     pub quote_denom: String,
-    pub address: Addr,
+    pub route: Vec<u64>,
     pub decimal_delta: i8,
     pub price_precision: u8,
 }
 
 impl Pair {
+    pub fn position_type(&self, swap_denom: &str) -> PositionType {
+        if self.quote_denom == swap_denom {
+            PositionType::Enter
+        } else {
+            PositionType::Exit
+        }
+    }
+
     pub fn denoms(&self) -> [String; 2] {
         [self.base_denom.clone(), self.quote_denom.clone()]
     }

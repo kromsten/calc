@@ -3,7 +3,7 @@ use cosmwasm_std::{Coin, SubMsg, Uint128};
 use cw_storage_plus::{Item, Map};
 use std::collections::VecDeque;
 
-pub const VAULT_ID_CACHE: Item<Uint128> = Item::new("vault_id_cache_v8");
+pub const VAULT_ID_CACHE: Item<Uint128> = Item::new("vault_id_cache_v1");
 
 #[cw_serde]
 pub struct SwapCache {
@@ -11,7 +11,7 @@ pub struct SwapCache {
     pub receive_denom_balance: Coin,
 }
 
-pub const SWAP_CACHE: Item<SwapCache> = Item::new("swap_cache_v8");
+pub const SWAP_CACHE: Item<SwapCache> = Item::new("swap_cache_v1");
 
 #[cw_serde]
 pub struct PostExecutionActionCacheEntry {
@@ -20,4 +20,4 @@ pub struct PostExecutionActionCacheEntry {
 }
 
 pub const POST_EXECUTION_ACTION_CACHE: Map<u128, VecDeque<PostExecutionActionCacheEntry>> =
-    Map::new("post_execution_action_cache_v8");
+    Map::new("post_execution_action_cache_v1");

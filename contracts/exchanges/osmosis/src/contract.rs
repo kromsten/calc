@@ -74,7 +74,7 @@ pub fn execute(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetPairs { start_after, limit } => {
             to_binary(&get_pairs_handler(deps, start_after, limit)?)
@@ -88,6 +88,7 @@ pub fn query(deps: Deps, _: Env, msg: QueryMsg) -> StdResult<Binary> {
             period,
         } => to_binary(&get_twap_to_now_handler(
             deps,
+            env,
             swap_denom,
             target_denom,
             period,

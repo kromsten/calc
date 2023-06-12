@@ -21,6 +21,7 @@ describe('when disbursing escrow', () => {
         swap_adjustment_strategy: {
           risk_weighted_average: {
             base_denom: 'bitcoin',
+            position_type: 'enter',
           },
         },
         performance_assessment_strategy: 'compare_to_standard_dca',

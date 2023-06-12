@@ -283,6 +283,7 @@ describe('when cancelling a vault', () => {
           swap_adjustment_strategy: {
             risk_weighted_average: {
               base_denom: 'bitcoin',
+              position_type: 'enter',
             },
           },
           time_interval: 'every_block',

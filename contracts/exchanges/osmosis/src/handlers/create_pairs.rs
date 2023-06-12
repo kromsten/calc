@@ -65,13 +65,13 @@ mod create_pairs_tests {
 
         save_pair(deps.as_mut().storage, &pair).unwrap();
 
-        let new_address = Addr::unchecked("new-pair-address");
+        let new_route = vec![167, 2];
 
         create_pairs_handler(
             deps.as_mut(),
             mock_info(ADMIN, &[]),
             vec![Pair {
-                address: new_address.clone(),
+                route: new_route.clone(),
                 ..pair.clone()
             }],
         )
@@ -79,7 +79,7 @@ mod create_pairs_tests {
 
         let updated_pair = find_pair(deps.as_ref().storage, pair.denoms()).unwrap();
 
-        assert_ne!(pair.address, updated_pair.address);
-        assert_eq!(updated_pair.address, new_address);
+        assert_ne!(pair.route, updated_pair.route);
+        assert_eq!(updated_pair.route, new_route);
     }
 }

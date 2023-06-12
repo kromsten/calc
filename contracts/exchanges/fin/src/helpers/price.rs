@@ -1,10 +1,17 @@
 use std::str::FromStr;
 
 use cosmwasm_std::{Decimal256, QuerierWrapper, StdError, StdResult};
-use kujira_fin::{ConfigResponse, QueryMsg};
-use kujira_std::Precise;
+use kujira_fin::QueryMsg;
+use kujira_std::{Precise, Precision};
+use serde::{Deserialize, Serialize};
 
 use crate::types::{pair::Pair, position_type::PositionType};
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct FinConfigResponse {
+    pub price_precision: Precision,
+    pub decimal_delta: i8,
+}
 
 pub fn get_fin_price(
     querier: &QuerierWrapper,
@@ -12,8 +19,8 @@ pub fn get_fin_price(
     swap_denom: &str,
     pair: &Pair,
 ) -> StdResult<Decimal256> {
-    let pair_config =
-        querier.query_wasm_smart::<ConfigResponse>(pair.address.clone(), &QueryMsg::Config {})?;
+    let pair_config = querier
+        .query_wasm_smart::<FinConfigResponse>(pair.address.clone(), &QueryMsg::Config {})?;
 
     if pair_config.decimal_delta < 0 {
         return Err(StdError::GenericErr {
@@ -52,6 +59,7 @@ mod calculate_target_price_tests {
         Uint128, Uint256,
     };
     use cw20::Denom;
+    use kujira_fin::ConfigResponse;
     use kujira_std::Precision;
 
     use crate::tests::constants::{DENOM_UKUJI, DENOM_UUSK};

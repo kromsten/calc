@@ -119,7 +119,7 @@ const instantiateDCAContract = async (
       default_page_limit: 30,
       paused: false,
       default_slippage_tolerance: '0.05',
-      twap_period: 60,
+      twap_period: 0,
       default_swap_fee_percent: `${calcSwapFee}`,
       weighted_scale_swap_fee_percent: '0.01',
       risk_weighted_average_escrow_level: '0.05',
@@ -128,20 +128,6 @@ const instantiateDCAContract = async (
     },
     'dca',
   );
-
-  for (const address of pairAddress) {
-    const pair = await cosmWasmClient.queryContractSmart(address, {
-      config: {},
-    });
-
-    await execute(cosmWasmClient, adminWalletAddress, dcaContractAddress, {
-      create_pair: {
-        base_denom: pair.denoms[0].native,
-        quote_denom: pair.denoms[1].native,
-        address,
-      },
-    });
-  }
 
   for (const position_type of ['enter', 'exit']) {
     await execute(cosmWasmClient, adminWalletAddress, dcaContractAddress, {
@@ -166,7 +152,7 @@ export const instantiateExchangeContract = async (
   adminWalletAddress: string,
   pairAddress: string[] = [],
 ): Promise<string> => {
-  const dcaContractAddress = await uploadAndInstantiate(
+  const finExchangeAddress = await uploadAndInstantiate(
     '../artifacts/fin.wasm',
     cosmWasmClient,
     adminWalletAddress,
@@ -181,7 +167,7 @@ export const instantiateExchangeContract = async (
       config: {},
     });
 
-    await execute(cosmWasmClient, adminWalletAddress, dcaContractAddress, {
+    await execute(cosmWasmClient, adminWalletAddress, finExchangeAddress, {
       internal_msg: {
         msg: Buffer.from(
           JSON.stringify({
@@ -190,6 +176,8 @@ export const instantiateExchangeContract = async (
                 {
                   base_denom: pair.denoms[0].native,
                   quote_denom: pair.denoms[1].native,
+                  decimal_delta: pair.decimal_delta,
+                  price_precision: pair.price_precision.decimal_places,
                   address,
                 },
               ],
@@ -200,7 +188,7 @@ export const instantiateExchangeContract = async (
     });
   }
 
-  return dcaContractAddress;
+  return finExchangeAddress;
 };
 
 export const instantiateFinPairContract = async (

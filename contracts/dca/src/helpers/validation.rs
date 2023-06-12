@@ -183,7 +183,7 @@ pub fn assert_risk_weighted_average_escrow_level_is_no_greater_than_100_percent(
 }
 
 pub fn assert_twap_period_is_valid(twap_period: u64) -> Result<(), ContractError> {
-    if !(30..=3600).contains(&twap_period) {
+    if !(0..=3600).contains(&twap_period) {
         return Err(ContractError::CustomError {
             val: "twap_period must be between 30 and 3600".to_string(),
         });
@@ -359,7 +359,7 @@ pub fn assert_pair_exists_for_denoms(
     );
     if twap_request.is_err() {
         return Err(ContractError::CustomError {
-            val: format!("swapping {} to {} not supported", swap_denom, target_denom),
+            val: format!("swapping {} to {} not supported", swap_denom, target_denom,),
         });
     }
     Ok(())

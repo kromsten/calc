@@ -79,7 +79,7 @@ mod find_pair_tests {
 
 #[cfg(test)]
 mod get_pairs_tests {
-    use cosmwasm_std::{testing::mock_dependencies, Addr};
+    use cosmwasm_std::testing::mock_dependencies;
 
     use crate::types::pair::Pair;
 
@@ -93,7 +93,7 @@ mod get_pairs_tests {
             let pair = Pair {
                 base_denom: format!("base_denom_{}", i),
                 quote_denom: format!("quote_denom_{}", i),
-                address: Addr::unchecked(format!("address_{}", i)),
+                route: vec![i],
                 decimal_delta: 0,
                 price_precision: 3,
             };
@@ -114,7 +114,7 @@ mod get_pairs_tests {
             let pair = Pair {
                 base_denom: format!("base_denom_{}", i),
                 quote_denom: format!("quote_denom_{}", i),
-                address: Addr::unchecked(format!("address_{}", i)),
+                route: vec![i],
                 decimal_delta: 0,
                 price_precision: 3,
             };
@@ -135,7 +135,7 @@ mod get_pairs_tests {
             let pair = Pair {
                 base_denom: format!("base_denom_{}", i),
                 quote_denom: format!("quote_denom_{}", i),
-                address: Addr::unchecked(format!("address_{}", i)),
+                route: vec![i],
                 decimal_delta: 0,
                 price_precision: 3,
             };
@@ -161,7 +161,7 @@ mod get_pairs_tests {
             let pair = Pair {
                 base_denom: format!("base_denom_{}", i),
                 quote_denom: format!("quote_denom_{}", i),
-                address: Addr::unchecked(format!("address_{}", i)),
+                route: vec![i],
                 decimal_delta: 0,
                 price_precision: 3,
             };
