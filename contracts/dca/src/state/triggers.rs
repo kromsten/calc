@@ -22,18 +22,18 @@ pub(crate) fn trigger_store<'a>() -> IndexedMap<'a, u128, Trigger, TriggerIndexe
                 TriggerConfiguration::Time { target_time } => target_time.seconds(),
                 _ => u64::MAX,
             },
-            "triggers_v26",
-            "triggers_v26__due_date",
+            "triggers_v30",
+            "triggers_v30__due_date",
         ),
         order_idx: UniqueIndex::new(
             |trigger| match trigger.configuration {
                 TriggerConfiguration::Price { order_idx, .. } => order_idx.into(),
                 _ => u128::MAX - trigger.vault_id.u128(), // allows a unique entry that will never be found via an order_idx
             },
-            "triggers_v26__order_idx",
+            "triggers_v30__order_idx",
         ),
     };
-    IndexedMap::new("triggers_v26", indexes)
+    IndexedMap::new("triggers_v30", indexes)
 }
 
 pub fn save_trigger(store: &mut dyn Storage, trigger: Trigger) -> StdResult<()> {

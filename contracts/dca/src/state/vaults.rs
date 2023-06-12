@@ -29,13 +29,13 @@ impl<'a> IndexList<VaultData> for VaultIndexes<'a> {
 
 fn vault_store<'a>() -> IndexedMap<'a, u128, VaultData, VaultIndexes<'a>> {
     let indexes = VaultIndexes {
-        owner: UniqueIndex::new(|v| (v.owner.clone(), v.id.into()), "vaults_v26__owner"),
+        owner: UniqueIndex::new(|v| (v.owner.clone(), v.id.into()), "vaults_v30__owner"),
         owner_status: UniqueIndex::new(
             |v| (v.owner.clone(), v.status.clone() as u8, v.id.into()),
-            "vaults_v26__owner_status",
+            "vaults_v30__owner_status",
         ),
     };
-    IndexedMap::new("vaults_v26", indexes)
+    IndexedMap::new("vaults_v30", indexes)
 }
 
 pub fn migrate_vault(store: &mut dyn Storage, vault: Vault) -> StdResult<()> {
