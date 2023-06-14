@@ -19,7 +19,7 @@ mod get_order_handler_tests {
     use crate::{
         handlers::get_order::get_order_handler,
         state::pairs::save_pair,
-        tests::constants::{DENOM_UKUJI, DENOM_UUSK, ONE},
+        tests::constants::{DENOM_UATOM, DENOM_UOSMO, ONE},
         types::pair::Pair,
     };
 
@@ -29,7 +29,7 @@ mod get_order_handler_tests {
             get_order_handler(
                 mock_dependencies().as_ref(),
                 Uint128::zero(),
-                [DENOM_UKUJI.to_string(), DENOM_UUSK.to_string()]
+                [DENOM_UOSMO.to_string(), DENOM_UATOM.to_string()]
             )
             .unwrap_err(),
             StdError::NotFound {
@@ -93,7 +93,7 @@ mod get_order_handler_tests {
                 order_idx: ONE,
                 remaining_offer_amount: Coin {
                     amount: Uint256::from_u128(2u128).try_into().unwrap(),
-                    denom: DENOM_UKUJI.to_string(),
+                    denom: DENOM_UOSMO.to_string(),
                 },
             }
         );

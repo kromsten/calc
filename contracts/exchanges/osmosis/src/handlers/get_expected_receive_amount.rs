@@ -17,7 +17,7 @@ mod get_expected_receive_amount_handler_tests {
     use crate::{
         handlers::get_expected_receive_amount::get_expected_receive_amount_handler,
         state::pairs::save_pair,
-        tests::constants::{DENOM_UKUJI, DENOM_UUSK},
+        tests::constants::{DENOM_UATOM, DENOM_UOSMO},
         types::pair::Pair,
     };
 
@@ -27,10 +27,10 @@ mod get_expected_receive_amount_handler_tests {
             get_expected_receive_amount_handler(
                 mock_dependencies().as_ref(),
                 Coin {
-                    denom: DENOM_UKUJI.to_string(),
+                    denom: DENOM_UOSMO.to_string(),
                     amount: Uint128::zero()
                 },
-                DENOM_UUSK.to_string()
+                DENOM_UATOM.to_string()
             )
             .unwrap_err(),
             StdError::NotFound {
@@ -55,10 +55,10 @@ mod get_expected_receive_amount_handler_tests {
             get_expected_receive_amount_handler(
                 deps.as_ref(),
                 Coin {
-                    denom: DENOM_UKUJI.to_string(),
+                    denom: DENOM_UOSMO.to_string(),
                     amount: Uint128::zero()
                 },
-                DENOM_UUSK.to_string()
+                DENOM_UATOM.to_string()
             )
             .unwrap_err(),
             StdError::GenericErr {
@@ -90,14 +90,14 @@ mod get_expected_receive_amount_handler_tests {
             get_expected_receive_amount_handler(
                 deps.as_ref(),
                 Coin {
-                    denom: DENOM_UKUJI.to_string(),
+                    denom: DENOM_UOSMO.to_string(),
                     amount: Uint128::zero()
                 },
-                DENOM_UUSK.to_string()
+                DENOM_UATOM.to_string()
             )
             .unwrap(),
             Coin {
-                denom: DENOM_UUSK.to_string(),
+                denom: DENOM_UATOM.to_string(),
                 amount: Uint128::from(83211293u128)
             }
         )

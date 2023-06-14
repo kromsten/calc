@@ -27,7 +27,7 @@ mod retract_order_handler_tests {
 
     use crate::{
         state::{cache::LIMIT_ORDER_CACHE, pairs::save_pair},
-        tests::constants::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
+        tests::constants::{ADMIN, DENOM_UATOM, DENOM_UOSMO},
         types::pair::Pair,
         ContractError,
     };
@@ -40,9 +40,9 @@ mod retract_order_handler_tests {
             retract_order_handler(
                 mock_dependencies().as_mut(),
                 mock_env(),
-                mock_info(ADMIN, &[Coin::new(3218312, DENOM_UUSK)]),
+                mock_info(ADMIN, &[Coin::new(3218312, DENOM_UATOM)]),
                 Uint128::new(234),
-                [DENOM_UUSK.to_string(), DENOM_UKUJI.to_string()],
+                [DENOM_UATOM.to_string(), DENOM_UOSMO.to_string()],
             )
             .unwrap_err(),
             ContractError::InvalidFunds {
@@ -56,8 +56,8 @@ mod retract_order_handler_tests {
         let mut deps = mock_dependencies();
         let env = mock_env();
 
-        let uusk_balance = Coin::new(25423, DENOM_UUSK);
-        let ukuji_balance = Coin::new(12234324343123, DENOM_UKUJI);
+        let uusk_balance = Coin::new(25423, DENOM_UATOM);
+        let ukuji_balance = Coin::new(12234324343123, DENOM_UOSMO);
 
         let balances = vec![uusk_balance.clone(), ukuji_balance.clone()];
 
@@ -75,7 +75,7 @@ mod retract_order_handler_tests {
             env,
             mock_info(ADMIN, &[]),
             order_idx,
-            [DENOM_UUSK.to_string(), DENOM_UKUJI.to_string()],
+            [DENOM_UATOM.to_string(), DENOM_UOSMO.to_string()],
         )
         .unwrap();
 
@@ -85,8 +85,8 @@ mod retract_order_handler_tests {
         assert_eq!(
             cache.balances,
             HashMap::from([
-                (DENOM_UUSK.to_string(), uusk_balance),
-                (DENOM_UKUJI.to_string(), ukuji_balance)
+                (DENOM_UATOM.to_string(), uusk_balance),
+                (DENOM_UOSMO.to_string(), ukuji_balance)
             ])
         );
     }
@@ -106,7 +106,7 @@ mod retract_order_handler_tests {
             mock_env(),
             mock_info(ADMIN, &[]),
             order_idx,
-            [DENOM_UUSK.to_string(), DENOM_UKUJI.to_string()],
+            [DENOM_UATOM.to_string(), DENOM_UOSMO.to_string()],
         )
         .unwrap();
 
@@ -133,7 +133,7 @@ mod return_retracted_funds_tests {
 
     use crate::{
         state::cache::{LimitOrderCache, LIMIT_ORDER_CACHE},
-        tests::constants::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
+        tests::constants::{ADMIN, DENOM_UATOM, DENOM_UOSMO},
     };
 
     use super::return_retracted_funds;
@@ -143,8 +143,8 @@ mod return_retracted_funds_tests {
         let mut deps = mock_dependencies();
         let env = mock_env();
 
-        let old_uusk_balance = Coin::new(25423, DENOM_UUSK);
-        let old_ukuji_balance = Coin::new(12234324343123, DENOM_UKUJI);
+        let old_uusk_balance = Coin::new(25423, DENOM_UATOM);
+        let old_ukuji_balance = Coin::new(12234324343123, DENOM_UOSMO);
 
         LIMIT_ORDER_CACHE
             .save(
@@ -152,8 +152,8 @@ mod return_retracted_funds_tests {
                 &LimitOrderCache {
                     sender: Addr::unchecked(ADMIN),
                     balances: HashMap::from([
-                        (DENOM_UUSK.to_string(), old_uusk_balance.clone()),
-                        (DENOM_UKUJI.to_string(), old_ukuji_balance.clone()),
+                        (DENOM_UATOM.to_string(), old_uusk_balance.clone()),
+                        (DENOM_UOSMO.to_string(), old_ukuji_balance.clone()),
                     ]),
                 },
             )
@@ -174,7 +174,7 @@ mod return_retracted_funds_tests {
             response.messages.first().unwrap(),
             &SubMsg::new(BankMsg::Send {
                 to_address: ADMIN.to_string(),
-                amount: vec![Coin::new(1000, DENOM_UUSK), Coin::new(2000, DENOM_UKUJI)],
+                amount: vec![Coin::new(1000, DENOM_UATOM), Coin::new(2000, DENOM_UOSMO)],
             })
         );
     }
@@ -184,8 +184,8 @@ mod return_retracted_funds_tests {
         let mut deps = mock_dependencies();
         let env = mock_env();
 
-        let old_uusk_balance = Coin::new(25423, DENOM_UUSK);
-        let old_ukuji_balance = Coin::new(12234324343123, DENOM_UKUJI);
+        let old_uusk_balance = Coin::new(25423, DENOM_UATOM);
+        let old_ukuji_balance = Coin::new(12234324343123, DENOM_UOSMO);
 
         LIMIT_ORDER_CACHE
             .save(
@@ -193,8 +193,8 @@ mod return_retracted_funds_tests {
                 &LimitOrderCache {
                     sender: Addr::unchecked(ADMIN),
                     balances: HashMap::from([
-                        (DENOM_UUSK.to_string(), old_uusk_balance.clone()),
-                        (DENOM_UKUJI.to_string(), old_ukuji_balance.clone()),
+                        (DENOM_UATOM.to_string(), old_uusk_balance.clone()),
+                        (DENOM_UOSMO.to_string(), old_ukuji_balance.clone()),
                     ]),
                 },
             )
@@ -214,7 +214,7 @@ mod return_retracted_funds_tests {
             response.messages.first().unwrap(),
             &SubMsg::new(BankMsg::Send {
                 to_address: ADMIN.to_string(),
-                amount: vec![Coin::new(2000, DENOM_UKUJI)],
+                amount: vec![Coin::new(2000, DENOM_UOSMO)],
             })
         );
     }
@@ -224,8 +224,8 @@ mod return_retracted_funds_tests {
         let mut deps = mock_dependencies();
         let env = mock_env();
 
-        let old_uusk_balance = Coin::new(25423, DENOM_UUSK);
-        let old_ukuji_balance = Coin::new(12234324343123, DENOM_UKUJI);
+        let old_uusk_balance = Coin::new(25423, DENOM_UATOM);
+        let old_ukuji_balance = Coin::new(12234324343123, DENOM_UOSMO);
 
         LIMIT_ORDER_CACHE
             .save(
@@ -233,8 +233,8 @@ mod return_retracted_funds_tests {
                 &LimitOrderCache {
                     sender: Addr::unchecked(ADMIN),
                     balances: HashMap::from([
-                        (DENOM_UUSK.to_string(), old_uusk_balance.clone()),
-                        (DENOM_UKUJI.to_string(), old_ukuji_balance.clone()),
+                        (DENOM_UATOM.to_string(), old_uusk_balance.clone()),
+                        (DENOM_UOSMO.to_string(), old_ukuji_balance.clone()),
                     ]),
                 },
             )

@@ -19,7 +19,7 @@ pub fn get_twap_to_now_handler(
 ) -> StdResult<Decimal256> {
     let pair = find_pair(deps.storage, [swap_denom.clone(), target_denom])?;
 
-    let route = match pair.position_type(&swap_denom) {
+    let route = match pair.position_type(swap_denom.clone()) {
         PositionType::Enter => pair.route.clone(),
         PositionType::Exit => pair.route.clone().into_iter().rev().collect(),
     };
@@ -119,7 +119,7 @@ mod get_twap_to_now_tests {
     use crate::{
         handlers::get_twap_to_now::get_twap_to_now_handler,
         state::pairs::save_pair,
-        tests::constants::{DENOM_UKUJI, DENOM_UUSK},
+        tests::constants::{DENOM_UATOM, DENOM_UOSMO},
         types::pair::Pair,
     };
 
@@ -129,8 +129,8 @@ mod get_twap_to_now_tests {
             get_twap_to_now_handler(
                 mock_dependencies().as_ref(),
                 mock_env(),
-                DENOM_UKUJI.to_string(),
-                DENOM_UUSK.to_string(),
+                DENOM_UOSMO.to_string(),
+                DENOM_UATOM.to_string(),
                 10
             )
             .unwrap_err(),
@@ -144,8 +144,8 @@ mod get_twap_to_now_tests {
             get_twap_to_now_handler(
                 mock_dependencies().as_ref(),
                 mock_env(),
-                DENOM_UKUJI.to_string(),
-                DENOM_UUSK.to_string(),
+                DENOM_UOSMO.to_string(),
+                DENOM_UATOM.to_string(),
                 0
             )
             .unwrap_err(),
@@ -177,14 +177,14 @@ mod get_twap_to_now_tests {
             get_twap_to_now_handler(
                 deps.as_ref(),
                 mock_env(),
-                DENOM_UKUJI.to_string(),
-                DENOM_UUSK.to_string(),
+                DENOM_UOSMO.to_string(),
+                DENOM_UATOM.to_string(),
                 0
             )
             .unwrap_err(),
             StdError::generic_err(format!(
                 "No orders found for {} at fin pair {:?}",
-                DENOM_UKUJI, pair
+                DENOM_UOSMO, pair
             ))
         )
     }

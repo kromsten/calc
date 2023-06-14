@@ -24,7 +24,7 @@ mod submit_order_tests {
 
     use crate::{
         state::pairs::save_pair,
-        tests::constants::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
+        tests::constants::{ADMIN, DENOM_UATOM, DENOM_UOSMO},
         types::pair::Pair,
         ContractError,
     };
@@ -38,7 +38,7 @@ mod submit_order_tests {
                 mock_dependencies().as_ref(),
                 mock_info(ADMIN, &[]),
                 Decimal256::one(),
-                DENOM_UKUJI.to_string(),
+                DENOM_UOSMO.to_string(),
             )
             .unwrap_err(),
             ContractError::InvalidFunds {
@@ -54,10 +54,13 @@ mod submit_order_tests {
                 mock_dependencies().as_ref(),
                 mock_info(
                     ADMIN,
-                    &[Coin::new(43282, DENOM_UKUJI), Coin::new(234782, DENOM_UUSK)]
+                    &[
+                        Coin::new(43282, DENOM_UOSMO),
+                        Coin::new(234782, DENOM_UATOM)
+                    ]
                 ),
                 Decimal256::one(),
-                DENOM_UKUJI.to_string(),
+                DENOM_UOSMO.to_string(),
             )
             .unwrap_err(),
             ContractError::InvalidFunds {
@@ -71,9 +74,9 @@ mod submit_order_tests {
         assert_eq!(
             submit_order_handler(
                 mock_dependencies().as_ref(),
-                mock_info(ADMIN, &[Coin::new(43282, DENOM_UKUJI)]),
+                mock_info(ADMIN, &[Coin::new(43282, DENOM_UOSMO)]),
                 Decimal256::one(),
-                DENOM_UKUJI.to_string(),
+                DENOM_UOSMO.to_string(),
             )
             .unwrap_err(),
             ContractError::InvalidFunds {
@@ -87,9 +90,9 @@ mod submit_order_tests {
         assert_eq!(
             submit_order_handler(
                 mock_dependencies().as_ref(),
-                mock_info(ADMIN, &[Coin::new(43282, DENOM_UUSK)]),
+                mock_info(ADMIN, &[Coin::new(43282, DENOM_UATOM)]),
                 Decimal256::one(),
-                DENOM_UKUJI.to_string(),
+                DENOM_UOSMO.to_string(),
             )
             .unwrap_err(),
             ContractError::Std(StdError::NotFound {

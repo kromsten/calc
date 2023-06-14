@@ -25,7 +25,7 @@ mod swap_tests {
     use crate::{
         handlers::swap::swap_handler,
         state::{cache::SWAP_CACHE, pairs::save_pair},
-        tests::constants::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
+        tests::constants::{ADMIN, DENOM_UATOM, DENOM_UOSMO},
         types::pair::Pair,
         ContractError,
     };
@@ -37,7 +37,7 @@ mod swap_tests {
                 mock_dependencies().as_mut(),
                 mock_env(),
                 mock_info(ADMIN, &[]),
-                Coin::new(12312, DENOM_UKUJI)
+                Coin::new(12312, DENOM_UOSMO)
             )
             .unwrap_err(),
             ContractError::InvalidFunds {
@@ -54,9 +54,9 @@ mod swap_tests {
                 mock_env(),
                 mock_info(
                     ADMIN,
-                    &[Coin::new(12312, DENOM_UUSK), Coin::new(12312, DENOM_UKUJI)]
+                    &[Coin::new(12312, DENOM_UATOM), Coin::new(12312, DENOM_UOSMO)]
                 ),
-                Coin::new(12312, DENOM_UKUJI)
+                Coin::new(12312, DENOM_UOSMO)
             )
             .unwrap_err(),
             ContractError::InvalidFunds {
@@ -71,8 +71,8 @@ mod swap_tests {
             swap_handler(
                 mock_dependencies().as_mut(),
                 mock_env(),
-                mock_info(ADMIN, &[Coin::new(0, DENOM_UKUJI)]),
-                Coin::new(12312, DENOM_UKUJI)
+                mock_info(ADMIN, &[Coin::new(0, DENOM_UOSMO)]),
+                Coin::new(12312, DENOM_UOSMO)
             )
             .unwrap_err(),
             ContractError::InvalidFunds {
@@ -87,8 +87,8 @@ mod swap_tests {
             swap_handler(
                 mock_dependencies().as_mut(),
                 mock_env(),
-                mock_info(ADMIN, &[Coin::new(12312, DENOM_UKUJI)]),
-                Coin::new(12312, DENOM_UUSK)
+                mock_info(ADMIN, &[Coin::new(12312, DENOM_UOSMO)]),
+                Coin::new(12312, DENOM_UATOM)
             )
             .unwrap_err(),
             ContractError::Std(StdError::NotFound {
@@ -99,7 +99,7 @@ mod swap_tests {
 
     #[test]
     fn caches_details_correctly() {
-        let mut deps = mock_dependencies_with_balance(&[Coin::new(0, DENOM_UUSK)]);
+        let mut deps = mock_dependencies_with_balance(&[Coin::new(0, DENOM_UATOM)]);
 
         let pair = Pair::default();
 
@@ -183,7 +183,7 @@ mod return_swapped_funds_tests {
     use crate::{
         handlers::swap::return_swapped_funds,
         state::cache::{SwapCache, SWAP_CACHE},
-        tests::constants::DENOM_UKUJI,
+        tests::constants::DENOM_UOSMO,
         ContractError,
     };
 
@@ -191,12 +191,12 @@ mod return_swapped_funds_tests {
     fn with_return_amount_smaller_than_minimum_receive_amount_fails() {
         let mut deps = mock_dependencies();
 
-        let minimum_receive_amount = Coin::new(123, DENOM_UKUJI);
+        let minimum_receive_amount = Coin::new(123, DENOM_UOSMO);
 
         let swap_cache = SwapCache {
             sender: Addr::unchecked("sender"),
             minimum_receive_amount: minimum_receive_amount.clone(),
-            target_denom_balance: Coin::new(122, DENOM_UKUJI),
+            target_denom_balance: Coin::new(122, DENOM_UOSMO),
         };
 
         SWAP_CACHE.save(deps.as_mut().storage, &swap_cache).unwrap();
@@ -218,9 +218,9 @@ mod return_swapped_funds_tests {
         let mut deps = mock_dependencies();
         let env = mock_env();
 
-        let minimum_receive_amount = Coin::new(123, DENOM_UKUJI);
-        let target_denom_balance = Coin::new(122, DENOM_UKUJI);
-        let return_amount = Coin::new(153, DENOM_UKUJI);
+        let minimum_receive_amount = Coin::new(123, DENOM_UOSMO);
+        let target_denom_balance = Coin::new(122, DENOM_UOSMO);
+        let return_amount = Coin::new(153, DENOM_UOSMO);
 
         let swap_cache = SwapCache {
             sender: Addr::unchecked("sender"),

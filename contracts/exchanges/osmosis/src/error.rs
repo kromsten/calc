@@ -18,6 +18,6 @@ pub enum ContractError {
     #[error("Missing reply id")]
     MissingReplyId {},
 
-    #[error("Empty fin pool")]
-    EmptyPool {},
+    #[error("Bad route: {msg:?}")]
+    BadRoute { msg: String },
 }
