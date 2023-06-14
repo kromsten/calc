@@ -98,6 +98,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             target_denom,
         } => to_binary(&get_expected_receive_amount_handler(
             deps,
+            env,
             swap_amount,
             target_denom,
         )?),

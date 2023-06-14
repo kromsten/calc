@@ -1,7 +1,8 @@
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{
     from_slice, to_binary, Binary, ContractResult, CustomQuery, Empty, OwnedDeps, Querier,
-    QuerierResult, QueryRequest, StdError, StdResult, SystemError, SystemResult, WasmQuery,
+    QuerierResult, QueryRequest, StdError, StdResult, SystemError, SystemResult, Uint128,
+    WasmQuery,
 };
 use osmosis_std::shim::Any;
 use osmosis_std::types::cosmos::base::v1beta1::Coin;
@@ -16,8 +17,7 @@ use serde::de::DeserializeOwned;
 use std::marker::PhantomData;
 
 use super::constants::{
-    DENOM_STAKE, DENOM_UATOM, DENOM_UION, DENOM_UOSMO, DENOM_USDC, ONE, ONE_DECIMAL, SWAP_FEE_RATE,
-    TEN,
+    DENOM_STAKE, DENOM_UATOM, DENOM_UION, DENOM_UOSMO, DENOM_USDC, ONE_DECIMAL, SWAP_FEE_RATE, TEN,
 };
 
 pub type StargateHandler = dyn Fn(&str, &Binary) -> StdResult<Binary>;
@@ -39,7 +39,7 @@ impl<C: DeserializeOwned> CalcMockQuerier<C> {
                 }
                 "/osmosis.poolmanager.v1beta1.Query/EstimateSwapExactAmountIn" => {
                     to_binary(&EstimateSwapExactAmountInResponse {
-                        token_out_amount: ONE.to_string(),
+                        token_out_amount: Uint128::new(1231232).to_string(),
                     })
                 }
                 "/osmosis.gamm.v1beta1.Query/CalcJoinPoolShares" => {

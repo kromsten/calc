@@ -1,23 +1,56 @@
-use cosmwasm_std::{Coin, Deps, StdResult};
+use cosmwasm_std::{Coin, Deps, Env, StdError, StdResult, Uint128};
+use osmosis_std::types::osmosis::poolmanager::v1beta1::PoolmanagerQuerier;
+
+use crate::{helpers::routes::calculate_route, state::pairs::find_pair};
 
 pub fn get_expected_receive_amount_handler(
-    _deps: Deps,
-    _swap_amount: Coin,
-    _target_denom: String,
+    deps: Deps,
+    env: Env,
+    swap_amount: Coin,
+    target_denom: String,
 ) -> StdResult<Coin> {
-    unimplemented!()
+    let pair = find_pair(
+        deps.storage,
+        [swap_amount.denom.clone(), target_denom.clone()],
+    )?;
+
+    let routes = calculate_route(&deps.querier, &pair, swap_amount.denom.clone())?;
+
+    let token_out_amount = PoolmanagerQuerier::new(&deps.querier)
+        .estimate_swap_exact_amount_in(
+            env.contract.address.to_string(),
+            0,
+            swap_amount.to_string(),
+            routes.clone(),
+        )
+        .map_err(|_| {
+            StdError::generic_err(format!(
+                "amount of {} received for swapping {} via {:#?}",
+                routes.last().unwrap().token_out_denom,
+                swap_amount,
+                routes
+            ))
+        })?
+        .token_out_amount
+        .parse::<Uint128>()?;
+
+    Ok(Coin::new(token_out_amount.into(), target_denom))
 }
 
 #[cfg(test)]
 mod get_expected_receive_amount_handler_tests {
     use cosmwasm_std::{
-        testing::mock_dependencies, Coin, ContractResult, StdError, SystemResult, Uint128,
+        testing::{mock_dependencies, mock_env},
+        Coin, StdError, Uint128,
     };
 
     use crate::{
         handlers::get_expected_receive_amount::get_expected_receive_amount_handler,
         state::pairs::save_pair,
-        tests::constants::{DENOM_UATOM, DENOM_UOSMO},
+        tests::{
+            constants::{DENOM_UATOM, DENOM_UOSMO},
+            mocks::calc_mock_dependencies,
+        },
         types::pair::Pair,
     };
 
@@ -26,6 +59,7 @@ mod get_expected_receive_amount_handler_tests {
         assert_eq!(
             get_expected_receive_amount_handler(
                 mock_dependencies().as_ref(),
+                mock_env(),
                 Coin {
                     denom: DENOM_UOSMO.to_string(),
                     amount: Uint128::zero()
@@ -34,53 +68,14 @@ mod get_expected_receive_amount_handler_tests {
             )
             .unwrap_err(),
             StdError::NotFound {
-                kind: "fin::types::pair::Pair".to_string()
-            }
-        )
-    }
-
-    #[test]
-    fn for_failed_simulation_fails() {
-        let mut deps = mock_dependencies();
-
-        deps.querier.update_wasm(|_| {
-            SystemResult::Ok(ContractResult::Err("simulation failed".to_string()))
-        });
-
-        let pair = Pair::default();
-
-        save_pair(deps.as_mut().storage, &pair).unwrap();
-
-        assert_eq!(
-            get_expected_receive_amount_handler(
-                deps.as_ref(),
-                Coin {
-                    denom: DENOM_UOSMO.to_string(),
-                    amount: Uint128::zero()
-                },
-                DENOM_UATOM.to_string()
-            )
-            .unwrap_err(),
-            StdError::GenericErr {
-                msg: "Querier contract error: simulation failed".to_string()
+                kind: "osmosis::types::pair::Pair".to_string()
             }
         )
     }
 
     #[test]
     fn for_successful_simulation_returns_expected_amount() {
-        let mut deps = mock_dependencies();
-
-        // deps.querier.update_wasm(|_| {
-        //     SystemResult::Ok(ContractResult::Ok(
-        //         to_binary(&SimulationResponse {
-        //             return_amount: Uint256::from(83211293u128),
-        //             spread_amount: Uint256::from(13312u128),
-        //             commission_amount: Uint256::from(23312u128),
-        //         })
-        //         .unwrap(),
-        //     ))
-        // });
+        let mut deps = calc_mock_dependencies();
 
         let pair = Pair::default();
 
@@ -89,16 +84,17 @@ mod get_expected_receive_amount_handler_tests {
         assert_eq!(
             get_expected_receive_amount_handler(
                 deps.as_ref(),
+                mock_env(),
                 Coin {
-                    denom: DENOM_UOSMO.to_string(),
+                    denom: pair.base_denom.to_string(),
                     amount: Uint128::zero()
                 },
-                DENOM_UATOM.to_string()
+                pair.quote_denom.to_string()
             )
             .unwrap(),
             Coin {
-                denom: DENOM_UATOM.to_string(),
-                amount: Uint128::from(83211293u128)
+                amount: Uint128::new(1231232),
+                denom: pair.quote_denom.to_string(),
             }
         )
     }
