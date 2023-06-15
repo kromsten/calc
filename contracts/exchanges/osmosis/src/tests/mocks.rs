@@ -1,8 +1,8 @@
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{
-    from_slice, to_binary, Binary, ContractResult, CustomQuery, Empty, OwnedDeps, Querier,
-    QuerierResult, QueryRequest, StdError, StdResult, SystemError, SystemResult, Uint128,
-    WasmQuery,
+    from_slice, to_binary, Addr, Binary, Coin as CosmosCoin, ContractResult, CustomQuery, Empty,
+    OwnedDeps, Querier, QuerierResult, QueryRequest, StdError, StdResult, SystemError,
+    SystemResult, Uint128, WasmQuery,
 };
 use osmosis_std::shim::Any;
 use osmosis_std::types::cosmos::base::v1beta1::Coin;
@@ -222,6 +222,10 @@ impl<C: CustomQuery + DeserializeOwned> CalcMockQuerier<C> {
         WH: Fn(&WasmQuery) -> QuerierResult,
     {
         self.mock_querier.update_wasm(wasm_handler);
+    }
+
+    pub fn update_balance(&mut self, address: Addr, balances: Vec<CosmosCoin>) {
+        self.mock_querier.update_balance(address, balances);
     }
 
     pub fn handle_query(&self, request: &QueryRequest<C>) -> QuerierResult {

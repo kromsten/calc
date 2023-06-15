@@ -1,31 +1,124 @@
-use cosmwasm_std::{Coin, Deps, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{BankMsg, Coin, Deps, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg};
+use osmosis_std::types::osmosis::poolmanager::v1beta1::MsgSwapExactAmountIn;
+use shared::coin::subtract;
 
-use crate::ContractError;
+use crate::{
+    contract::AFTER_SWAP,
+    helpers::routes::calculate_route,
+    state::{
+        cache::{SwapCache, SWAP_CACHE},
+        pairs::find_pair,
+    },
+    ContractError,
+};
 
 pub fn swap_handler(
-    _deps: DepsMut,
-    _env: Env,
-    _info: MessageInfo,
-    _minimum_receive_amount: Coin,
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    minimum_receive_amount: Coin,
 ) -> Result<Response, ContractError> {
-    unimplemented!()
+    if info.funds.len() != 1 {
+        return Err(ContractError::InvalidFunds {
+            msg: "Must provide exactly one coin to swap".to_string(),
+        });
+    }
+
+    if info.funds[0].amount.is_zero() {
+        return Err(ContractError::InvalidFunds {
+            msg: "Must provide a non-zero amount to swap".to_string(),
+        });
+    }
+
+    let pair = find_pair(
+        deps.storage,
+        [
+            info.funds[0].denom.clone(),
+            minimum_receive_amount.denom.clone(),
+        ],
+    )?;
+
+    SWAP_CACHE.save(
+        deps.storage,
+        &SwapCache {
+            sender: info.sender.clone(),
+            minimum_receive_amount: minimum_receive_amount.clone(),
+            target_denom_balance: deps.querier.query_balance(
+                env.contract.address.clone(),
+                minimum_receive_amount.denom.clone(),
+            )?,
+        },
+    )?;
+
+    let routes = calculate_route(&deps.querier, &pair, info.funds[0].denom.clone())?;
+
+    Ok(Response::new()
+        .add_attribute("swap", "true")
+        .add_attribute("sender", info.sender)
+        .add_attribute("swap_amount", info.funds[0].to_string())
+        .add_attribute("minimum_receive_amount", minimum_receive_amount.to_string())
+        .add_submessage(SubMsg {
+            msg: MsgSwapExactAmountIn {
+                sender: env.contract.address.to_string(),
+                token_in: Some(info.funds[0].clone().into()),
+                token_out_min_amount: minimum_receive_amount.amount.to_string(),
+                routes,
+            }
+            .into(),
+            id: AFTER_SWAP,
+            reply_on: ReplyOn::Success,
+            gas_limit: None,
+        }))
 }
 
-pub fn return_swapped_funds(_deps: Deps, _env: Env) -> Result<Response, ContractError> {
-    unimplemented!()
+pub fn return_swapped_funds(deps: Deps, env: Env) -> Result<Response, ContractError> {
+    let swap_cache = SWAP_CACHE.load(deps.storage)?;
+
+    let updated_target_denom_balance = deps.querier.query_balance(
+        env.contract.address,
+        swap_cache.minimum_receive_amount.denom.clone(),
+    )?;
+
+    let return_amount = subtract(
+        &updated_target_denom_balance,
+        &swap_cache.target_denom_balance,
+    )?;
+
+    if return_amount.amount < swap_cache.minimum_receive_amount.amount {
+        return Err(ContractError::FailedSwap {
+            msg: format!(
+                "{} is less than the minumum return amount of {}",
+                return_amount, swap_cache.minimum_receive_amount
+            ),
+        });
+    }
+
+    Ok(Response::new()
+        .add_attribute("return_amount", return_amount.to_string())
+        .add_submessage(SubMsg::new(BankMsg::Send {
+            to_address: swap_cache.sender.to_string(),
+            amount: vec![return_amount],
+        })))
 }
 
 #[cfg(test)]
 mod swap_tests {
     use cosmwasm_std::{
-        testing::{mock_dependencies, mock_dependencies_with_balance, mock_env, mock_info},
-        Coin, StdError,
+        testing::{mock_dependencies, mock_env, mock_info},
+        Coin, ReplyOn, StdError, SubMsg,
+    };
+    use osmosis_std::types::osmosis::poolmanager::v1beta1::{
+        MsgSwapExactAmountIn, SwapAmountInRoute,
     };
 
     use crate::{
+        contract::AFTER_SWAP,
         handlers::swap::swap_handler,
         state::{cache::SWAP_CACHE, pairs::save_pair},
-        tests::constants::{ADMIN, DENOM_UATOM, DENOM_UOSMO},
+        tests::{
+            constants::{ADMIN, DENOM_UATOM, DENOM_UOSMO},
+            mocks::calc_mock_dependencies,
+        },
         types::pair::Pair,
         ContractError,
     };
@@ -92,14 +185,20 @@ mod swap_tests {
             )
             .unwrap_err(),
             ContractError::Std(StdError::NotFound {
-                kind: "fin::types::pair::Pair".to_string()
+                kind: "osmosis::types::pair::Pair".to_string()
             })
         )
     }
 
     #[test]
     fn caches_details_correctly() {
-        let mut deps = mock_dependencies_with_balance(&[Coin::new(0, DENOM_UATOM)]);
+        let mut deps = calc_mock_dependencies();
+        let env = mock_env();
+
+        deps.querier.update_balance(
+            env.contract.address.clone(),
+            vec![Coin::new(0, DENOM_UATOM)],
+        );
 
         let pair = Pair::default();
 
@@ -123,10 +222,7 @@ mod swap_tests {
             swap_cache.target_denom_balance,
             deps.as_ref()
                 .querier
-                .query_balance(
-                    mock_env().contract.address,
-                    minimum_receive_amount.denom.clone()
-                )
+                .query_balance(env.contract.address, minimum_receive_amount.denom.clone())
                 .unwrap()
         );
         assert_eq!(swap_cache.minimum_receive_amount, minimum_receive_amount);
@@ -134,7 +230,7 @@ mod swap_tests {
 
     #[test]
     fn sends_swap_message() {
-        let mut deps = mock_dependencies();
+        let mut deps = calc_mock_dependencies();
 
         let pair = Pair::default();
 
@@ -142,33 +238,35 @@ mod swap_tests {
 
         let info = mock_info(ADMIN, &[Coin::new(2347631, pair.quote_denom.clone())]);
 
+        let minimum_receive_amount = Coin::new(3873213, pair.base_denom.clone());
+
         let response = swap_handler(
             deps.as_mut(),
             mock_env(),
             info.clone(),
-            Coin::new(3873213, pair.base_denom.clone()),
+            minimum_receive_amount.clone(),
         )
         .unwrap();
 
         assert_eq!(response.messages.len(), 1);
-        // assert_eq!(
-        //     response.messages.first().unwrap(),
-        //     &SubMsg::reply_on_success(
-        //         PairContract(pair.address)
-        //             .call(
-        //                 ExecuteMsg::Swap {
-        //                     offer_asset: None,
-        //                     belief_price: None,
-        //                     max_spread: None,
-        //                     to: None,
-        //                     callback: None
-        //                 },
-        //                 info.funds
-        //             )
-        //             .unwrap(),
-        //         AFTER_SWAP
-        //     )
-        // )
+        assert_eq!(
+            response.messages.first().unwrap(),
+            &SubMsg {
+                msg: MsgSwapExactAmountIn {
+                    sender: mock_env().contract.address.to_string(),
+                    token_in: Some(info.funds[0].clone().into()),
+                    token_out_min_amount: minimum_receive_amount.amount.to_string(),
+                    routes: vec![SwapAmountInRoute {
+                        token_out_denom: pair.base_denom.clone(),
+                        pool_id: pair.route[0]
+                    }],
+                }
+                .into(),
+                id: AFTER_SWAP,
+                reply_on: ReplyOn::Success,
+                gas_limit: None,
+            }
+        )
     }
 }
 
