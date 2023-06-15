@@ -29,15 +29,6 @@ pub fn get_twap_to_now_handler(
     for pool_id in route.into_iter() {
         let target_denom = get_token_out_denom(&deps.querier, swap_denom.clone(), pool_id)?;
 
-        let pool = get_pool(&deps.querier, pool_id)?;
-
-        let swap_fee = pool
-            .pool_params
-            .unwrap()
-            .swap_fee
-            .parse::<Decimal>()
-            .unwrap();
-
         let pool_price = TwapQuerier::new(&deps.querier)
             .arithmetic_twap_to_now(
                 pool_id,
@@ -50,8 +41,7 @@ pub fn get_twap_to_now_handler(
             )
             .unwrap()
             .arithmetic_twap
-            .parse::<Decimal>()?
-            * (Decimal::one() + swap_fee);
+            .parse::<Decimal>()?;
 
         price = pool_price * price;
 
@@ -113,30 +103,22 @@ pub fn get_pool(querier: &QuerierWrapper, pool_id: u64) -> Result<Pool, StdError
 mod get_twap_to_now_tests {
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env},
-        Decimal256, StdError,
+        to_binary, Decimal256, StdError,
     };
+    use osmosis_std::types::osmosis::twap::v1beta1::{
+        ArithmeticTwapRequest, ArithmeticTwapResponse,
+    };
+    use prost::Message;
 
     use crate::{
         handlers::get_twap_to_now::get_twap_to_now_handler,
         state::pairs::save_pair,
-        tests::constants::{DENOM_UATOM, DENOM_UOSMO},
+        tests::{
+            constants::{DENOM_UATOM, DENOM_UOSMO},
+            mocks::calc_mock_dependencies,
+        },
         types::pair::Pair,
     };
-
-    #[test]
-    fn with_period_larger_than_zero_fails() {
-        assert_eq!(
-            get_twap_to_now_handler(
-                mock_dependencies().as_ref(),
-                mock_env(),
-                DENOM_UOSMO.to_string(),
-                DENOM_UATOM.to_string(),
-                10
-            )
-            .unwrap_err(),
-            StdError::generic_err("Cannot get twap for period of 10 seconds, only 0 is supported")
-        )
-    }
 
     #[test]
     fn with_no_pair_for_denoms_fails() {
@@ -150,124 +132,78 @@ mod get_twap_to_now_tests {
             )
             .unwrap_err(),
             StdError::NotFound {
-                kind: "fin::types::pair::Pair".to_string()
+                kind: "osmosis::types::pair::Pair".to_string()
             }
         )
     }
 
     #[test]
-    fn with_no_orders_for_denom_fails() {
-        let mut deps = mock_dependencies();
+    fn query_belief_price_with_single_pool_id_should_succeed() {
+        let mut deps = calc_mock_dependencies();
+        let env = mock_env();
+
+        deps.querier.update_stargate(|path, data| {
+            if path == "/osmosis.twap.v1beta1.Query/ArithmeticTwapToNow" {
+                let price = match ArithmeticTwapRequest::decode(data.as_slice())
+                    .unwrap()
+                    .pool_id
+                {
+                    3 => "0.8",
+                    _ => "1.0",
+                };
+
+                return to_binary(&ArithmeticTwapResponse {
+                    arithmetic_twap: price.to_string(),
+                });
+            }
+            Err(StdError::generic_err("invoke fallback"))
+        });
 
         let pair = Pair::default();
 
         save_pair(deps.as_mut().storage, &pair).unwrap();
 
-        // deps.querier.update_wasm(|_| {
-        //     SystemResult::Ok(ContractResult::Ok(
-        //         to_binary(&BookResponse {
-        //             base: vec![],
-        //             quote: vec![],
-        //         })
-        //         .unwrap(),
-        //     ))
-        // });
+        let price =
+            get_twap_to_now_handler(deps.as_ref(), env, pair.quote_denom, pair.base_denom, 60)
+                .unwrap();
 
-        assert_eq!(
-            get_twap_to_now_handler(
-                deps.as_ref(),
-                mock_env(),
-                DENOM_UOSMO.to_string(),
-                DENOM_UATOM.to_string(),
-                0
-            )
-            .unwrap_err(),
-            StdError::generic_err(format!(
-                "No orders found for {} at fin pair {:?}",
-                DENOM_UOSMO, pair
-            ))
-        )
+        assert_eq!(price, Decimal256::percent(80));
     }
 
     #[test]
-    fn for_fin_buy_returns_quote_price() {
-        let mut deps = mock_dependencies();
+    fn query_belief_price_with_multiple_pool_ids_id_should_succeed() {
+        let mut deps = calc_mock_dependencies();
+        let env = mock_env();
 
-        let pair = Pair::default();
+        deps.querier.update_stargate(|path, data| {
+            if path == "/osmosis.twap.v1beta1.Query/ArithmeticTwapToNow" {
+                let price = match ArithmeticTwapRequest::decode(data.as_slice())
+                    .unwrap()
+                    .pool_id
+                {
+                    1 => "0.2",
+                    4 => "1.2",
+                    _ => "1.0",
+                };
 
-        save_pair(deps.as_mut().storage, &pair).unwrap();
+                return to_binary(&ArithmeticTwapResponse {
+                    arithmetic_twap: price.to_string(),
+                });
+            }
+            Err(StdError::generic_err("invoke fallback"))
+        });
 
-        // deps.querier.update_wasm(move |_| {
-        //     SystemResult::Ok(ContractResult::Ok(
-        //         to_binary(&BookResponse {
-        //             base: vec![PoolResponse {
-        //                 quote_price: Decimal256::percent(50),
-        //                 offer_denom: Denom::Native(pair.base_denom.to_string()),
-        //                 total_offer_amount: Uint256::from_u128(372u128),
-        //             }],
-        //             quote: vec![PoolResponse {
-        //                 quote_price: Decimal256::percent(30),
-        //                 offer_denom: Denom::Native(pair.quote_denom.to_string()),
-        //                 total_offer_amount: Uint256::from_u128(372u128),
-        //             }],
-        //         })
-        //         .unwrap(),
-        //     ))
-        // });
-
-        let pair = Pair::default();
-
-        assert_eq!(
-            get_twap_to_now_handler(
-                deps.as_ref(),
-                mock_env(),
-                pair.quote_denom.to_string(),
-                pair.base_denom.to_string(),
-                0
-            )
-            .unwrap(),
-            Decimal256::percent(50)
-        )
-    }
-
-    #[test]
-    fn for_fin_sell_returns_inverted_quote_price() {
-        let mut deps = mock_dependencies();
-
-        let pair = Pair::default();
+        let pair = Pair {
+            route: vec![4, 1],
+            ..Pair::default()
+        };
 
         save_pair(deps.as_mut().storage, &pair).unwrap();
 
-        // deps.querier.update_wasm(move |_| {
-        //     SystemResult::Ok(ContractResult::Ok(
-        //         to_binary(&BookResponse {
-        //             base: vec![PoolResponse {
-        //                 quote_price: Decimal256::percent(50),
-        //                 offer_denom: Denom::Native(pair.base_denom.to_string()),
-        //                 total_offer_amount: Uint256::from_u128(372u128),
-        //             }],
-        //             quote: vec![PoolResponse {
-        //                 quote_price: Decimal256::percent(30),
-        //                 offer_denom: Denom::Native(pair.quote_denom.to_string()),
-        //                 total_offer_amount: Uint256::from_u128(372u128),
-        //             }],
-        //         })
-        //         .unwrap(),
-        //     ))
-        // });
+        let price =
+            get_twap_to_now_handler(deps.as_ref(), env, pair.quote_denom, pair.base_denom, 60)
+                .unwrap();
 
-        let pair = Pair::default();
-
-        assert_eq!(
-            get_twap_to_now_handler(
-                deps.as_ref(),
-                mock_env(),
-                pair.base_denom.to_string(),
-                pair.quote_denom.to_string(),
-                0
-            )
-            .unwrap(),
-            Decimal256::one() / Decimal256::percent(30)
-        )
+        assert_eq!(price, Decimal256::percent(20) * Decimal256::percent(120));
     }
 }
