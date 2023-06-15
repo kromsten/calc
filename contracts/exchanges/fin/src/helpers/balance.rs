@@ -7,5 +7,5 @@ pub fn get_balance_delta(
     old_balance: &Coin,
 ) -> StdResult<Coin> {
     let new_balance = querier.query_balance(address, old_balance.denom.clone())?;
-    subtract(&new_balance, &old_balance)
+    subtract(&new_balance, old_balance)
 }

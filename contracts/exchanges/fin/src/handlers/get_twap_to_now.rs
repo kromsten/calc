@@ -164,7 +164,7 @@ mod get_twap_to_now_tests {
             get_twap_to_now_handler(
                 deps.as_ref(),
                 pair.quote_denom.to_string(),
-                pair.base_denom.to_string(),
+                pair.base_denom,
                 0
             )
             .unwrap(),
@@ -204,7 +204,7 @@ mod get_twap_to_now_tests {
             get_twap_to_now_handler(
                 deps.as_ref(),
                 pair.base_denom.to_string(),
-                pair.quote_denom.to_string(),
+                pair.quote_denom,
                 0
             )
             .unwrap(),

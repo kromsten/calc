@@ -16,7 +16,7 @@ pub struct FinConfigResponse {
 pub fn get_fin_price(
     querier: &QuerierWrapper,
     target_price: Decimal256,
-    swap_denom: &str,
+    swap_denom: String,
     pair: &Pair,
 ) -> StdResult<Decimal256> {
     let pair_config = querier
@@ -28,7 +28,7 @@ pub fn get_fin_price(
         });
     }
 
-    let directional_price = match pair.position_type(swap_denom.clone()) {
+    let directional_price = match pair.position_type(&swap_denom) {
         PositionType::Enter => target_price,
         PositionType::Exit => Decimal256::one() / target_price,
     };
@@ -96,7 +96,7 @@ mod calculate_target_price_tests {
             get_fin_price(
                 &deps.as_ref().querier,
                 target_price,
-                &pair.quote_denom,
+                pair.quote_denom.clone(),
                 &pair
             )
             .unwrap(),
@@ -134,7 +134,7 @@ mod calculate_target_price_tests {
             get_fin_price(
                 &deps.as_ref().querier,
                 target_price,
-                &pair.base_denom,
+                pair.base_denom.clone(),
                 &pair
             )
             .unwrap(),
@@ -172,7 +172,7 @@ mod calculate_target_price_tests {
             get_fin_price(
                 &deps.as_ref().querier,
                 target_price,
-                &pair.base_denom,
+                pair.base_denom.clone(),
                 &pair
             )
             .unwrap(),
@@ -213,7 +213,7 @@ mod calculate_target_price_tests {
             get_fin_price(
                 &deps.as_ref().querier,
                 target_price,
-                &pair.quote_denom,
+                pair.quote_denom.clone(),
                 &pair
             )
             .unwrap(),
@@ -252,7 +252,7 @@ mod calculate_target_price_tests {
             get_fin_price(
                 &deps.as_ref().querier,
                 target_price,
-                &pair.base_denom,
+                pair.base_denom.clone(),
                 &pair
             )
             .unwrap(),

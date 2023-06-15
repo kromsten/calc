@@ -205,12 +205,12 @@ mod swap_tests {
         save_pair(deps.as_mut().storage, &pair).unwrap();
 
         let info = mock_info(ADMIN, &[Coin::new(2347631, pair.quote_denom.clone())]);
-        let minimum_receive_amount = Coin::new(3873213, pair.base_denom.clone());
+        let minimum_receive_amount = Coin::new(3873213, pair.base_denom);
 
         swap_handler(
             deps.as_mut(),
             mock_env(),
-            info.clone(),
+            info,
             minimum_receive_amount.clone(),
         )
         .unwrap();

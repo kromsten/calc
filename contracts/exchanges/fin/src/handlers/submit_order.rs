@@ -29,7 +29,12 @@ pub fn submit_order_handler(
 
     let pair = find_pair(deps.storage, [info.funds[0].denom.clone(), target_denom])?;
 
-    let price = get_fin_price(&deps.querier, target_price, &info.funds[0].denom, &pair)?;
+    let price = get_fin_price(
+        &deps.querier,
+        target_price,
+        info.funds[0].denom.clone(),
+        &pair,
+    )?;
 
     Ok(Response::new()
         .add_attribute("submit_order", "true")

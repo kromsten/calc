@@ -6,7 +6,7 @@ use kujira_fin::{OrderResponse, QueryMsg};
 use crate::state::pairs::find_pair;
 
 pub fn get_order_handler(deps: Deps, order_idx: Uint128, denoms: [String; 2]) -> StdResult<Order> {
-    let pair = find_pair(deps.storage, denoms.clone())?;
+    let pair = find_pair(deps.storage, denoms)?;
 
     let order = deps
         .querier

@@ -33,7 +33,7 @@ pub fn instantiate(
     _: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    deps.api.addr_validate(&msg.admin.to_string())?;
+    deps.api.addr_validate(msg.admin.as_ref())?;
     update_config(
         deps.storage,
         Config {

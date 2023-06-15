@@ -94,7 +94,7 @@ mod get_expected_receive_amount_handler_tests {
             .unwrap(),
             Coin {
                 amount: Uint128::new(1231232),
-                denom: pair.quote_denom.to_string(),
+                denom: pair.quote_denom,
             }
         )
     }

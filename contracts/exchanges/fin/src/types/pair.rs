@@ -35,10 +35,10 @@ impl Pair {
     }
 }
 
-impl Into<ExchangePair> for Pair {
-    fn into(self) -> ExchangePair {
+impl From<Pair> for ExchangePair {
+    fn from(val: Pair) -> Self {
         ExchangePair {
-            denoms: [self.base_denom, self.quote_denom],
+            denoms: [val.base_denom, val.quote_denom],
         }
     }
 }

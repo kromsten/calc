@@ -32,7 +32,7 @@ pub fn withdraw_order_handler(
     LIMIT_ORDER_CACHE.save(
         deps.storage,
         &LimitOrderCache {
-            sender: info.sender.clone(),
+            sender: info.sender,
             balances: HashMap::from([
                 (
                     denoms[0].clone(),
@@ -42,7 +42,7 @@ pub fn withdraw_order_handler(
                 (
                     denoms[1].clone(),
                     deps.querier
-                        .query_balance(env.contract.address.clone(), denoms[1].clone())?,
+                        .query_balance(env.contract.address, denoms[1].clone())?,
                 ),
             ]),
         },
@@ -70,9 +70,7 @@ pub fn return_withdrawn_funds(deps: Deps, env: Env) -> Result<Response, Contract
     let cache = LIMIT_ORDER_CACHE.load(deps.storage)?;
 
     let mut funds = cache
-        .balances
-        .iter()
-        .map(|(_, old_balance)| {
+        .balances.values().map(|old_balance| {
             get_balance_delta(deps.querier, env.contract.address.clone(), old_balance)
         })
         .collect::<Result<Vec<Coin>, _>>()?

@@ -20,8 +20,8 @@ pub fn get_twap_to_now_handler(
     let pair = find_pair(deps.storage, [swap_denom.clone(), target_denom])?;
 
     let route = match pair.position_type(swap_denom.clone()) {
-        PositionType::Enter => pair.route.clone(),
-        PositionType::Exit => pair.route.clone().into_iter().rev().collect(),
+        PositionType::Enter => pair.route,
+        PositionType::Exit => pair.route.into_iter().rev().collect(),
     };
 
     let mut price = Decimal::one();
