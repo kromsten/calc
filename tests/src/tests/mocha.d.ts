@@ -12,7 +12,8 @@ declare module 'mocha' {
     queryClient: KujiraQueryClient;
     userCosmWasmClient: SigningCosmWasmClient;
     dcaContractAddress: Addr;
-    calcSwapFee: number;
+    exchangeContractAddress: Addr;
+    dexSwapFee: number;
     automationFee: number;
     adminWalletAddress: Addr;
     feeCollectorAddress: Addr;

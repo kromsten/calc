@@ -1,5 +1,5 @@
 use cosmwasm_std::{Deps, StdResult, Uint128};
-use exchange::order::Order;
+use exchange::msg::Order;
 
 pub fn get_order_handler(
     _deps: Deps,

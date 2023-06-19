@@ -10,100 +10,103 @@ import { expect } from '../shared.test';
 import { coin } from '@cosmjs/proto-signing';
 
 describe('when cancelling a vault', () => {
-  describe('with an unfilled limit order trigger', async () => {
-    const swapAmount = 100000;
-    const targetPrice = 0.5;
-    let vaultBeforeExecution: Vault;
-    let vaultAfterExecution: Vault;
-    let eventPayloadsAfterExecution: EventData[];
-    let balancesBeforeExecution: { [x: string]: { address: string } };
-    let balancesAfterExecution: { [x: string]: { address: string } };
+  (process.env.SUPPORTS_PRICE_TRIGGERS === 'false' ? describe.skip : describe)(
+    'with an unsatisfied price trigger',
+    async function () {
+      const swapAmount = 100000;
+      const targetPrice = 0.5;
+      let vaultBeforeExecution: Vault;
+      let vaultAfterExecution: Vault;
+      let eventPayloadsAfterExecution: EventData[];
+      let balancesBeforeExecution: { [x: string]: { address: string } };
+      let balancesAfterExecution: { [x: string]: { address: string } };
 
-    before(async function (this: Context) {
-      const vaultId = await createVault(this, {
-        swap_amount: `${swapAmount}`,
-        target_receive_amount: `${Math.round(swapAmount / targetPrice)}`,
-      });
+      before(async function (this: Context) {
+        const vaultId = await createVault(this, {
+          swap_amount: `${swapAmount}`,
+          target_receive_amount: `${Math.round(swapAmount / targetPrice)}`,
+        });
 
-      vaultBeforeExecution = (
-        await this.cosmWasmClient.queryContractSmart(this.dcaContractAddress, {
-          get_vault: {
-            vault_id: vaultId,
-          },
-        })
-      ).vault;
-
-      balancesBeforeExecution = await getBalances(this.cosmWasmClient, [
-        this.userWalletAddress,
-        this.dcaContractAddress,
-        this.finPairAddress,
-        this.feeCollectorAddress,
-      ]);
-
-      await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
-        cancel_vault: {
-          vault_id: vaultId,
-        },
-      });
-
-      vaultAfterExecution = (
-        await this.cosmWasmClient.queryContractSmart(this.dcaContractAddress, {
-          get_vault: {
-            vault_id: vaultId,
-          },
-        })
-      ).vault;
-
-      balancesAfterExecution = await getBalances(this.cosmWasmClient, [
-        this.userWalletAddress,
-        this.dcaContractAddress,
-        this.finPairAddress,
-        this.feeCollectorAddress,
-      ]);
-
-      eventPayloadsAfterExecution = map(
-        (event) => event.data,
-        (
+        vaultBeforeExecution = (
           await this.cosmWasmClient.queryContractSmart(this.dcaContractAddress, {
-            get_events_by_resource_id: { resource_id: vaultId },
+            get_vault: {
+              vault_id: vaultId,
+            },
           })
-        ).events,
-      );
-    });
+        ).vault;
 
-    it('withdraws the fin limit order', async function (this: Context) {
-      expect(
-        this.cosmWasmClient.queryContractSmart(this.finPairAddress, {
-          order: {
-            order_idx: 'price' in vaultBeforeExecution.trigger && vaultBeforeExecution.trigger.price.order_idx,
+        balancesBeforeExecution = await getBalances(this.cosmWasmClient, [
+          this.userWalletAddress,
+          this.dcaContractAddress,
+          this.finPairAddress,
+          this.feeCollectorAddress,
+        ]);
+
+        await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
+          cancel_vault: {
+            vault_id: vaultId,
           },
-        }),
-      ).to.be.rejectedWith(/No orders with the specified information exist/);
-    });
+        });
 
-    it('empties the vault balance', async function (this: Context) {
-      expect(vaultAfterExecution.balance.amount).to.equal('0');
-    });
+        vaultAfterExecution = (
+          await this.cosmWasmClient.queryContractSmart(this.dcaContractAddress, {
+            get_vault: {
+              vault_id: vaultId,
+            },
+          })
+        ).vault;
 
-    it('sends vault balance back to the user', async function (this: Context) {
-      expect(balancesAfterExecution[this.userWalletAddress][vaultAfterExecution.balance.denom]).to.equal(
-        balancesBeforeExecution[this.userWalletAddress][vaultAfterExecution.balance.denom] +
-          Number(vaultBeforeExecution.balance.amount),
-      );
-    });
+        balancesAfterExecution = await getBalances(this.cosmWasmClient, [
+          this.userWalletAddress,
+          this.dcaContractAddress,
+          this.finPairAddress,
+          this.feeCollectorAddress,
+        ]);
 
-    it('is cancelled', () => expect(vaultAfterExecution.status).to.equal('cancelled'));
+        eventPayloadsAfterExecution = map(
+          (event) => event.data,
+          (
+            await this.cosmWasmClient.queryContractSmart(this.dcaContractAddress, {
+              get_events_by_resource_id: { resource_id: vaultId },
+            })
+          ).events,
+        );
+      });
 
-    it('removes the trigger', () => expect(vaultAfterExecution.trigger).to.be.null);
+      it('withdraws the fin limit order', async function (this: Context) {
+        expect(
+          this.cosmWasmClient.queryContractSmart(this.finPairAddress, {
+            order: {
+              order_idx: 'price' in vaultBeforeExecution.trigger && vaultBeforeExecution.trigger.price.order_idx,
+            },
+          }),
+        ).to.be.rejectedWith(/No orders with the specified information exist/);
+      });
 
-    it('has a vault cancelled event', function (this: Context) {
-      expect(eventPayloadsAfterExecution).to.include.deep.members([
-        {
-          dca_vault_cancelled: {},
-        },
-      ]);
-    });
-  });
+      it('empties the vault balance', async function (this: Context) {
+        expect(vaultAfterExecution.balance.amount).to.equal('0');
+      });
+
+      it('sends vault balance back to the user', async function (this: Context) {
+        expect(balancesAfterExecution[this.userWalletAddress][vaultAfterExecution.balance.denom]).to.equal(
+          balancesBeforeExecution[this.userWalletAddress][vaultAfterExecution.balance.denom] +
+            Number(vaultBeforeExecution.balance.amount),
+        );
+      });
+
+      it('is cancelled', () => expect(vaultAfterExecution.status).to.equal('cancelled'));
+
+      it('removes the trigger', () => expect(vaultAfterExecution.trigger).to.be.null);
+
+      it('has a vault cancelled event', function (this: Context) {
+        expect(eventPayloadsAfterExecution).to.include.deep.members([
+          {
+            dca_vault_cancelled: {},
+          },
+        ]);
+      });
+    },
+  );
 
   describe('with a time trigger', async () => {
     const swapAmount = 100000;
@@ -288,7 +291,7 @@ describe('when cancelling a vault', () => {
           },
           time_interval: 'every_block',
         },
-        [coin(200000, this.pair.quote_denom)],
+        [coin(200000, this.pair.denoms[1])],
       );
 
       vaultBeforeExecution = (

@@ -17,8 +17,7 @@ use crate::types::vault::{Vault, VaultStatus};
 use cosmwasm_std::{to_binary, Coin, Decimal, SubMsg, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{DepsMut, Env, Response, Uint128};
-use exchange::msg::{ExecuteMsg as ExchangeExecuteMsg, QueryMsg as ExchangeQueryMsg};
-use exchange::order::Order;
+use exchange::msg::{ExecuteMsg as ExchangeExecuteMsg, Order, QueryMsg as ExchangeQueryMsg};
 
 pub fn execute_trigger_handler(
     deps: DepsMut,
@@ -223,34 +222,40 @@ pub fn execute_trigger_handler(
         belief_price,
     );
 
-    if get_slippage_result.is_err() {
-        create_event(
-            deps.storage,
-            EventBuilder::new(
-                vault.id,
-                env.block,
-                EventData::DcaVaultExecutionSkipped {
-                    reason: ExecutionSkippedReason::InsufficientLiquidity,
-                },
-            ),
-        )?;
+    match get_slippage_result {
+        Ok(slippage) => {
+            if slippage > vault.slippage_tolerance {
+                create_event(
+                    deps.storage,
+                    EventBuilder::new(
+                        vault.id,
+                        env.block,
+                        EventData::DcaVaultExecutionSkipped {
+                            reason: ExecutionSkippedReason::SlippageToleranceExceeded,
+                        },
+                    ),
+                )?;
 
-        return Ok(response.add_attribute("execution_skipped", "insufficient_liquidity"));
-    }
+                return Ok(response
+                    .add_attribute("execution_skipped", "slippage_tolerance_exceeded")
+                    .add_attribute("belief_price", belief_price.to_string())
+                    .add_attribute("slippage", slippage.to_string()));
+            }
+        }
+        Err(_) => {
+            create_event(
+                deps.storage,
+                EventBuilder::new(
+                    vault.id,
+                    env.block,
+                    EventData::DcaVaultExecutionSkipped {
+                        reason: ExecutionSkippedReason::SlippageQueryError,
+                    },
+                ),
+            )?;
 
-    if get_slippage_result? > vault.slippage_tolerance {
-        create_event(
-            deps.storage,
-            EventBuilder::new(
-                vault.id,
-                env.block,
-                EventData::DcaVaultExecutionSkipped {
-                    reason: ExecutionSkippedReason::SlippageToleranceExceeded,
-                },
-            ),
-        )?;
-
-        return Ok(response.add_attribute("execution_skipped", "slippage_tolerance_exceeded"));
+            return Ok(response.add_attribute("execution_skipped", "slippage_query_error"));
+        }
     }
 
     VAULT_ID_CACHE.save(deps.storage, &vault.id)?;
@@ -275,19 +280,22 @@ pub fn execute_trigger_handler(
                     * minimum_receive_amount
             });
 
-    Ok(response.add_submessage(SubMsg::reply_always(
-        WasmMsg::Execute {
-            contract_addr: config.exchange_contract_address.to_string(),
-            msg: to_binary(&ExchangeExecuteMsg::Swap {
-                minimum_receive_amount: Coin {
-                    amount: adjusted_minimum_receive_amount,
-                    denom: vault.target_denom,
-                },
-            })?,
-            funds: vec![adjusted_swap_amount],
-        },
-        AFTER_SWAP_REPLY_ID,
-    )))
+    Ok(response
+        .add_attribute("min_rcv", adjusted_minimum_receive_amount.to_string())
+        .add_attribute("swap", adjusted_swap_amount.to_string())
+        .add_submessage(SubMsg::reply_always(
+            WasmMsg::Execute {
+                contract_addr: config.exchange_contract_address.to_string(),
+                msg: to_binary(&ExchangeExecuteMsg::Swap {
+                    minimum_receive_amount: Coin {
+                        amount: adjusted_minimum_receive_amount,
+                        denom: vault.target_denom,
+                    },
+                })?,
+                funds: vec![adjusted_swap_amount],
+            },
+            AFTER_SWAP_REPLY_ID,
+        )))
 }
 
 #[cfg(test)]

@@ -1,8 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, Coin, Decimal, Decimal256, Uint128};
 
-use crate::{order::Order, pair::Pair};
-
 #[cw_serde]
 pub struct InstantiateMsg {}
 
@@ -52,4 +50,33 @@ pub enum QueryMsg {
         swap_amount: Coin,
         target_denom: String,
     },
+}
+
+#[cw_serde]
+pub struct Pair {
+    pub denoms: [String; 2],
+}
+
+impl Pair {
+    pub fn other_denom(self, denom: String) -> String {
+        if self.denoms[0] == denom {
+            self.denoms[1].clone()
+        } else {
+            self.denoms[0].clone()
+        }
+    }
+}
+
+impl Default for Pair {
+    fn default() -> Self {
+        Pair {
+            denoms: ["uusd".to_string(), "uatom".to_string()],
+        }
+    }
+}
+
+#[cw_serde]
+pub struct Order {
+    pub order_idx: Uint128,
+    pub remaining_offer_amount: Coin,
 }

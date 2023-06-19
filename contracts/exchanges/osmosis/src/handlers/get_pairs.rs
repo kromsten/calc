@@ -1,5 +1,5 @@
 use cosmwasm_std::{Deps, StdResult};
-use exchange::pair::Pair;
+use exchange::msg::Pair;
 
 use crate::state::pairs::get_pairs;
 

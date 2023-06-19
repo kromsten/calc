@@ -10,7 +10,7 @@ use crate::types::time_interval::TimeInterval;
 use crate::types::vault::{Vault, VaultStatus};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Coin, Decimal, Uint128, Uint64};
-use exchange::pair::Pair;
+use exchange::msg::Pair;
 
 #[cw_serde]
 pub struct InstantiateMsg {

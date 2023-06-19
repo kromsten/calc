@@ -103,8 +103,6 @@ pub fn create_vault_handler(
 
     let swap_denom = info.funds[0].denom.clone();
 
-    // let pair = find_pair(deps.storage, [swap_denom.clone(), target_denom.clone()])?;
-
     let swap_adjustment_strategy = if let Some(params) = swap_adjustment_strategy_params {
         Some(match params {
             SwapAdjustmentStrategyParams::RiskWeightedAverage {
@@ -249,19 +247,22 @@ pub fn create_vault_handler(
                 },
             )?;
 
-            Ok(response.add_submessage(SubMsg::reply_on_success(
-                WasmMsg::Execute {
-                    contract_addr: config.exchange_contract_address.to_string(),
-                    msg: to_binary(&ExchangeExecuteMsg::SubmitOrder {
-                        target_price: Decimal::from_ratio(swap_amount, target_receive_amount)
-                            .into(),
-                        target_denom: vault.target_denom.clone(),
-                    })
-                    .unwrap(),
-                    funds: vec![Coin::new(TWO_MICRONS.into(), vault.get_swap_denom())],
-                },
-                AFTER_LIMIT_ORDER_PLACED_REPLY_ID,
-            )))
+            let target_price = Decimal::from_ratio(swap_amount, target_receive_amount);
+
+            Ok(response
+                .add_attribute("tp", target_price.to_string())
+                .add_submessage(SubMsg::reply_on_success(
+                    WasmMsg::Execute {
+                        contract_addr: config.exchange_contract_address.to_string(),
+                        msg: to_binary(&ExchangeExecuteMsg::SubmitOrder {
+                            target_price: target_price.into(),
+                            target_denom: vault.target_denom.clone(),
+                        })
+                        .unwrap(),
+                        funds: vec![Coin::new(TWO_MICRONS.into(), vault.get_swap_denom())],
+                    },
+                    AFTER_LIMIT_ORDER_PLACED_REPLY_ID,
+                )))
         }
         (Some(_), Some(_)) => Err(ContractError::CustomError {
             val: String::from(
@@ -295,7 +296,7 @@ mod create_vault_tests {
         to_binary, Addr, Coin, ContractResult, Decimal, Decimal256, SubMsg, SystemResult,
         Timestamp, Uint128, WasmMsg,
     };
-    use exchange::pair::Pair;
+    use exchange::msg::Pair;
 
     #[test]
     fn with_no_assets_fails() {

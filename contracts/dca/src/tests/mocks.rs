@@ -4,9 +4,9 @@ use cosmwasm_std::{
     Decimal256, Empty, OwnedDeps, Querier, QuerierResult, QueryRequest, StdError, StdResult,
     SystemError, SystemResult, Uint128, Uint256, WasmQuery,
 };
+use exchange::msg::Order;
+use exchange::msg::Pair;
 use exchange::msg::QueryMsg as ExchangeQueryMsg;
-use exchange::order::Order;
-use exchange::pair::Pair;
 use serde::de::DeserializeOwned;
 use std::marker::PhantomData;
 

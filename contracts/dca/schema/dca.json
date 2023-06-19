@@ -1851,7 +1851,7 @@
               "enum": [
                 "slippage_tolerance_exceeded",
                 "swap_amount_adjusted_to_zero",
-                "insufficient_liquidity"
+                "slippage_query_error"
               ]
             },
             {
@@ -1868,6 +1868,27 @@
                   "properties": {
                     "price": {
                       "$ref": "#/definitions/Decimal"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "unknown_error"
+              ],
+              "properties": {
+                "unknown_error": {
+                  "type": "object",
+                  "required": [
+                    "msg"
+                  ],
+                  "properties": {
+                    "msg": {
+                      "type": "string"
                     }
                   },
                   "additionalProperties": false
@@ -2940,7 +2961,7 @@
               "enum": [
                 "slippage_tolerance_exceeded",
                 "swap_amount_adjusted_to_zero",
-                "insufficient_liquidity"
+                "slippage_query_error"
               ]
             },
             {
@@ -2957,6 +2978,27 @@
                   "properties": {
                     "price": {
                       "$ref": "#/definitions/Decimal"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "unknown_error"
+              ],
+              "properties": {
+                "unknown_error": {
+                  "type": "object",
+                  "required": [
+                    "msg"
+                  ],
+                  "properties": {
+                    "msg": {
+                      "type": "string"
                     }
                   },
                   "additionalProperties": false

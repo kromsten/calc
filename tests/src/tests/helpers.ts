@@ -5,14 +5,12 @@ import { coin, Coin, DirectSecp256k1HdWallet } from '@cosmjs/proto-signing';
 import { GasPrice } from '@cosmjs/stargate';
 import dayjs, { Dayjs } from 'dayjs';
 import { Context } from 'mocha';
-import { indexBy, map, mergeAll, omit, pipe, prop } from 'ramda';
+import { indexBy, map, mergeAll, prop } from 'ramda';
 import { Config } from '../shared/config';
 import { execute } from '../shared/cosmwasm';
 import { Addr } from '../types/dca/execute';
 import { EventsResponse } from '../types/dca/response/get_events';
 import { Timestamp } from 'cosmjs-types/google/protobuf/timestamp';
-import { Pair } from '../types/dca/response/get_pairs';
-import { kujiraQueryClient } from 'kujira.js';
 
 export const createWallet = async (config: Config) =>
   await DirectSecp256k1HdWallet.generate(12, {
@@ -31,7 +29,12 @@ export const createCosmWasmClientForWallet = async (
   });
 
   const [userAccount] = await userWallet.getAccounts();
-  await adminCosmWasmClient.sendTokens(adminWalletAddress, userAccount.address, [coin(1000000, 'ukuji')], 'auto');
+  await adminCosmWasmClient.sendTokens(
+    adminWalletAddress,
+    userAccount.address,
+    [coin(1000000, config.feeDenom)],
+    'auto',
+  );
 
   return userCosmWasmClient;
 };
@@ -39,10 +42,10 @@ export const createCosmWasmClientForWallet = async (
 export const createVault = async (
   context: Context,
   overrides: Record<string, unknown> = {},
-  deposit: Coin[] = [coin('1000000', context.pair.quote_denom)],
+  deposit: Coin[] = [coin('1000000', context.pair.denoms[1])],
 ) => {
   if (deposit.length > 0) {
-    await context.cosmWasmClient.sendTokens(context.adminWalletAddress, context.userWalletAddress, deposit, 'auto');
+    await context.cosmWasmClient.sendTokens(context.adminWalletAddress, context.userWalletAddress, deposit, 2);
   }
 
   const response = await execute(
@@ -53,7 +56,7 @@ export const createVault = async (
       create_vault: {
         label: 'test',
         swap_amount: '100000',
-        target_denom: context.pair.base_denom,
+        target_denom: context.pair.denoms[0],
         time_interval: 'hourly',
         ...overrides,
       },
@@ -67,7 +70,7 @@ export const createVault = async (
 export const getBalances = async (
   cosmWasmClient: SigningCosmWasmClient,
   addresses: Addr[],
-  denoms: string[] = ['udemo', 'ukuji', 'utest'],
+  denoms: string[] = ['udemo', 'ukuji', 'utest', 'uosmo', 'stake', 'uion'],
 ) => {
   return indexBy(
     prop('address'),
@@ -108,21 +111,18 @@ export const getVaultLastUpdatedTime = async (
 
 export const getExpectedPrice = async (
   cosmWasmClient: CosmWasmClient,
-  pair: Pair,
+  exchangeAddress: Addr,
   swapAmount: Coin,
+  targetDenom: String,
 ): Promise<number> => {
-  const response = await cosmWasmClient.queryContractSmart(pair.address, {
-    simulation: {
-      offer_asset: {
-        info: {
-          native_token: { denom: swapAmount.denom },
-        },
-        amount: swapAmount.amount,
-      },
+  const response = await cosmWasmClient.queryContractSmart(exchangeAddress, {
+    get_expected_receive_amount: {
+      swap_amount: swapAmount,
+      target_denom: targetDenom,
     },
   });
 
-  return Number(swapAmount.amount) / Number(response.return_amount);
+  return Number(swapAmount.amount) / Number(response.amount);
 };
 
 export const provideAuthGrant = async (

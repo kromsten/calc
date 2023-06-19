@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use exchange::pair::Pair as ExchangePair;
+use exchange::msg::Pair as ExchangePair;
 
 use super::position_type::PositionType;
 
@@ -8,8 +8,6 @@ pub struct Pair {
     pub base_denom: String,
     pub quote_denom: String,
     pub route: Vec<u64>,
-    pub decimal_delta: i8,
-    pub price_precision: u8,
 }
 
 impl Pair {

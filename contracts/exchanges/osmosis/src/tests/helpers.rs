@@ -8,8 +8,6 @@ impl Default for Pair {
             base_denom: DENOM_UOSMO.to_string(),
             quote_denom: DENOM_STAKE.to_string(),
             route: vec![3],
-            decimal_delta: 0,
-            price_precision: 3,
         }
     }
 }

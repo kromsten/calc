@@ -1,6 +1,6 @@
 use cosmwasm_std::{Coin, Deps, StdResult, Uint128};
 use cw20::Denom;
-use exchange::order::Order;
+use exchange::msg::Order;
 use kujira_fin::{OrderResponse, QueryMsg};
 
 use crate::state::pairs::find_pair;
@@ -33,7 +33,7 @@ mod get_order_handler_tests {
         SystemResult, Timestamp, Uint128, Uint256,
     };
     use cw20::Denom;
-    use exchange::order::Order;
+    use exchange::msg::Order;
     use kujira_fin::OrderResponse;
 
     use crate::{

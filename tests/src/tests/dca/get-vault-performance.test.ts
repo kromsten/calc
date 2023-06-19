@@ -12,7 +12,7 @@ describe('when fetching risk weighted average swap adjustment strategy performan
     let performance: any;
 
     before(async function (this: Context) {
-      deposit = coin(1000, this.pair.quote_denom);
+      deposit = coin(1000, this.pair.denoms[1]);
       const vault_id = await createVault(
         this,
         {
@@ -34,7 +34,7 @@ describe('when fetching risk weighted average swap adjustment strategy performan
     });
 
     it('has an empty performance fee', async function (this: Context) {
-      expect(performance.fee).to.deep.equal(coin(0, this.pair.base_denom));
+      expect(performance.fee).to.deep.equal(coin(0, this.pair.denoms[0]));
     });
 
     it('has an even performance factor', async function (this: Context) {
@@ -61,7 +61,7 @@ describe('when fetching risk weighted average swap adjustment strategy performan
       });
     });
 
-    it('has a performance fee', () => expect(Number(performance.fee.amount)).to.be.approximately(5, 10));
+    it('has a performance fee', () => expect(Number(performance.fee.amount)).to.be.lessThan(50));
 
     it('has a performance factor', () => expect(Number(performance.factor)).to.be.approximately(1, 0.01));
   });

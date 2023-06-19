@@ -1,9 +1,14 @@
 {
   "scripts": {
-    "types": "ts-node ./src/scripts/generate-types.ts ../contracts/dca/schema/dca.json ./src/types/dca",
-    "localnet": "docker compose up -d",
     "compile": "cd .. && ./scripts/optimizer.sh && cd tests",
-    "test": "mocha --recursive '**/*.test.ts' --timeout 20000 --exit"
+    "types:dca": "ts-node ./src/scripts/generate-types.ts ../contracts/dca/schema/dca.json ./src/types/dca",
+    "types:osmosis": "ts-node ./src/scripts/generate-types.ts ../contracts/exchanges/osmosis/schema/osmosis.json ./src/types/exchanges/osmosis",
+    "types:fin": "ts-node ./src/scripts/generate-types.ts ../contracts/exchanges/fin/schema/fin.json ./src/types/exchanges/fin",
+    "types": "npm run types:dca && npm run types:osmosis && npm run types:fin",
+    "localnet:kujira": "cd kujira && docker compose up -d & cd ..",
+    "localnet:osmosis": "cd osmosis && make localnet-init && make localnet-startd-with-state && cd ..",
+    "test:kujira": "env-cmd -e kujira,shared mocha --recursive '**/*.test.ts' --timeout 90000 --exit",
+    "test:osmosis": "env-cmd -e osmosis,shared mocha --recursive '**/*.test.ts' --timeout 90000 --exit"
   },
   "devDependencies": {
     "@cosmjs/cosmwasm-stargate": "^0.29.3",
@@ -19,9 +24,12 @@
     "cosmjs-types": "^0.6.1",
     "dayjs": "^1.11.6",
     "dotenv": "^16.0.3",
+    "env-cmd": "^10.1.0",
     "json-schema-to-typescript": "^11.0.2",
     "kujira.js": "Team-Kujira/kujira.js.git",
     "mocha": "^10.1.0",
+    "mocha-assume": "^1.0.0",
+    "osmojs": "^14.0.0-rc.0",
     "ramda": "^0.28.0",
     "sinon": "^14.0.2",
     "ts-node": "^10.9.1",

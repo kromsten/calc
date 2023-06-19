@@ -11,156 +11,160 @@ import { find, map } from 'ramda';
 import { PositionType } from '../../types/dca/execute';
 
 describe('when executing a vault', () => {
-  describe('with a filled fin limit order trigger', () => {
-    const swapAmount = 100000;
-    const targetPrice = 1.5;
-    let vaultBeforeExecution: Vault;
-    let vaultAfterExecution: Vault;
-    let eventPayloadsAfterExecution: EventData[];
-    let balancesBeforeExecution: { [x: string]: { address: string } };
-    let balancesAfterExecution: { [x: string]: { address: string } };
-    let receivedAmount: number;
-    let receivedAmountAfterFee: number;
+  (process.env.SUPPORTS_PRICE_TRIGGERS === 'false' ? describe.skip : describe)(
+    'with a satisfied price trigger',
+    function () {
+      const swapAmount = 100000;
+      const targetPrice = 0.5;
+      let vaultBeforeExecution: Vault;
+      let vaultAfterExecution: Vault;
+      let eventPayloadsAfterExecution: EventData[];
+      let balancesBeforeExecution: { [x: string]: { address: string } };
+      let balancesAfterExecution: { [x: string]: { address: string } };
+      let receivedAmount: number;
+      let receivedAmountAfterFee: number;
 
-    before(async function (this: Context) {
-      const vaultId = await createVault(this, {
-        swap_amount: `${swapAmount}`,
-        target_receive_amount: `${Math.round(swapAmount / targetPrice)}`,
-      });
+      before(async function (this: Context) {
+        const vaultId = await createVault(this, {
+          swap_amount: `${swapAmount}`,
+          target_receive_amount: `${Math.round(swapAmount / targetPrice)}`,
+        });
 
-      vaultBeforeExecution = (
-        await this.cosmWasmClient.queryContractSmart(this.dcaContractAddress, {
-          get_vault: {
-            vault_id: vaultId,
-          },
-        })
-      ).vault;
-
-      balancesBeforeExecution = await getBalances(this.cosmWasmClient, [
-        this.userWalletAddress,
-        this.dcaContractAddress,
-        this.finPairAddress,
-        this.feeCollectorAddress,
-      ]);
-
-      const expectedPrice = await getExpectedPrice(
-        this.cosmWasmClient,
-        this.pair,
-        coin(vaultBeforeExecution.swap_amount, vaultBeforeExecution.balance.denom),
-      );
-
-      await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
-        execute_trigger: {
-          trigger_id: vaultId,
-        },
-      });
-
-      vaultAfterExecution = (
-        await this.cosmWasmClient.queryContractSmart(this.dcaContractAddress, {
-          get_vault: {
-            vault_id: vaultId,
-          },
-        })
-      ).vault;
-
-      balancesAfterExecution = await getBalances(this.cosmWasmClient, [
-        this.userWalletAddress,
-        this.dcaContractAddress,
-        this.finPairAddress,
-        this.feeCollectorAddress,
-      ]);
-
-      eventPayloadsAfterExecution = map(
-        (event) => event.data,
-        (
+        vaultBeforeExecution = (
           await this.cosmWasmClient.queryContractSmart(this.dcaContractAddress, {
-            get_events_by_resource_id: { resource_id: vaultId },
+            get_vault: {
+              vault_id: vaultId,
+            },
           })
-        ).events,
-      );
+        ).vault;
 
-      receivedAmount = Math.floor(swapAmount / expectedPrice);
-      receivedAmountAfterFee = Math.floor(receivedAmount * (1 - this.calcSwapFee));
-    });
+        balancesBeforeExecution = await getBalances(this.cosmWasmClient, [
+          this.userWalletAddress,
+          this.dcaContractAddress,
+          this.finPairAddress,
+          this.feeCollectorAddress,
+        ]);
 
-    it('withdraws the fin limit order', async function (this: Context) {
-      expect(
-        this.cosmWasmClient.queryContractSmart(this.finPairAddress, {
-          order: {
-            order_idx: 'price' in vaultBeforeExecution.trigger && vaultBeforeExecution.trigger.price.order_idx,
+        const expectedPrice = await getExpectedPrice(
+          this.cosmWasmClient,
+          this.exchangeContractAddress,
+          coin(vaultBeforeExecution.swap_amount, vaultBeforeExecution.balance.denom),
+          vaultBeforeExecution.balance.denom === this.pair.denoms[1] ? this.pair.denoms[0] : this.pair.denoms[1],
+        );
+
+        await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
+          execute_trigger: {
+            trigger_id: vaultId,
           },
-        }),
-      ).to.be.rejectedWith(/No orders with the specified information exist/);
-    });
+        });
 
-    it('reduces the vault balance', async function (this: Context) {
-      expect(vaultAfterExecution.balance.amount).to.equal(
-        `${Number(vaultBeforeExecution.balance.amount) - swapAmount}`,
-      );
-    });
+        vaultAfterExecution = (
+          await this.cosmWasmClient.queryContractSmart(this.dcaContractAddress, {
+            get_vault: {
+              vault_id: vaultId,
+            },
+          })
+        ).vault;
 
-    it('sends funds back to the user', async function (this: Context) {
-      expect(balancesAfterExecution[this.userWalletAddress][vaultAfterExecution.target_denom]).to.equal(
-        balancesBeforeExecution[this.userWalletAddress][vaultAfterExecution.target_denom] +
-          Number(vaultAfterExecution.received_amount.amount),
-      );
-    });
+        balancesAfterExecution = await getBalances(this.cosmWasmClient, [
+          this.userWalletAddress,
+          this.dcaContractAddress,
+          this.finPairAddress,
+          this.feeCollectorAddress,
+        ]);
 
-    it('sends fees to the fee collector', async function (this: Context) {
-      const totalFees = receivedAmount - receivedAmountAfterFee;
-      expect(balancesAfterExecution[this.feeCollectorAddress][vaultAfterExecution.target_denom]).to.be.approximately(
-        balancesBeforeExecution[this.feeCollectorAddress][vaultAfterExecution.target_denom] + totalFees,
-        1,
-      );
-    });
+        eventPayloadsAfterExecution = map(
+          (event) => event.data,
+          (
+            await this.cosmWasmClient.queryContractSmart(this.dcaContractAddress, {
+              get_events_by_resource_id: { resource_id: vaultId },
+            })
+          ).events,
+        );
 
-    it('updates the vault swapped amount correctly', () =>
-      expect(vaultAfterExecution.swapped_amount.amount).to.eql(
-        `${Number(vaultBeforeExecution.swapped_amount.amount) + Number(vaultBeforeExecution.swap_amount)}`,
-      ));
+        receivedAmount = Math.floor(swapAmount / expectedPrice);
+        receivedAmountAfterFee = Math.floor(receivedAmount * (1 - this.dexSwapFee));
+      });
 
-    it('updates the vault received amount correctly', async () => {
-      expect(Number(vaultAfterExecution.received_amount.amount)).to.be.approximately(receivedAmountAfterFee, 2);
-    });
+      it('withdraws the fin limit order', async function (this: Context) {
+        expect(
+          this.cosmWasmClient.queryContractSmart(this.finPairAddress, {
+            order: {
+              order_idx: 'price' in vaultBeforeExecution.trigger && vaultBeforeExecution.trigger.price.order_idx,
+            },
+          }),
+        ).to.be.rejectedWith(/No orders with the specified information exist/);
+      });
 
-    it('has an execution triggered event', function (this: Context) {
-      expect(eventPayloadsAfterExecution).to.include.deep.members([
-        {
-          dca_vault_execution_triggered: {
-            asset_price: `${this.finBuyPrice}`,
-            base_denom: vaultAfterExecution.target_denom,
-            quote_denom: vaultAfterExecution.balance.denom,
+      it('reduces the vault balance', async function (this: Context) {
+        expect(vaultAfterExecution.balance.amount).to.equal(
+          `${Number(vaultBeforeExecution.balance.amount) - swapAmount}`,
+        );
+      });
+
+      it('sends funds back to the user', async function (this: Context) {
+        expect(balancesAfterExecution[this.userWalletAddress][vaultAfterExecution.target_denom]).to.equal(
+          balancesBeforeExecution[this.userWalletAddress][vaultAfterExecution.target_denom] +
+            Number(vaultAfterExecution.received_amount.amount),
+        );
+      });
+
+      it('sends fees to the fee collector', async function (this: Context) {
+        const totalFees = receivedAmount - receivedAmountAfterFee;
+        expect(balancesAfterExecution[this.feeCollectorAddress][vaultAfterExecution.target_denom]).to.be.approximately(
+          balancesBeforeExecution[this.feeCollectorAddress][vaultAfterExecution.target_denom] + totalFees,
+          1,
+        );
+      });
+
+      it('updates the vault swapped amount correctly', () =>
+        expect(vaultAfterExecution.swapped_amount.amount).to.eql(
+          `${Number(vaultBeforeExecution.swapped_amount.amount) + Number(vaultBeforeExecution.swap_amount)}`,
+        ));
+
+      it('updates the vault received amount correctly', async () => {
+        expect(Number(vaultAfterExecution.received_amount.amount)).to.be.approximately(receivedAmountAfterFee, 2);
+      });
+
+      it('has an execution triggered event', function (this: Context) {
+        expect(eventPayloadsAfterExecution).to.include.deep.members([
+          {
+            dca_vault_execution_triggered: {
+              asset_price: `${this.finBuyPrice}`,
+              base_denom: vaultAfterExecution.target_denom,
+              quote_denom: vaultAfterExecution.balance.denom,
+            },
           },
-        },
-      ]);
-    });
+        ]);
+      });
 
-    it('has an execution completed event', function (this: Context) {
-      expect(eventPayloadsAfterExecution).to.include.deep.members([
-        {
-          dca_vault_execution_completed: {
-            sent: coin(vaultAfterExecution.swap_amount, vaultAfterExecution.balance.denom),
-            received: coin(`${receivedAmount + 1}`, vaultAfterExecution.target_denom),
-            fee: coin(Math.floor(receivedAmount * this.calcSwapFee), vaultAfterExecution.target_denom),
+      it('has an execution completed event', function (this: Context) {
+        expect(eventPayloadsAfterExecution).to.include.deep.members([
+          {
+            dca_vault_execution_completed: {
+              sent: coin(vaultAfterExecution.swap_amount, vaultAfterExecution.balance.denom),
+              received: coin(`${receivedAmount + 1}`, vaultAfterExecution.target_denom),
+              fee: coin(Math.floor(receivedAmount * this.dexSwapFee), vaultAfterExecution.target_denom),
+            },
           },
-        },
-      ]);
-    });
+        ]);
+      });
 
-    it('creates a new time trigger', async function (this: Context) {
-      const executionTime = await getVaultLastUpdatedTime(
-        this.cosmWasmClient,
-        this.dcaContractAddress,
-        vaultAfterExecution.id,
-      );
-      expect('time' in vaultAfterExecution.trigger && vaultAfterExecution.trigger.time.target_time).to.eql(
-        `${executionTime.add(1, 'hour').unix()}000000000`,
-      );
-    });
+      it('creates a new time trigger', async function (this: Context) {
+        const executionTime = await getVaultLastUpdatedTime(
+          this.cosmWasmClient,
+          this.dcaContractAddress,
+          vaultAfterExecution.id,
+        );
+        expect('time' in vaultAfterExecution.trigger && vaultAfterExecution.trigger.time.target_time).to.eql(
+          `${executionTime.add(1, 'hour').unix()}000000000`,
+        );
+      });
 
-    it('makes the vault active', () =>
-      expect(vaultBeforeExecution.status).to.eql('scheduled') && expect(vaultAfterExecution.status).to.eql('active'));
-  });
+      it('makes the vault active', () =>
+        expect(vaultBeforeExecution.status).to.eql('scheduled') && expect(vaultAfterExecution.status).to.eql('active'));
+    },
+  );
 
   describe('with a ready time trigger', () => {
     let targetTime: Dayjs;
@@ -197,8 +201,9 @@ describe('when executing a vault', () => {
 
       expectedPrice = await getExpectedPrice(
         this.cosmWasmClient,
-        this.pair,
+        this.exchangeContractAddress,
         coin(vaultBeforeExecution.swap_amount, vaultBeforeExecution.balance.denom),
+        vaultBeforeExecution.balance.denom === this.pair.denoms[1] ? this.pair.denoms[0] : this.pair.denoms[1],
       );
 
       eventPayloadsBeforeExecution = map(
@@ -265,7 +270,7 @@ describe('when executing a vault', () => {
     });
 
     it('sends fees to the fee collector', async function (this: Context) {
-      const totalFees = Math.floor(receivedAmount * this.calcSwapFee);
+      const totalFees = Math.floor(receivedAmount * this.dexSwapFee);
       expect(balancesAfterExecution[this.feeCollectorAddress][vaultAfterExecution.target_denom]).to.equal(
         balancesBeforeExecution[this.feeCollectorAddress][vaultAfterExecution.target_denom] + totalFees,
       );
@@ -278,7 +283,7 @@ describe('when executing a vault', () => {
 
     it('updates the vault received amount correctly', function (this: Context) {
       expect(Number(vaultAfterExecution.received_amount.amount)).to.be.approximately(
-        receivedAmount * (1 - this.calcSwapFee),
+        receivedAmount * (1 - this.dexSwapFee),
         5,
       );
     });
@@ -324,7 +329,7 @@ describe('when executing a vault', () => {
           2,
         ) &&
         expect(Number(executionCompletedEvent.dca_vault_execution_completed?.fee.amount)).to.approximately(
-          Math.round(receivedAmount * this.calcSwapFee),
+          Math.round(receivedAmount * this.dexSwapFee),
           2,
         );
     });
@@ -405,7 +410,7 @@ describe('when executing a vault', () => {
     const swap_amount = '300000';
 
     before(async function (this: Context) {
-      deposit = coin(1000000, this.pair.quote_denom);
+      deposit = coin(1000000, this.pair.denoms[1]);
       const vaultId = await createVault(
         this,
         {
@@ -487,26 +492,29 @@ describe('when executing a vault', () => {
     });
   });
 
-  describe('with an unfilled fin limit order trigger', () => {
-    let vaultId: number;
+  (process.env.SUPPORTS_PRICE_TRIGGERS === 'false' ? describe.skip : describe)(
+    'with an unsatisfied price trigger',
+    function () {
+      let vaultId: number;
 
-    before(async function (this: Context) {
-      vaultId = await createVault(this, {
-        swap_amount: '1000000',
-        target_receive_amount: '300000000',
+      before(async function (this: Context) {
+        vaultId = await createVault(this, {
+          swap_amount: '1000000',
+          target_receive_amount: '30000',
+        });
       });
-    });
 
-    it('fails to execute with the correct error message', async function (this: Context) {
-      await expect(
-        execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
-          execute_trigger: {
-            trigger_id: vaultId,
-          },
-        }),
-      ).to.be.rejectedWith(/target price has not been met/);
-    });
-  });
+      it('fails to execute with the correct error message', async function (this: Context) {
+        await expect(
+          execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
+            execute_trigger: {
+              trigger_id: vaultId,
+            },
+          }),
+        ).to.be.rejectedWith(/target price has not been met/);
+      });
+    },
+  );
 
   describe('with an exceeded price ceiling', () => {
     let targetTime: Dayjs;
@@ -685,10 +693,10 @@ describe('when executing a vault', () => {
         this,
         {
           target_start_time_utc_seconds: `${targetTime.unix()}`,
-          swap_amount: '10000000000000',
+          swap_amount: '1000000000',
           slippage_tolerance: '0.0001',
         },
-        [coin(10000000000000, this.pair.quote_denom)],
+        [coin(1000000000, this.pair.denoms[1])],
       );
 
       vaultBeforeExecution = (
@@ -826,7 +834,7 @@ describe('when executing a vault', () => {
       balancesBeforeExecution = await getBalances(
         this.cosmWasmClient,
         [this.userWalletAddress],
-        [this.pair.quote_denom, this.pair.base_denom],
+        [this.pair.denoms[1], this.pair.denoms[0]],
       );
 
       const targetTime = dayjs().add(10, 'seconds');
@@ -853,8 +861,9 @@ describe('when executing a vault', () => {
 
       expectedPrice = await getExpectedPrice(
         this.cosmWasmClient,
-        this.pair,
+        this.exchangeContractAddress,
         coin(vault.swap_amount, vault.balance.denom),
+        vault.balance.denom === this.pair.denoms[1] ? this.pair.denoms[0] : this.pair.denoms[1],
       );
 
       while (dayjs((await this.cosmWasmClient.getBlock()).header.time).isBefore(targetTime)) {
@@ -924,13 +933,7 @@ describe('when executing a vault', () => {
     const swapAdjustment = 1.8;
 
     before(async function (this: Context) {
-      deposit = coin(1000000, this.pair.quote_denom);
-
-      balancesBeforeExecution = await getBalances(
-        this.cosmWasmClient,
-        [this.userWalletAddress, this.feeCollectorAddress],
-        [this.pair.quote_denom, this.pair.base_denom],
-      );
+      deposit = coin(1000000, this.pair.denoms[1]);
 
       for (const position_type of ['enter', 'exit']) {
         await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {
@@ -964,6 +967,12 @@ describe('when executing a vault', () => {
           performance_assessment_strategy: 'compare_to_standard_dca',
         },
         [deposit],
+      );
+
+      balancesBeforeExecution = await getBalances(
+        this.cosmWasmClient,
+        [this.userWalletAddress, this.feeCollectorAddress],
+        [this.pair.denoms[1], this.pair.denoms[0]],
       );
 
       while (dayjs((await this.cosmWasmClient.getBlock()).header.time).isBefore(targetTime)) {
@@ -1100,12 +1109,12 @@ describe('when executing a vault', () => {
     const swapAdjustment = 0.8;
 
     before(async function (this: Context) {
-      deposit = coin(1000000, this.pair.quote_denom);
+      deposit = coin(1000000, this.pair.denoms[1]);
 
       balancesBeforeExecution = await getBalances(
         this.cosmWasmClient,
         [this.userWalletAddress, this.feeCollectorAddress],
-        [this.pair.base_denom, this.pair.quote_denom],
+        [this.pair.denoms[0], this.pair.denoms[1]],
       );
 
       for (const position_type of ['enter', 'exit']) {
@@ -1138,12 +1147,16 @@ describe('when executing a vault', () => {
             },
           },
           performance_assessment_strategy: 'compare_to_standard_dca',
+          slippage_tolerance: '0.4',
         },
         [deposit],
       );
 
-      while (dayjs((await this.cosmWasmClient.getBlock()).header.time).isBefore(targetTime)) {
+      let currentTime = dayjs((await this.cosmWasmClient.getBlock()).header.time);
+
+      while (currentTime.isBefore(targetTime)) {
         await setTimeout(3000);
+        currentTime = dayjs((await this.cosmWasmClient.getBlock()).header.time);
       }
 
       await execute(this.cosmWasmClient, this.adminWalletAddress, this.dcaContractAddress, {

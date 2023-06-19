@@ -62,7 +62,7 @@ pub fn cancel_vault_handler(
 
         submessages.push(SubMsg::new(WasmMsg::Execute {
             contract_addr: config.exchange_contract_address.to_string(),
-            msg: to_binary(&ExecuteMsg::WithdrawOrder {
+            msg: to_binary(&ExecuteMsg::RetractOrder {
                 order_idx,
                 denoms: vault.denoms(),
             })
@@ -72,7 +72,7 @@ pub fn cancel_vault_handler(
 
         submessages.push(SubMsg::new(WasmMsg::Execute {
             contract_addr: config.exchange_contract_address.to_string(),
-            msg: to_binary(&ExecuteMsg::RetractOrder {
+            msg: to_binary(&ExecuteMsg::WithdrawOrder {
                 order_idx,
                 denoms: vault.denoms(),
             })
@@ -338,7 +338,7 @@ mod cancel_vault_tests {
         let config = get_config(deps.as_ref().storage).unwrap();
 
         assert_eq!(
-            response.messages.get(2).unwrap(),
+            response.messages.get(1).unwrap(),
             &SubMsg::new(WasmMsg::Execute {
                 contract_addr: config.exchange_contract_address.to_string(),
                 msg: to_binary(&ExecuteMsg::RetractOrder {
@@ -378,7 +378,7 @@ mod cancel_vault_tests {
         let config = get_config(deps.as_ref().storage).unwrap();
 
         assert_eq!(
-            response.messages.get(1).unwrap(),
+            response.messages.get(2).unwrap(),
             &SubMsg::new(WasmMsg::Execute {
                 contract_addr: config.exchange_contract_address.to_string(),
                 msg: to_binary(&ExecuteMsg::WithdrawOrder {

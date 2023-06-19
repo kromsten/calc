@@ -48,6 +48,7 @@ pub fn get_slippage(
         swap_amount.clone(),
         target_denom,
     )?;
+
     let expected_price = Decimal::from_ratio(swap_amount.amount, expected_receive_amount);
     let price_diff = expected_price - beleif_price;
 

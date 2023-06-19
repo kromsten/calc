@@ -1,3 +1,4 @@
 require:
   - 'ts-node/register'
-  - 'src/tests/hooks.ts'
+  - 'src/tests/hooks.kujira.ts'
+  - 'src/tests/hooks.osmosis.ts'

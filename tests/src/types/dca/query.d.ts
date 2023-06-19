@@ -10,7 +10,10 @@ export type QueryMsg =
       get_config: {};
     }
   | {
-      get_pairs: {};
+      get_pairs: {
+        limit?: number | null;
+        start_after?: Pair | null;
+      };
     }
   | {
       get_time_trigger_ids: {
@@ -58,9 +61,6 @@ export type QueryMsg =
       };
     }
   | {
-      get_custom_swap_fees: {};
-    }
-  | {
       get_vault_performance: {
         vault_id: Uint128;
       };
@@ -95,3 +95,11 @@ export type Uint128 = string;
  */
 export type Addr = string;
 export type VaultStatus = "scheduled" | "active" | "inactive" | "cancelled";
+
+export interface Pair {
+  /**
+   * @minItems 2
+   * @maxItems 2
+   */
+  denoms: [string, string];
+}

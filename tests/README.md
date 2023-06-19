@@ -2,22 +2,24 @@
 
 ## Running the tests
 
-If you use vscode, you can run the tests by pressing `F5` or by clicking the `Run` button in the debug tab. Ensure that you have a launch.config in the .vscode folder at the root of the project. It should look something like
+Each chain requires some slightly different setup. The following sections describe how to run the tests locally for each chain.
 
-```json
-{
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "Run Tests",
-      "program": "${workspaceFolder}/tests/node_modules/mocha/bin/_mocha",
-      "args": ["-r", "dotenv/config", "--recursive", "**/*.test.ts", "--timeout", "300000", "--exit"],
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-      "cwd": "${workspaceFolder}/tests"
-    }
-  ]
-}
-```
+### Pre-requisites
+
+#### Kujira
+
+None
+
+#### Osmosis
+
+1. Run `git clone https://github.com/osmosis-labs/osmosis.git` from the tests directory.
+2. Replace `uosmo` for `stake` in the `osmosis/tests/localosmosis/scripts/nativeDenomPoolB.json` file.
+3. Replace `$STATE` fro `-s` in the `osmosis/tests/localosmosis/docker-compose.yml` file.
+
+### Tests
+
+Run the tests via:
+
+1. `npm run localnet:{{chain}}`
+2. Wait for the docker container to initialise (around 1-2 mins depending on the chain).
+3. `npm run test:{{chain}}`

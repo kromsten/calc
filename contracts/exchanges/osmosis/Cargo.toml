@@ -26,18 +26,14 @@ library = []
 
 [dependencies]
 cosmwasm-schema = "1.1.3"
-cosmwasm-std = "1.1.3"
+cosmwasm-std = { version = "1.2.6", features = ["stargate"] }
 cosmwasm-storage = "1.1.3"
 cw-storage-plus = "1.0.1"
 cw2 = "1.0.1"
 cw20 = "1.0.1"
 osmosis-std = "=0.15.0"
 prost = "0.11.8"
-schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 shared = { path = "../../../packages/shared" }
 thiserror = { version = "1.0.31" }
 exchange = { path = "../../../packages/exchange" }
-
-[dev-dependencies]
-cw-multi-test = "0.16.2"

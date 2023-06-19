@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;
-use exchange::pair::Pair as ExchangePair;
+use exchange::msg::Pair as ExchangePair;
 
 use super::position_type::PositionType;
 

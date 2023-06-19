@@ -18,9 +18,14 @@ describe('when creating a vault', () => {
     let receivedAmountAfterFee: number;
 
     before(async function (this: Context) {
-      deposit = coin(1000000, this.pair.quote_denom);
+      deposit = coin(1000000, this.pair.denoms[1]);
 
-      const expectedPrice = await getExpectedPrice(this.cosmWasmClient, this.pair, coin(swapAmount, deposit.denom));
+      const expectedPrice = await getExpectedPrice(
+        this.cosmWasmClient,
+        this.exchangeContractAddress,
+        coin(swapAmount, deposit.denom),
+        deposit.denom === this.pair.denoms[1] ? this.pair.denoms[0] : this.pair.denoms[1],
+      );
 
       const vaultId = await createVault(
         this,
@@ -49,7 +54,7 @@ describe('when creating a vault', () => {
 
       const receivedAmountBeforeFee = Math.floor(Number(vault.swap_amount) / expectedPrice);
       receivedAmount = Math.floor(receivedAmountBeforeFee);
-      receivedAmountAfterFee = Math.floor(receivedAmount * (1 - this.calcSwapFee));
+      receivedAmountAfterFee = Math.floor(receivedAmount * (1 - this.dexSwapFee));
     });
 
     it('has the correct label', () => expect(vault.label).to.equal('test'));
@@ -92,7 +97,7 @@ describe('when creating a vault', () => {
           2,
         ) &&
         expect(Number(executionCompletedEvent.dca_vault_execution_completed?.fee.amount)).to.approximately(
-          receivedAmount * this.calcSwapFee,
+          receivedAmount * this.dexSwapFee,
           2,
         );
     });
@@ -151,70 +156,76 @@ describe('when creating a vault', () => {
     it('is scheduled', () => expect(vault.status).to.equal('scheduled'));
   });
 
-  describe('with a price trigger', async () => {
-    const swapAmount = 1000000;
-    const targetPrice = 0.5;
-    let vault: Vault;
-    let eventPayloads: EventData[];
+  (process.env.SUPPORTS_PRICE_TRIGGERS === 'false' ? describe.skip : describe)(
+    'with a price trigger',
+    async function () {
+      const swapAmount = 1000000;
+      const targetPrice = 0.5;
+      let vault: Vault;
+      let eventPayloads: EventData[];
 
-    before(async function (this: Context) {
-      const vault_id = await createVault(this, {
-        swap_amount: `${swapAmount}`,
-        target_receive_amount: `${swapAmount / targetPrice}`,
+      before(async function (this: Context) {
+        const vault_id = await createVault(this, {
+          swap_amount: `${swapAmount}`,
+          target_receive_amount: `${swapAmount / targetPrice}`,
+        });
+
+        vault = (
+          await this.cosmWasmClient.queryContractSmart(this.dcaContractAddress, {
+            get_vault: {
+              vault_id,
+            },
+          })
+        ).vault;
+
+        eventPayloads = map(
+          (event) => event.data,
+          (
+            await this.cosmWasmClient.queryContractSmart(this.dcaContractAddress, {
+              get_events_by_resource_id: { resource_id: vault_id },
+            })
+          ).events,
+        );
       });
 
-      vault = (
-        await this.cosmWasmClient.queryContractSmart(this.dcaContractAddress, {
-          get_vault: {
-            vault_id,
-          },
-        })
-      ).vault;
+      it('has the correct label', () => expect(vault.label).to.equal('test'));
 
-      eventPayloads = map(
-        (event) => event.data,
-        (
-          await this.cosmWasmClient.queryContractSmart(this.dcaContractAddress, {
-            get_events_by_resource_id: { resource_id: vault_id },
-          })
-        ).events,
-      );
-    });
+      it('has the correct swapped amount', () => expect(vault.swapped_amount).to.eql(coin(0, vault.balance.denom)));
 
-    it('has the correct label', () => expect(vault.label).to.equal('test'));
+      it('has the correct received amount', () => expect(vault.received_amount).to.eql(coin(0, vault.target_denom)));
 
-    it('has the correct swapped amount', () => expect(vault.swapped_amount).to.eql(coin(0, vault.balance.denom)));
+      it('has a funds deposited event', () =>
+        expect(eventPayloads).to.include.deep.members([
+          { dca_vault_funds_deposited: { amount: coin(Number(vault.balance.amount), vault.balance.denom) } },
+        ]));
 
-    it('has the correct received amount', () => expect(vault.received_amount).to.eql(coin(0, vault.target_denom)));
+      it('has no other events', () => expect(eventPayloads).to.have.lengthOf(1));
 
-    it('has a funds deposited event', () =>
-      expect(eventPayloads).to.include.deep.members([
-        { dca_vault_funds_deposited: { amount: coin(Number(vault.balance.amount), vault.balance.denom) } },
-      ]));
+      it('has a price trigger', () =>
+        expect(
+          vault.trigger &&
+            'price' in vault.trigger &&
+            vault.trigger.price.target_price === `${targetPrice}` &&
+            vault.trigger.price.order_idx != null,
+        ).to.be.true);
 
-    it('has no other events', () => expect(eventPayloads).to.have.lengthOf(1));
+      it('is scheduled', () => expect(vault.status).to.equal('scheduled'));
+    },
+  );
 
-    it('has a price trigger', () =>
-      expect(
-        vault.trigger &&
-          'price' in vault.trigger &&
-          vault.trigger.price.target_price === `${targetPrice}` &&
-          vault.trigger.price.order_idx != null,
-      ).to.be.true);
-
-    it('is scheduled', () => expect(vault.status).to.equal('scheduled'));
-  });
-
-  describe('with a price trigger and a time trigger', () => {
-    it('fails with the correct error message', async function (this: Context) {
-      await expect(
-        createVault(this, {
-          target_receive_amount: `1000000`,
-          target_start_time_utc_seconds: `${dayjs().add(1, 'hour').unix()}`,
-        }),
-      ).to.be.rejectedWith(/cannot provide both a target_start_time_utc_seconds and a target_price/);
-    });
-  });
+  (process.env.SUPPORTS_PRICE_TRIGGERS === 'false' ? describe.skip : describe)(
+    'with a price trigger and a time trigger',
+    function () {
+      it('fails with the correct error message', async function (this: Context) {
+        await expect(
+          createVault(this, {
+            target_receive_amount: '1000000',
+            target_start_time_utc_seconds: `${dayjs().add(1, 'hour').unix()}`,
+          }),
+        ).to.be.rejectedWith(/cannot provide both a target_start_time_utc_seconds and a target_price/);
+      });
+    },
+  );
 
   describe('with a time trigger in the past', () => {
     it('fails with the correct error message', async function (this: Context) {
@@ -304,7 +315,7 @@ describe('when creating a vault', () => {
   describe('with multiple assets sent', () => {
     it('fails with the correct error message', async function (this: Context) {
       await expect(
-        createVault(this, {}, [coin(1000000, this.pair.quote_denom), coin(1000000, this.pair.base_denom)]),
+        createVault(this, {}, [coin(1000000, this.pair.denoms[0]), coin(1000000, this.pair.denoms[1])]),
       ).to.be.rejectedWith(/received 2 denoms but required exactly 1/);
     });
   });
@@ -370,16 +381,17 @@ describe('when creating a vault', () => {
     let expectedPrice: number;
 
     before(async function (this: Context) {
-      const deposit = coin(1000000, this.pair.quote_denom);
+      const deposit = coin(1000000, this.pair.denoms[1]);
       const swapAmount = 100000;
 
-      balancesBeforeExecution = await getBalances(
-        this.cosmWasmClient,
-        [this.userWalletAddress],
-        [this.pair.base_denom],
-      );
+      balancesBeforeExecution = await getBalances(this.cosmWasmClient, [this.userWalletAddress], [this.pair.denoms[0]]);
 
-      expectedPrice = await getExpectedPrice(this.cosmWasmClient, this.pair, coin(swapAmount, this.pair.quote_denom));
+      expectedPrice = await getExpectedPrice(
+        this.cosmWasmClient,
+        this.exchangeContractAddress,
+        coin(swapAmount, deposit.denom),
+        deposit.denom === this.pair.denoms[1] ? this.pair.denoms[0] : this.pair.denoms[1],
+      );
 
       const vault_id = await createVault(
         this,

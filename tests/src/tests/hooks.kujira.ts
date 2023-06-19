@@ -1,4 +1,3 @@
-import dotenv from 'dotenv';
 import { fetchConfig } from '../shared/config';
 import { createAdminCosmWasmClient, execute, getWallet, uploadAndInstantiate } from '../shared/cosmwasm';
 import { Coin, coin } from '@cosmjs/proto-signing';
@@ -8,8 +7,9 @@ import { Tendermint34Client } from '@cosmjs/tendermint-rpc';
 import { HttpBatchClient } from '@cosmjs/tendermint-rpc/build/rpcclients';
 import { kujiraQueryClient } from 'kujira.js';
 import { PositionType } from '../types/dca/response/get_vault';
+import { Pair } from '../types/exchanges/fin/pair';
 
-const calcSwapFee = 0.0165;
+const dexSwapFee = 0.0165;
 const automationFee = 0.0075;
 const finTakerFee = 0.0015;
 const finMakerFee = 0.00075;
@@ -18,7 +18,9 @@ const finSellPrice = 0.99;
 const swapAdjustment = 1.3;
 
 export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
-  dotenv.config();
+  if (process.env.BECH32_ADDRESS_PREFIX !== 'kujira') {
+    return;
+  }
 
   const config = await fetchConfig();
   const httpClient = new HttpBatchClient(config.netUrl, {
@@ -27,6 +29,7 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
   });
   const tmClient = (await Tendermint34Client.create(httpClient)) as any;
   const queryClient = kujiraQueryClient({ client: tmClient });
+
   const cosmWasmClient = await createAdminCosmWasmClient(config);
 
   const adminWalletAddress = (
@@ -45,21 +48,34 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
     address: finPairAddress,
   };
 
-  const pair = {
-    base_denom: pairConfig.denoms[0].native,
-    quote_denom: pairConfig.denoms[1].native,
-    address: finPairAddress,
-  };
-
-  const exchangeAddress = await instantiateExchangeContract(cosmWasmClient, adminWalletAddress, [finPairAddress]);
+  const exchangeContractAddress = await instantiateExchangeContract(cosmWasmClient, adminWalletAddress);
 
   const dcaContractAddress = await instantiateDCAContract(
     cosmWasmClient,
     adminWalletAddress,
     feeCollectorAddress,
-    exchangeAddress,
-    [finPairAddress],
+    exchangeContractAddress,
   );
+
+  const pair: Pair = {
+    base_denom: pairConfig.denoms[1].native,
+    quote_denom: pairConfig.denoms[0].native,
+    address: finPairAddress,
+    decimal_delta: 0,
+    price_precision: 3,
+  };
+
+  await execute(cosmWasmClient, adminWalletAddress, exchangeContractAddress, {
+    internal_msg: {
+      msg: Buffer.from(
+        JSON.stringify({
+          create_pairs: {
+            pairs: [pair],
+          },
+        }),
+      ).toString('base64'),
+    },
+  });
 
   const userWallet = await createWallet(config);
   const userWalletAddress = (await userWallet.getAccounts())[0].address;
@@ -68,6 +84,13 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
     cosmWasmClient,
     adminWalletAddress,
     userWallet,
+  );
+
+  await cosmWasmClient.sendTokens(
+    adminWalletAddress,
+    userWalletAddress,
+    [coin('100000000', pair.base_denom), coin('100000000', pair.quote_denom)],
+    2,
   );
 
   const validatorAddress = (await queryClient.staking.validators('')).validators[0].operatorAddress;
@@ -80,7 +103,8 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
         queryClient,
         userCosmWasmClient,
         dcaContractAddress,
-        calcSwapFee,
+        exchangeContractAddress,
+        dexSwapFee,
         automationFee,
         adminWalletAddress,
         feeCollectorAddress,
@@ -90,7 +114,9 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
         finSellPrice,
         finMakerFee,
         finTakerFee,
-        pair,
+        pair: {
+          denoms: [pair.base_denom, pair.quote_denom],
+        },
         validatorAddress,
         swapAdjustment,
       };
@@ -105,7 +131,6 @@ const instantiateDCAContract = async (
   adminWalletAddress: string,
   feeCollectorAdress: string,
   exchangeAddress: string,
-  pairAddress: string[] = [],
 ): Promise<string> => {
   const dcaContractAddress = await uploadAndInstantiate(
     '../artifacts/dca.wasm',
@@ -120,7 +145,7 @@ const instantiateDCAContract = async (
       paused: false,
       default_slippage_tolerance: '0.05',
       twap_period: 0,
-      default_swap_fee_percent: `${calcSwapFee}`,
+      default_swap_fee_percent: `${dexSwapFee}`,
       weighted_scale_swap_fee_percent: '0.01',
       risk_weighted_average_escrow_level: '0.05',
       exchange_contract_address: exchangeAddress,
@@ -150,46 +175,16 @@ const instantiateDCAContract = async (
 export const instantiateExchangeContract = async (
   cosmWasmClient: SigningCosmWasmClient,
   adminWalletAddress: string,
-  pairAddress: string[] = [],
-): Promise<string> => {
-  const finExchangeAddress = await uploadAndInstantiate(
+): Promise<string> =>
+  await uploadAndInstantiate(
     '../artifacts/fin.wasm',
     cosmWasmClient,
     adminWalletAddress,
     {
       admin: adminWalletAddress,
     },
-    'fin-exchange',
+    'fin exchange',
   );
-
-  for (const address of pairAddress) {
-    const pair = await cosmWasmClient.queryContractSmart(address, {
-      config: {},
-    });
-
-    await execute(cosmWasmClient, adminWalletAddress, finExchangeAddress, {
-      internal_msg: {
-        msg: Buffer.from(
-          JSON.stringify({
-            create_pairs: {
-              pairs: [
-                {
-                  base_denom: pair.denoms[0].native,
-                  quote_denom: pair.denoms[1].native,
-                  decimal_delta: pair.decimal_delta,
-                  price_precision: pair.price_precision.decimal_places,
-                  address,
-                },
-              ],
-            },
-          }),
-        ).toString('base64'),
-      },
-    });
-  }
-
-  return finExchangeAddress;
-};
 
 export const instantiateFinPairContract = async (
   cosmWasmClient: SigningCosmWasmClient,

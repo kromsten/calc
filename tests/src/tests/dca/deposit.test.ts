@@ -17,7 +17,7 @@ describe('when depositing into a vault', () => {
     let eventPayloads: EventData[];
 
     before(async function (this: Context) {
-      deposit = coin(1000, this.pair.quote_denom);
+      deposit = coin(1000, this.pair.denoms[1]);
       const vault_id = await createVault(this, {
         swap_amount: `${swapAmount}`,
         target_start_time_utc_seconds: `${dayjs().add(1, 'hour').unix()}`,
@@ -82,8 +82,8 @@ describe('when depositing into a vault', () => {
     let vaultAfterDeposit: Vault;
 
     before(async function (this: Context) {
-      initialDeposit = coin(100, this.pair.quote_denom);
-      deposit = coin(10000000, this.pair.quote_denom);
+      initialDeposit = coin(100, this.pair.denoms[1]);
+      deposit = coin(10000000, this.pair.denoms[1]);
       const vault_id = await createVault(
         this,
         {

@@ -78,7 +78,7 @@ export type Uint128 = string;
  */
 export type Decimal = string;
 export type ExecutionSkippedReason =
-  | ("slippage_tolerance_exceeded" | "swap_amount_adjusted_to_zero")
+  | ("slippage_tolerance_exceeded" | "swap_amount_adjusted_to_zero" | "insufficient_liquidity")
   | {
       price_threshold_exceeded: {
         price: Decimal;

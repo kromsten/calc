@@ -1,6 +1,6 @@
 use crate::{msg::PairsResponse, state::config::get_config};
 use cosmwasm_std::{Deps, StdResult};
-use exchange::{msg::QueryMsg, pair::Pair};
+use exchange::{msg::Pair, msg::QueryMsg};
 
 pub fn get_pairs_handler(
     deps: Deps,
@@ -31,7 +31,7 @@ mod get_pairs_tests {
         testing::{mock_dependencies, mock_env, mock_info},
         to_binary, ContractResult, SystemResult,
     };
-    use exchange::pair::Pair;
+    use exchange::msg::Pair;
 
     #[test]
     fn get_all_pairs_with_one_whitelisted_pair_should_succeed() {

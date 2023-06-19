@@ -114,7 +114,7 @@ export type TriggerConfiguration =
     }
   | {
       price: {
-        order_idx?: Uint128 | null;
+        order_idx: Uint128;
         target_price: Decimal;
       };
     };
