@@ -16,7 +16,7 @@ use crate::handlers::retract_order::{retract_order_handler, return_retracted_fun
 use crate::handlers::submit_order::{return_order_idx, submit_order_handler};
 use crate::handlers::swap::{return_swapped_funds, swap_handler};
 use crate::handlers::withdraw_order::{return_withdrawn_funds, withdraw_order_handler};
-use crate::msg::{InstantiateMsg, InternalMsg};
+use crate::msg::{InstantiateMsg, InternalMsg, MigrateMsg};
 use crate::state::config::update_config;
 use crate::types::config::Config;
 
@@ -25,6 +25,11 @@ use crate::types::config::Config;
 const CONTRACT_NAME: &str = "crates.io:fin";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 */
+
+#[entry_point]
+pub fn migrate(_deps: DepsMut, _: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    Ok(Response::new().add_attribute("migrate", "true"))
+}
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
