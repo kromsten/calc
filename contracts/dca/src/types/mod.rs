@@ -8,4 +8,5 @@ pub mod position_type;
 pub mod swap_adjustment_strategy;
 pub mod time_interval;
 pub mod trigger;
+pub mod update;
 pub mod vault;

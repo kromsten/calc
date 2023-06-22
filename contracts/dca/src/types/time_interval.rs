@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use cosmwasm_schema::cw_serde;
 
 #[cw_serde]
@@ -27,6 +29,23 @@ impl From<TimeInterval> for String {
             TimeInterval::Fortnightly => "Fortnightly".to_string(),
             TimeInterval::Monthly => "Monthly".to_string(),
             TimeInterval::Custom { seconds } => format!("Custom:{}", seconds),
+        }
+    }
+}
+
+impl Display for TimeInterval {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TimeInterval::EveryBlock => write!(f, "EveryBlock"),
+            TimeInterval::EveryMinute => write!(f, "EveryMinute"),
+            TimeInterval::HalfHourly => write!(f, "HalfHourly"),
+            TimeInterval::Hourly => write!(f, "Hourly"),
+            TimeInterval::HalfDaily => write!(f, "HalfDaily"),
+            TimeInterval::Daily => write!(f, "Daily"),
+            TimeInterval::Weekly => write!(f, "Weekly"),
+            TimeInterval::Fortnightly => write!(f, "Fortnightly"),
+            TimeInterval::Monthly => write!(f, "Monthly"),
+            TimeInterval::Custom { seconds } => write!(f, "Custom:{}", seconds),
         }
     }
 }

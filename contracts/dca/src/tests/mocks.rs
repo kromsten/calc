@@ -56,6 +56,9 @@ impl<C: DeserializeOwned> CalcMockQuerier<C> {
                             denom: target_denom,
                         })
                         .unwrap(),
+                        ExchangeQueryMsg::InternalQuery { .. } => {
+                            unimplemented!("Internal query unsupported")
+                        }
                     }
                 }
                 _ => panic!("Unsupported contract addr"),
@@ -137,6 +140,9 @@ impl<C: CustomQuery + DeserializeOwned> CalcMockQuerier<C> {
                             denom: target_denom,
                         })
                         .unwrap(),
+                        ExchangeQueryMsg::InternalQuery { .. } => {
+                            unimplemented!("Internal query unsupported")
+                        }
                     }
                 }
                 _ => panic!("Unsupported contract addr"),

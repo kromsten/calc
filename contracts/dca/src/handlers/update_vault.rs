@@ -1,24 +1,37 @@
 use crate::{
     error::ContractError,
-    helpers::validation::{
-        assert_destination_allocations_add_up_to_one,
-        assert_destination_callback_addresses_are_valid, assert_destinations_limit_is_not_breached,
-        assert_label_is_no_longer_than_100_characters, assert_no_destination_allocations_are_zero,
-        assert_slippage_tolerance_is_less_than_or_equal_to_one, assert_time_interval_is_valid,
-        assert_vault_is_not_cancelled, assert_weighted_scale_multiplier_is_no_more_than_10,
-        asset_sender_is_vault_owner,
+    helpers::{
+        time::get_next_target_time,
+        validation::{
+            assert_destination_allocations_add_up_to_one,
+            assert_destination_callback_addresses_are_valid,
+            assert_destinations_limit_is_not_breached,
+            assert_label_is_no_longer_than_100_characters,
+            assert_no_destination_allocations_are_zero,
+            assert_slippage_tolerance_is_less_than_or_equal_to_one, assert_time_interval_is_valid,
+            assert_vault_is_not_cancelled, assert_weighted_scale_multiplier_is_no_more_than_10,
+            asset_sender_is_vault_owner,
+        },
     },
-    state::vaults::{get_vault, update_vault},
+    state::{
+        events::create_event,
+        triggers::{delete_trigger, save_trigger},
+        vaults::{get_vault, update_vault},
+    },
     types::{
         destination::Destination,
+        event::{EventBuilder, EventData},
         swap_adjustment_strategy::{SwapAdjustmentStrategy, SwapAdjustmentStrategyParams},
         time_interval::TimeInterval,
+        trigger::{Trigger, TriggerConfiguration},
+        update::Update,
     },
 };
-use cosmwasm_std::{Decimal, DepsMut, MessageInfo, Response, Uint128};
+use cosmwasm_std::{Decimal, DepsMut, Env, MessageInfo, Response, Uint128};
 
 pub fn update_vault_handler(
     deps: DepsMut,
+    env: Env,
     info: MessageInfo,
     vault_id: Uint128,
     label: Option<String>,
@@ -38,8 +51,16 @@ pub fn update_vault_handler(
         .add_attribute("vault_id", vault.id)
         .add_attribute("owner", vault.owner.clone());
 
+    let mut updates = Vec::<Update>::new();
+
     if let Some(label) = label {
         assert_label_is_no_longer_than_100_characters(&label)?;
+
+        updates.push(Update {
+            field: "label".to_string(),
+            old_value: vault.label.unwrap_or_default(),
+            new_value: label.clone(),
+        });
 
         vault.label = Some(label.clone());
         response = response.add_attribute("label", label);
@@ -59,25 +80,67 @@ pub fn update_vault_handler(
         assert_no_destination_allocations_are_zero(&destinations)?;
         assert_destination_allocations_add_up_to_one(&destinations)?;
 
+        updates.push(Update {
+            field: "destinations".to_string(),
+            old_value: format!("{:?}", vault.destinations),
+            new_value: format!("{:?}", destinations),
+        });
+
         vault.destinations = destinations.clone();
         response = response.add_attribute("destinations", format!("{:?}", destinations));
     }
 
     if let Some(slippage_tolerance) = slippage_tolerance {
         assert_slippage_tolerance_is_less_than_or_equal_to_one(slippage_tolerance)?;
+
+        updates.push(Update {
+            field: "slippage_tolerance".to_string(),
+            old_value: format!("{}", vault.slippage_tolerance),
+            new_value: format!("{}", slippage_tolerance),
+        });
+
         vault.slippage_tolerance = slippage_tolerance;
         response = response.add_attribute("slippage_tolerance", slippage_tolerance.to_string());
     }
 
     if let Some(minimum_receive_amount) = minimum_receive_amount {
+        updates.push(Update {
+            field: "minimum_receive_amount".to_string(),
+            old_value: format!("{}", vault.minimum_receive_amount.unwrap_or_default()),
+            new_value: format!("{}", minimum_receive_amount),
+        });
+
         vault.minimum_receive_amount = Some(minimum_receive_amount);
         response = response.add_attribute("minimum_receive_amount", minimum_receive_amount);
     }
 
     if let Some(time_interval) = time_interval {
         assert_time_interval_is_valid(&time_interval)?;
+
+        updates.push(Update {
+            field: "time_interval".to_string(),
+            old_value: format!("{}", vault.time_interval),
+            new_value: format!("{}", time_interval),
+        });
+
         vault.time_interval = time_interval.clone();
         response = response.add_attribute("time_interval", time_interval);
+
+        delete_trigger(deps.storage, vault.id)?;
+
+        save_trigger(
+            deps.storage,
+            Trigger {
+                vault_id: vault.id,
+                configuration: TriggerConfiguration::Time {
+                    target_time: get_next_target_time(
+                        env.block.time,
+                        vault.started_at.unwrap_or(env.block.time),
+                        vault.time_interval.clone(),
+                    ),
+                },
+            },
+        )?;
     }
 
     match swap_adjustment_strategy {
@@ -88,6 +151,13 @@ pub fn update_vault_handler(
         }) => match vault.swap_adjustment_strategy {
             Some(SwapAdjustmentStrategy::WeightedScale { .. }) => {
                 assert_weighted_scale_multiplier_is_no_more_than_10(multiplier)?;
+
+                updates.push(Update {
+                    field: "swap_adjustment_strategy".to_string(),
+                    old_value: format!("{:?}", vault.swap_adjustment_strategy),
+                    new_value: format!("{:?}", swap_adjustment_strategy),
+                });
+
                 vault.swap_adjustment_strategy = Some(SwapAdjustmentStrategy::WeightedScale {
                     base_receive_amount,
                     multiplier,
@@ -114,7 +184,13 @@ pub fn update_vault_handler(
         _ => {}
     }
 
-    update_vault(deps.storage, vault)?;
+    update_vault(deps.storage, vault.clone())?;
+
+    create_event(
+        deps.storage,
+        EventBuilder::new(vault.id, env.block, EventData::DcaVaultUpdated { updates }),
+    )?;
+
     Ok(response)
 }
 
@@ -122,18 +198,24 @@ pub fn update_vault_handler(
 mod update_vault_tests {
     use super::update_vault_handler;
     use crate::{
-        state::vaults::get_vault,
+        handlers::get_events_by_resource_id::get_events_by_resource_id_handler,
+        helpers::time::get_next_target_time,
+        state::{config::update_config, vaults::get_vault},
         tests::{
             helpers::{instantiate_contract, setup_vault},
             mocks::{ADMIN, USER},
         },
         types::{
+            config::Config,
             destination::Destination,
+            event::{Event, EventData},
             position_type::PositionType,
             swap_adjustment_strategy::{
                 BaseDenom, SwapAdjustmentStrategy, SwapAdjustmentStrategyParams,
             },
             time_interval::TimeInterval,
+            trigger::TriggerConfiguration,
+            update::Update,
             vault::{Vault, VaultStatus},
         },
     };
@@ -152,6 +234,7 @@ mod update_vault_tests {
 
         let err = update_vault_handler(
             deps.as_mut(),
+            mock_env(),
             mock_info(USER, &[]),
             vault.id,
             None,
@@ -179,6 +262,7 @@ mod update_vault_tests {
 
         let err = update_vault_handler(
             deps.as_mut(),
+            mock_env(),
             mock_info(USER, &[]),
             vault.id,
             None,
@@ -208,6 +292,7 @@ mod update_vault_tests {
 
         let err = update_vault_handler(
             deps.as_mut(),
+            mock_env(),
             mock_info(USER, &[]),
             vault.id,
             label,
@@ -244,6 +329,7 @@ mod update_vault_tests {
 
         let err = update_vault_handler(
             deps.as_mut(),
+            mock_env(),
             mock_info(USER, &[]),
             vault.id,
             label,
@@ -275,6 +361,7 @@ mod update_vault_tests {
 
         let err = update_vault_handler(
             deps.as_mut(),
+            mock_env(),
             mock_info(USER, &[]),
             vault.id,
             label,
@@ -306,6 +393,7 @@ mod update_vault_tests {
 
         let err = update_vault_handler(
             deps.as_mut(),
+            mock_env(),
             mock_info(USER, &[]),
             vault.id,
             None,
@@ -344,6 +432,7 @@ mod update_vault_tests {
 
         let err = update_vault_handler(
             deps.as_mut(),
+            mock_env(),
             mock_info(USER, &[]),
             vault.id,
             None,
@@ -382,6 +471,7 @@ mod update_vault_tests {
 
         let err = update_vault_handler(
             deps.as_mut(),
+            mock_env(),
             mock_info(USER, &[]),
             vault.id,
             None,
@@ -420,6 +510,7 @@ mod update_vault_tests {
 
         let err = update_vault_handler(
             deps.as_mut(),
+            mock_env(),
             mock_info(USER, &[]),
             vault.id,
             None,
@@ -463,6 +554,7 @@ mod update_vault_tests {
 
         let err = update_vault_handler(
             deps.as_mut(),
+            mock_env(),
             mock_info(USER, &[]),
             vault.id,
             None,
@@ -510,6 +602,7 @@ mod update_vault_tests {
 
         let err = update_vault_handler(
             deps.as_mut(),
+            mock_env(),
             mock_info(USER, &[]),
             vault.id,
             None,
@@ -544,6 +637,7 @@ mod update_vault_tests {
 
         let err = update_vault_handler(
             deps.as_mut(),
+            mock_env(),
             mock_info(USER, &[]),
             vault.id,
             None,
@@ -593,6 +687,7 @@ mod update_vault_tests {
 
         update_vault_handler(
             deps.as_mut(),
+            mock_env(),
             mock_info(USER, &[]),
             vault.id,
             None,
@@ -626,6 +721,7 @@ mod update_vault_tests {
 
         update_vault_handler(
             deps.as_mut(),
+            mock_env(),
             mock_info(USER, &[]),
             vault.id,
             label.clone(),
@@ -663,6 +759,7 @@ mod update_vault_tests {
 
         update_vault_handler(
             deps.as_mut(),
+            mock_env(),
             mock_info(USER, &[]),
             vault.id,
             None,
@@ -688,6 +785,7 @@ mod update_vault_tests {
 
         update_vault_handler(
             deps.as_mut(),
+            mock_env(),
             mock_info(USER, &[]),
             vault.id,
             None,
@@ -722,6 +820,7 @@ mod update_vault_tests {
 
         update_vault_handler(
             deps.as_mut(),
+            mock_env(),
             mock_info(USER, &[]),
             vault.id,
             None,
@@ -748,6 +847,7 @@ mod update_vault_tests {
 
         update_vault_handler(
             deps.as_mut(),
+            mock_env(),
             mock_info(USER, &[]),
             vault.id,
             None,
@@ -770,12 +870,11 @@ mod update_vault_tests {
 
         let vault = setup_vault(deps.as_mut(), mock_env(), Vault::default());
 
-        let time_interval = TimeInterval::Custom {
-            seconds: 31271632321,
-        };
+        let time_interval = TimeInterval::Custom { seconds: 31321 };
 
         update_vault_handler(
             deps.as_mut(),
+            mock_env(),
             mock_info(USER, &[]),
             vault.id,
             None,
@@ -790,5 +889,130 @@ mod update_vault_tests {
         let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
 
         assert_eq!(updated_vault.time_interval, time_interval);
+    }
+
+    #[test]
+    fn updates_the_trigger_target_time() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+        let vault = setup_vault(deps.as_mut(), mock_env(), Vault::default());
+
+        let time_interval = TimeInterval::Custom { seconds: 60 };
+
+        update_vault_handler(
+            deps.as_mut(),
+            env.clone(),
+            mock_info(USER, &[]),
+            vault.id,
+            None,
+            None,
+            None,
+            None,
+            Some(time_interval.clone()),
+            None,
+        )
+        .unwrap();
+
+        let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
+
+        match updated_vault.trigger {
+            Some(TriggerConfiguration::Time { target_time }) => {
+                assert_eq!(
+                    target_time,
+                    get_next_target_time(
+                        env.block.time,
+                        vault.started_at.unwrap_or(env.block.time),
+                        time_interval
+                    )
+                )
+            }
+            _ => panic!("expected trigger to be of type Time"),
+        }
+    }
+
+    #[test]
+    fn publishes_vault_updated_event() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+        let vault = setup_vault(deps.as_mut(), mock_env(), Vault::default());
+
+        let new_time_interval = TimeInterval::Custom { seconds: 60 };
+
+        update_config(deps.as_mut().storage, Config::default()).unwrap();
+
+        let new_label = &"new vault";
+        let new_destinations = vec![
+            Destination {
+                address: Addr::unchecked("random-1"),
+                allocation: Decimal::percent(50),
+                msg: None,
+            },
+            Destination {
+                address: Addr::unchecked("random-2"),
+                allocation: Decimal::percent(50),
+                msg: None,
+            },
+        ];
+        let new_slippage_tolerance = Decimal::percent(12);
+        let new_minimum_receive_amount = Uint128::new(2312312231);
+
+        update_vault_handler(
+            deps.as_mut(),
+            env.clone(),
+            mock_info(USER, &[]),
+            vault.id,
+            Some(new_label.to_string()),
+            Some(new_destinations.clone()),
+            Some(new_slippage_tolerance),
+            Some(new_minimum_receive_amount),
+            Some(new_time_interval.clone()),
+            None,
+        )
+        .unwrap();
+
+        let events = get_events_by_resource_id_handler(deps.as_ref(), vault.id, None, None, None)
+            .unwrap()
+            .events;
+
+        assert_eq!(
+            events.first().unwrap(),
+            &Event {
+                id: 1,
+                resource_id: vault.id,
+                timestamp: env.block.time,
+                block_height: env.block.height,
+                data: EventData::DcaVaultUpdated {
+                    updates: vec![
+                        Update {
+                            field: "label".to_string(),
+                            old_value: vault.label.unwrap().to_string(),
+                            new_value: new_label.to_string(),
+                        },
+                        Update {
+                            field: "destinations".to_string(),
+                            old_value: format!("{:?}", vault.destinations),
+                            new_value: format!("{:?}", new_destinations),
+                        },
+                        Update {
+                            field: "slippage_tolerance".to_string(),
+                            old_value: vault.slippage_tolerance.to_string(),
+                            new_value: new_slippage_tolerance.to_string(),
+                        },
+                        Update {
+                            field: "minimum_receive_amount".to_string(),
+                            old_value: vault.minimum_receive_amount.unwrap_or_default().to_string(),
+                            new_value: new_minimum_receive_amount.to_string(),
+                        },
+                        Update {
+                            field: "time_interval".to_string(),
+                            old_value: vault.time_interval.to_string(),
+                            new_value: new_time_interval.to_string(),
+                        }
+                    ]
+                }
+            }
+        )
     }
 }

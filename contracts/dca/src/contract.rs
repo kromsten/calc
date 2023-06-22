@@ -101,6 +101,7 @@ pub fn execute(
             swap_adjustment_strategy,
         } => update_vault_handler(
             deps,
+            env,
             info,
             vault_id,
             label,

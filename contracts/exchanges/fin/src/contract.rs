@@ -11,12 +11,13 @@ use crate::handlers::create_pairs::create_pairs_handler;
 use crate::handlers::get_expected_receive_amount::get_expected_receive_amount_handler;
 use crate::handlers::get_order::get_order_handler;
 use crate::handlers::get_pairs::get_pairs_handler;
+use crate::handlers::get_pairs_internal::get_pairs_internal_handler;
 use crate::handlers::get_twap_to_now::get_twap_to_now_handler;
 use crate::handlers::retract_order::{retract_order_handler, return_retracted_funds};
 use crate::handlers::submit_order::{return_order_idx, submit_order_handler};
 use crate::handlers::swap::{return_swapped_funds, swap_handler};
 use crate::handlers::withdraw_order::{return_withdrawn_funds, withdraw_order_handler};
-use crate::msg::{InstantiateMsg, InternalMsg, MigrateMsg};
+use crate::msg::{InstantiateMsg, InternalExecuteMsg, InternalQueryMsg, MigrateMsg};
 use crate::state::config::update_config;
 use crate::types::config::Config;
 
@@ -73,7 +74,7 @@ pub fn execute(
             withdraw_order_handler(deps, env, info, order_idx, denoms)
         }
         ExecuteMsg::InternalMsg { msg } => match from_binary(&msg).unwrap() {
-            InternalMsg::CreatePairs { pairs } => create_pairs_handler(deps, info, pairs),
+            InternalExecuteMsg::CreatePairs { pairs } => create_pairs_handler(deps, info, pairs),
         },
     }
 }
@@ -105,6 +106,11 @@ pub fn query(deps: Deps, _: Env, msg: QueryMsg) -> StdResult<Binary> {
             swap_amount,
             target_denom,
         )?),
+        QueryMsg::InternalQuery { msg } => match from_binary(&msg).unwrap() {
+            InternalQueryMsg::GetPairs { start_after, limit } => {
+                to_binary(&get_pairs_internal_handler(deps, start_after, limit)?)
+            }
+        },
     }
 }
 

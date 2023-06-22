@@ -62,7 +62,7 @@ mod create_pairs_tests {
 
     use crate::{
         contract::execute,
-        msg::InternalMsg,
+        msg::InternalExternalMsg,
         state::{config::update_config, pairs::find_pair},
         tests::{
             constants::{ADMIN, DENOM_STAKE, DENOM_UOSMO},
@@ -92,7 +92,7 @@ mod create_pairs_tests {
             env,
             info_with_unauthorised_sender,
             ExecuteMsg::InternalMsg {
-                msg: to_binary(&InternalMsg::CreatePairs {
+                msg: to_binary(&InternalExternalMsg::CreatePairs {
                     pairs: vec![Pair {
                         base_denom: String::from("base"),
                         quote_denom: String::from("quote"),
@@ -127,7 +127,7 @@ mod create_pairs_tests {
             env,
             info,
             ExecuteMsg::InternalMsg {
-                msg: to_binary(&InternalMsg::CreatePairs {
+                msg: to_binary(&InternalExternalMsg::CreatePairs {
                     pairs: vec![Pair {
                         quote_denom: DENOM_UOSMO.to_string(),
                         base_denom: DENOM_STAKE.to_string(),
@@ -167,7 +167,7 @@ mod create_pairs_tests {
             env,
             info,
             ExecuteMsg::InternalMsg {
-                msg: to_binary(&InternalMsg::CreatePairs {
+                msg: to_binary(&InternalExternalMsg::CreatePairs {
                     pairs: vec![Pair {
                         quote_denom: DENOM_UOSMO.to_string(),
                         base_denom: DENOM_STAKE.to_string(),
@@ -203,7 +203,7 @@ mod create_pairs_tests {
         .unwrap();
 
         let create_pair_execute_message = ExecuteMsg::InternalMsg {
-            msg: to_binary(&InternalMsg::CreatePairs {
+            msg: to_binary(&InternalExternalMsg::CreatePairs {
                 pairs: vec![Pair {
                     base_denom: DENOM_UOSMO.to_string(),
                     quote_denom: DENOM_STAKE.to_string(),
@@ -239,7 +239,7 @@ mod create_pairs_tests {
         .unwrap();
 
         let create_pair_execute_message = ExecuteMsg::InternalMsg {
-            msg: to_binary(&InternalMsg::CreatePairs {
+            msg: to_binary(&InternalExternalMsg::CreatePairs {
                 pairs: vec![Pair {
                     base_denom: DENOM_UOSMO.to_string(),
                     quote_denom: DENOM_STAKE.to_string(),
@@ -278,7 +278,7 @@ mod create_pairs_tests {
         .unwrap();
 
         let original_message = ExecuteMsg::InternalMsg {
-            msg: to_binary(&InternalMsg::CreatePairs {
+            msg: to_binary(&InternalExternalMsg::CreatePairs {
                 pairs: vec![Pair {
                     base_denom: DENOM_UOSMO.to_string(),
                     quote_denom: DENOM_STAKE.to_string(),
@@ -290,7 +290,7 @@ mod create_pairs_tests {
         };
 
         let message = ExecuteMsg::InternalMsg {
-            msg: to_binary(&InternalMsg::CreatePairs {
+            msg: to_binary(&InternalExternalMsg::CreatePairs {
                 pairs: vec![Pair {
                     base_denom: DENOM_UOSMO.to_string(),
                     quote_denom: DENOM_STAKE.to_string(),
@@ -330,7 +330,7 @@ mod create_pairs_tests {
         .unwrap();
 
         let original_message = ExecuteMsg::InternalMsg {
-            msg: to_binary(&InternalMsg::CreatePairs {
+            msg: to_binary(&InternalExternalMsg::CreatePairs {
                 pairs: vec![Pair {
                     quote_denom: DENOM_UOSMO.to_string(),
                     base_denom: DENOM_STAKE.to_string(),
@@ -342,7 +342,7 @@ mod create_pairs_tests {
         };
 
         let message = ExecuteMsg::InternalMsg {
-            msg: to_binary(&InternalMsg::CreatePairs {
+            msg: to_binary(&InternalExternalMsg::CreatePairs {
                 pairs: vec![Pair {
                     quote_denom: DENOM_UOSMO.to_string(),
                     base_denom: DENOM_STAKE.to_string(),

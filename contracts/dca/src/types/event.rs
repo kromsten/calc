@@ -1,6 +1,8 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{BlockInfo, Coin, Decimal, SubMsg, Timestamp, Uint128};
 
+use super::update::Update;
+
 #[cw_serde]
 pub enum ExecutionSkippedReason {
     SlippageToleranceExceeded,
@@ -44,6 +46,9 @@ pub enum EventData {
     DcaVaultPostExecutionActionFailed {
         msg: SubMsg,
         funds: Vec<Coin>,
+    },
+    DcaVaultUpdated {
+        updates: Vec<Update>,
     },
 }
 

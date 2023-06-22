@@ -31,8 +31,8 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     #[returns(Vec<Pair>)]
     GetPairs {
-        limit: Option<u16>,
         start_after: Option<Pair>,
+        limit: Option<u16>,
     },
     #[returns(Order)]
     GetOrder {
@@ -50,6 +50,8 @@ pub enum QueryMsg {
         swap_amount: Coin,
         target_denom: String,
     },
+    #[returns(Binary)]
+    InternalQuery { msg: Binary },
 }
 
 #[cw_serde]

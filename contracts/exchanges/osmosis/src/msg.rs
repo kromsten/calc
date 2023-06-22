@@ -1,4 +1,4 @@
-use cosmwasm_schema::cw_serde;
+use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
 
 use crate::types::pair::Pair;
@@ -12,6 +12,16 @@ pub struct InstantiateMsg {
 pub struct MigrateMsg {}
 
 #[cw_serde]
-pub enum InternalMsg {
+pub enum InternalExternalMsg {
     CreatePairs { pairs: Vec<Pair> },
+}
+
+#[cw_serde]
+#[derive(QueryResponses)]
+pub enum InternalQueryMsg {
+    #[returns(Vec<Pair>)]
+    GetPairs {
+        start_after: Option<Pair>,
+        limit: Option<u16>,
+    },
 }

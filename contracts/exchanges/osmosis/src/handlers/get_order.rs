@@ -6,24 +6,5 @@ pub fn get_order_handler(
     _order_idx: Uint128,
     _denoms: [String; 2],
 ) -> StdResult<Order> {
-    unimplemented!()
-}
-
-#[cfg(test)]
-mod get_order_handler_tests {
-
-    #[test]
-    fn for_missing_pair_fails() {
-        unimplemented!()
-    }
-
-    #[test]
-    fn for_missing_order_fails() {
-        unimplemented!()
-    }
-
-    #[test]
-    fn for_valid_order_returns_order() {
-        unimplemented!()
-    }
+    unimplemented!("Limit orders are not supported on osmosis yet")
 }
