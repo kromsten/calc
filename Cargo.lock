@@ -315,7 +315,7 @@ dependencies = [
 
 [[package]]
 name = "dca"
-version = "3.0.1"
+version = "3.0.0"
 dependencies = [
  "chrono",
  "cosmos-sdk-proto",
