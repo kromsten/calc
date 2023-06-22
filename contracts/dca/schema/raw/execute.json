@@ -198,6 +198,16 @@
                 }
               ]
             },
+            "swap_amount": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Uint128"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "time_interval": {
               "anyOf": [
                 {

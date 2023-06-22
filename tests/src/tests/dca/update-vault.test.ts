@@ -79,6 +79,19 @@ describe('when updating a vault', () => {
               old_value: 'Daily',
               new_value: 'Custom:60',
             },
+            {
+              field: 'trigger',
+              old_value: `Time { target_time: Timestamp(Uint64(${
+                dayjs(Number(vaultBeforeExecution.created_at) / 1000000)
+                  .add(1, 'day')
+                  .unix() * 1000000000
+              })) }`,
+              new_value: `Time { target_time: Timestamp(Uint64(${
+                dayjs(Number(vaultBeforeExecution.created_at) / 1000000)
+                  .add(1, 'minute')
+                  .unix() * 1000000000
+              })) }`,
+            },
           ],
         },
       });

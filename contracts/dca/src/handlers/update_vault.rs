@@ -40,6 +40,7 @@ pub fn update_vault_handler(
     minimum_receive_amount: Option<Uint128>,
     time_interval: Option<TimeInterval>,
     swap_adjustment_strategy: Option<SwapAdjustmentStrategyParams>,
+    swap_amount: Option<Uint128>,
 ) -> Result<Response, ContractError> {
     let mut vault = get_vault(deps.storage, vault_id)?;
 
@@ -52,6 +53,74 @@ pub fn update_vault_handler(
         .add_attribute("owner", vault.owner.clone());
 
     let mut updates = Vec::<Update>::new();
+
+    if let Some(swap_amount) = swap_amount {
+        if minimum_receive_amount.is_some() {
+            return Err(ContractError::CustomError {
+                val: "cannot update swap amount and minimum receive amount at the same time."
+                    .to_string(),
+            });
+        }
+
+        if swap_adjustment_strategy.is_some() {
+            return Err(ContractError::CustomError {
+                val: "cannot update swap amount and swap adjustment strategy at the same time."
+                    .to_string(),
+            });
+        }
+
+        if let Some(minimum_receive_amount) = vault.minimum_receive_amount {
+            let updated_minimum_receive_amount =
+                Some(minimum_receive_amount * Decimal::from_ratio(swap_amount, vault.swap_amount));
+
+            updates.push(Update {
+                field: "minimum_receive_amount".to_string(),
+                old_value: format!("{:?}", vault.minimum_receive_amount),
+                new_value: format!("{:?}", updated_minimum_receive_amount),
+            });
+
+            vault.minimum_receive_amount = updated_minimum_receive_amount;
+            response = response.add_attribute(
+                "minimum_receive_amount",
+                format!("{:?}", vault.minimum_receive_amount),
+            );
+        }
+
+        if let Some(SwapAdjustmentStrategy::WeightedScale {
+            base_receive_amount,
+            multiplier,
+            increase_only,
+        }) = vault.swap_adjustment_strategy
+        {
+            let updated_swap_adjustment_strategy = Some(SwapAdjustmentStrategy::WeightedScale {
+                base_receive_amount: base_receive_amount
+                    * Decimal::from_ratio(swap_amount, vault.swap_amount),
+                multiplier,
+                increase_only,
+            });
+
+            updates.push(Update {
+                field: "swap_adjustment_strategy".to_string(),
+                old_value: format!("{:?}", vault.swap_adjustment_strategy),
+                new_value: format!("{:?}", updated_swap_adjustment_strategy),
+            });
+
+            vault.swap_adjustment_strategy = updated_swap_adjustment_strategy;
+            response = response.add_attribute(
+                "swap_adjustment_strategy",
+                format!("{:?}", vault.swap_adjustment_strategy),
+            );
+        }
+
+        updates.push(Update {
+            field: "swap_amount".to_string(),
+            old_value: format!("{}", vault.swap_amount),
+            new_value: format!("{}", swap_amount),
+        });
+
+        vault.swap_amount = swap_amount;
+        response = response.add_attribute("swap_amount", vault.swap_amount);
+    }
 
     if let Some(label) = label {
         assert_label_is_no_longer_than_100_characters(&label)?;
@@ -126,21 +195,33 @@ pub fn update_vault_handler(
         vault.time_interval = time_interval.clone();
         response = response.add_attribute("time_interval", time_interval);
 
-        delete_trigger(deps.storage, vault.id)?;
+        if let Some(old_trigger) = vault.trigger.clone() {
+            delete_trigger(deps.storage, vault.id)?;
 
-        save_trigger(
-            deps.storage,
-            Trigger {
-                vault_id: vault.id,
-                configuration: TriggerConfiguration::Time {
-                    target_time: get_next_target_time(
-                        env.block.time,
-                        vault.started_at.unwrap_or(env.block.time),
-                        vault.time_interval.clone(),
-                    ),
+            let new_trigger = TriggerConfiguration::Time {
+                target_time: get_next_target_time(
+                    env.block.time,
+                    vault.started_at.unwrap_or(env.block.time),
+                    vault.time_interval.clone(),
+                ),
+            };
+
+            save_trigger(
+                deps.storage,
+                Trigger {
+                    vault_id: vault.id,
+                    configuration: new_trigger.clone(),
                 },
-            },
-        )?;
+            )?;
+
+            updates.push(Update {
+                field: "trigger".to_string(),
+                old_value: format!("{:?}", old_trigger),
+                new_value: format!("{:?}", new_trigger),
+            });
+
+            response = response.add_attribute("trigger", format!("{:?}", new_trigger));
+        }
     }
 
     match swap_adjustment_strategy {
@@ -162,7 +243,12 @@ pub fn update_vault_handler(
                     base_receive_amount,
                     multiplier,
                     increase_only,
-                })
+                });
+
+                response = response.add_attribute(
+                    "swap_adjustment_strategy",
+                    format!("{:?}", vault.swap_adjustment_strategy),
+                );
             }
             _ => {
                 return Err(ContractError::CustomError {
@@ -198,6 +284,7 @@ pub fn update_vault_handler(
 mod update_vault_tests {
     use super::update_vault_handler;
     use crate::{
+        constants::{ONE, TEN},
         handlers::get_events_by_resource_id::get_events_by_resource_id_handler,
         helpers::time::get_next_target_time,
         state::{config::update_config, vaults::get_vault},
@@ -243,6 +330,7 @@ mod update_vault_tests {
             None,
             None,
             None,
+            None,
         )
         .unwrap_err();
 
@@ -271,6 +359,7 @@ mod update_vault_tests {
             None,
             Some(TimeInterval::Custom { seconds: 12 }),
             None,
+            None,
         )
         .unwrap_err();
 
@@ -296,6 +385,7 @@ mod update_vault_tests {
             mock_info(USER, &[]),
             vault.id,
             label,
+            None,
             None,
             None,
             None,
@@ -338,6 +428,7 @@ mod update_vault_tests {
             None,
             None,
             None,
+            None,
         )
         .unwrap_err();
 
@@ -365,6 +456,7 @@ mod update_vault_tests {
             mock_info(USER, &[]),
             vault.id,
             label,
+            None,
             None,
             None,
             None,
@@ -398,6 +490,7 @@ mod update_vault_tests {
             vault.id,
             None,
             Some(destinations),
+            None,
             None,
             None,
             None,
@@ -441,6 +534,7 @@ mod update_vault_tests {
             None,
             None,
             None,
+            None,
         )
         .unwrap_err();
 
@@ -480,6 +574,7 @@ mod update_vault_tests {
             None,
             None,
             None,
+            None,
         )
         .unwrap_err();
 
@@ -515,6 +610,7 @@ mod update_vault_tests {
             vault.id,
             None,
             Some(destinations),
+            None,
             None,
             None,
             None,
@@ -563,6 +659,7 @@ mod update_vault_tests {
             None,
             None,
             Some(new_swap_adjustment_strategy.clone()),
+            None,
         )
         .unwrap_err();
 
@@ -611,6 +708,7 @@ mod update_vault_tests {
             None,
             None,
             new_swap_adjustment_strategy.clone(),
+            None,
         )
         .unwrap_err();
 
@@ -646,6 +744,7 @@ mod update_vault_tests {
             None,
             None,
             strategy.clone(),
+            None,
         )
         .unwrap_err();
 
@@ -656,6 +755,191 @@ mod update_vault_tests {
                 vault.swap_adjustment_strategy, strategy
             )
         );
+    }
+
+    #[test]
+    fn updating_swap_amount_and_minimum_receive_amount_fails() {
+        let mut deps = mock_dependencies();
+
+        let vault = setup_vault(deps.as_mut(), mock_env(), Vault::default());
+
+        let err = update_vault_handler(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(USER, &[]),
+            vault.id,
+            None,
+            None,
+            None,
+            Some(Uint128::new(621837621)),
+            None,
+            None,
+            Some(Uint128::new(3498473290)),
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            err.to_string(),
+            format!(
+                "Error: cannot update swap amount and minimum receive amount at the same time.",
+            )
+        );
+    }
+
+    #[test]
+    fn updating_swap_amount_and_swap_adjustment_strategy_fails() {
+        let mut deps = mock_dependencies();
+
+        let vault = setup_vault(deps.as_mut(), mock_env(), Vault::default());
+
+        let err = update_vault_handler(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(USER, &[]),
+            vault.id,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(SwapAdjustmentStrategyParams::WeightedScale {
+                base_receive_amount: Uint128::new(2732),
+                multiplier: Decimal::percent(150),
+                increase_only: false,
+            })
+            .clone(),
+            Some(Uint128::new(436753262)),
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            err.to_string(),
+            format!(
+                "Error: cannot update swap amount and swap adjustment strategy at the same time."
+            )
+        );
+    }
+
+    #[test]
+    fn updating_swap_amount_updates_minimum_receive_amount() {
+        let mut deps = mock_dependencies();
+
+        let vault = setup_vault(
+            deps.as_mut(),
+            mock_env(),
+            Vault {
+                swap_amount: ONE,
+                minimum_receive_amount: Some(TEN),
+                ..Vault::default()
+            },
+        );
+
+        update_vault_handler(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(USER, &[]),
+            vault.id,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(vault.swap_amount * Uint128::new(2)),
+        )
+        .unwrap();
+
+        let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
+
+        assert_eq!(
+            updated_vault.minimum_receive_amount,
+            Some(TEN * Uint128::new(2))
+        );
+    }
+
+    #[test]
+    fn updating_swap_amount_updates_weighted_scale_swap_adjustment_strategy_base_receive_amount() {
+        let mut deps = mock_dependencies();
+
+        let vault = setup_vault(
+            deps.as_mut(),
+            mock_env(),
+            Vault {
+                swap_adjustment_strategy: Some(SwapAdjustmentStrategy::WeightedScale {
+                    base_receive_amount: Uint128::new(2732),
+                    multiplier: Decimal::percent(150),
+                    increase_only: false,
+                }),
+                ..Vault::default()
+            },
+        );
+
+        update_vault_handler(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(USER, &[]),
+            vault.id,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(vault.swap_amount * Uint128::new(2)),
+        )
+        .unwrap();
+
+        let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
+
+        assert_eq!(
+            updated_vault.swap_adjustment_strategy,
+            Some(SwapAdjustmentStrategy::WeightedScale {
+                base_receive_amount: Uint128::new(2732) * Uint128::new(2),
+                multiplier: Decimal::percent(150),
+                increase_only: false,
+            })
+        );
+    }
+
+    #[test]
+    fn updates_swap_amount() {
+        let mut deps = mock_dependencies();
+
+        let vault = setup_vault(
+            deps.as_mut(),
+            mock_env(),
+            Vault {
+                swap_adjustment_strategy: Some(SwapAdjustmentStrategy::WeightedScale {
+                    base_receive_amount: Uint128::new(2732),
+                    multiplier: Decimal::percent(150),
+                    increase_only: false,
+                }),
+                minimum_receive_amount: Some(ONE),
+                ..Vault::default()
+            },
+        );
+
+        let swap_amount = vault.swap_amount * Uint128::new(2);
+
+        update_vault_handler(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(USER, &[]),
+            vault.id,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(swap_amount),
+        )
+        .unwrap();
+
+        let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
+
+        assert_ne!(vault.swap_amount, swap_amount);
+        assert_eq!(updated_vault.swap_amount, swap_amount);
     }
 
     #[test]
@@ -696,6 +980,7 @@ mod update_vault_tests {
             None,
             None,
             strategy,
+            None,
         )
         .unwrap();
 
@@ -725,6 +1010,7 @@ mod update_vault_tests {
             mock_info(USER, &[]),
             vault.id,
             label.clone(),
+            None,
             None,
             None,
             None,
@@ -768,6 +1054,7 @@ mod update_vault_tests {
             None,
             None,
             None,
+            None,
         )
         .unwrap();
 
@@ -790,6 +1077,7 @@ mod update_vault_tests {
             vault.id,
             None,
             Some(vec![]),
+            None,
             None,
             None,
             None,
@@ -829,6 +1117,7 @@ mod update_vault_tests {
             None,
             None,
             None,
+            None,
         )
         .unwrap();
 
@@ -854,6 +1143,7 @@ mod update_vault_tests {
             None,
             None,
             minimum_receive_amount,
+            None,
             None,
             None,
         )
@@ -883,6 +1173,7 @@ mod update_vault_tests {
             None,
             Some(time_interval.clone()),
             None,
+            None,
         )
         .unwrap();
 
@@ -910,6 +1201,7 @@ mod update_vault_tests {
             None,
             None,
             Some(time_interval.clone()),
+            None,
             None,
         )
         .unwrap();
@@ -969,6 +1261,7 @@ mod update_vault_tests {
             Some(new_minimum_receive_amount),
             Some(new_time_interval.clone()),
             None,
+            None,
         )
         .unwrap();
 
@@ -1009,6 +1302,20 @@ mod update_vault_tests {
                             field: "time_interval".to_string(),
                             old_value: vault.time_interval.to_string(),
                             new_value: new_time_interval.to_string(),
+                        },
+                        Update {
+                            field: "trigger".to_string(),
+                            old_value: format!("{:?}", vault.trigger.unwrap()),
+                            new_value: format!(
+                                "{:?}",
+                                TriggerConfiguration::Time {
+                                    target_time: get_next_target_time(
+                                        env.block.time,
+                                        vault.started_at.unwrap_or(env.block.time),
+                                        new_time_interval
+                                    )
+                                }
+                            )
                         }
                     ]
                 }

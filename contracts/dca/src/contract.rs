@@ -99,6 +99,7 @@ pub fn execute(
             minimum_receive_amount,
             time_interval,
             swap_adjustment_strategy,
+            swap_amount,
         } => update_vault_handler(
             deps,
             env,
@@ -110,6 +111,7 @@ pub fn execute(
             minimum_receive_amount,
             time_interval,
             swap_adjustment_strategy,
+            swap_amount,
         ),
         ExecuteMsg::CancelVault { vault_id } => cancel_vault_handler(deps, env, info, vault_id),
         ExecuteMsg::ExecuteTrigger { trigger_id } => execute_trigger_handler(deps, env, trigger_id),

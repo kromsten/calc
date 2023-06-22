@@ -74,6 +74,7 @@ pub enum ExecuteMsg {
         minimum_receive_amount: Option<Uint128>,
         time_interval: Option<TimeInterval>,
         swap_adjustment_strategy: Option<SwapAdjustmentStrategyParams>,
+        swap_amount: Option<Uint128>,
     },
     CancelVault {
         vault_id: Uint128,
