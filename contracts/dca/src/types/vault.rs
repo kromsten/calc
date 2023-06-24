@@ -5,7 +5,7 @@ use super::{
 };
 use crate::helpers::time::get_total_execution_duration;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Coin, Decimal, StdResult, Timestamp, Uint128};
+use cosmwasm_std::{Addr, Coin, Decimal, Decimal256, StdResult, Timestamp, Uint128, Uint256};
 use std::cmp::max;
 
 #[cw_serde]
@@ -81,14 +81,15 @@ impl Vault {
     pub fn price_threshold_exceeded(&self, belief_price: Decimal) -> StdResult<bool> {
         self.minimum_receive_amount
             .map_or(Ok(false), |minimum_receive_amount| {
-                let swap_amount_as_decimal = Decimal::from_ratio(self.swap_amount, Uint128::one());
+                let swap_amount_as_decimal =
+                    Decimal256::from_ratio(self.swap_amount, Uint256::one());
 
                 let expected_receive_amount_at_price = swap_amount_as_decimal
-                    .checked_div(belief_price)
+                    .checked_div(belief_price.into())
                     .expect("belief price should be larger than 0");
 
                 let minimum_receive_amount_as_decimal =
-                    Decimal::from_ratio(minimum_receive_amount, Uint128::one());
+                    Decimal256::from_ratio(minimum_receive_amount, Uint256::one());
 
                 Ok(expected_receive_amount_at_price < minimum_receive_amount_as_decimal)
             })
