@@ -30,21 +30,7 @@ pub struct InstantiateMsg {
 }
 
 #[cw_serde]
-pub struct MigrateMsg {
-    pub admin: Addr,
-    pub executors: Vec<Addr>,
-    pub fee_collectors: Vec<FeeCollector>,
-    pub default_swap_fee_percent: Decimal,
-    pub weighted_scale_swap_fee_percent: Decimal,
-    pub automation_fee_percent: Decimal,
-    pub default_page_limit: u16,
-    pub paused: bool,
-    pub risk_weighted_average_escrow_level: Decimal,
-    pub twap_period: u64,
-    pub default_slippage_tolerance: Decimal,
-    pub old_staking_router_address: Addr,
-    pub exchange_contract_address: Addr,
-}
+pub struct MigrateMsg {}
 
 #[cw_serde]
 pub enum ExecuteMsg {
