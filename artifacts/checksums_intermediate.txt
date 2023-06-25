@@ -1,3 +1,3 @@
 9d41d0cf47a7ebbd1575ba3423a7c9db3c6b6a9e357fa907ec38cdf8f2075611  target/wasm32-unknown-unknown/release/osmosis.wasm
 66aabdd22d17918e1c3729d1b6bfe2a3369fcce965727dc2f37c8f4e4fa24431  target/wasm32-unknown-unknown/release/dca.wasm
-dc0edde44537045d2548431d8b8bd51a8498e9730db0c98006bcf4474de059ee  target/wasm32-unknown-unknown/release/fin.wasm
+deefa180ac345b59865368c1101b7d0216b2f0b9d9a024316353711cc97ef016  target/wasm32-unknown-unknown/release/fin.wasm
