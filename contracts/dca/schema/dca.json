@@ -589,6 +589,31 @@
           }
         },
         "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "update_price_trigger"
+        ],
+        "properties": {
+          "update_price_trigger": {
+            "type": "object",
+            "required": [
+              "order_idx",
+              "vault_id"
+            ],
+            "properties": {
+              "order_idx": {
+                "$ref": "#/definitions/Uint128"
+              },
+              "vault_id": {
+                "$ref": "#/definitions/Uint128"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
       }
     ],
     "definitions": {

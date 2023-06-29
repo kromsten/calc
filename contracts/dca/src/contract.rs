@@ -4,7 +4,7 @@ use crate::constants::{
 };
 use crate::error::ContractError;
 use crate::handlers::cancel_vault::cancel_vault_handler;
-use crate::handlers::create_vault::create_vault_handler;
+use crate::handlers::create_vault::{create_vault_handler, save_price_trigger};
 use crate::handlers::deposit::deposit_handler;
 use crate::handlers::disburse_escrow::disburse_escrow_handler;
 use crate::handlers::disburse_funds::disburse_funds_handler;
@@ -24,8 +24,8 @@ use crate::handlers::handle_failed_automation::handle_failed_automation_handler;
 use crate::handlers::instantiate::instantiate_handler;
 use crate::handlers::migrate::migrate_handler;
 use crate::handlers::old_z_delegate_handler::old_z_delegate_handler;
-use crate::handlers::save_limit_order_id::save_price_trigger;
 use crate::handlers::update_config::update_config_handler;
+use crate::handlers::update_price_trigger::update_price_trigger;
 use crate::handlers::update_swap_adjustment_handler::update_swap_adjustment_handler;
 use crate::handlers::update_vault::update_vault_handler;
 use crate::handlers::z_delegate::{log_delegation_result, z_delegate_handler};
@@ -166,6 +166,10 @@ pub fn execute(
             validator_address,
             ..
         } => old_z_delegate_handler(deps.as_ref(), info, delegator_address, validator_address),
+        ExecuteMsg::UpdatePriceTrigger {
+            vault_id,
+            order_idx,
+        } => update_price_trigger(deps, info, vault_id, order_idx),
     }
 }
 

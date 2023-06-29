@@ -98,6 +98,10 @@ pub enum ExecuteMsg {
         amount: Uint128,
         denom: String,
     },
+    UpdatePriceTrigger {
+        vault_id: Uint128,
+        order_idx: Uint128,
+    },
 }
 
 #[cw_serde]

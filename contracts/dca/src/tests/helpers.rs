@@ -109,16 +109,6 @@ impl Default for Destination {
     }
 }
 
-// impl Default for Pair {
-//     fn default() -> Self {
-//         Self {
-//             base_denom: DENOM_UKUJI.to_string(),
-//             quote_denom: DENOM_UUSK.to_string(),
-//             address: Addr::unchecked(PAIR_CONTRACT_ADDRESS),
-//         }
-//     }
-// }
-
 impl Default for Vault {
     fn default() -> Self {
         Self {
@@ -212,16 +202,6 @@ impl Default for EventData {
 }
 
 pub fn setup_vault(deps: DepsMut, env: Env, mut vault: Vault) -> Vault {
-    // save_pair(
-    //     deps.as_mut().storage,
-    //     &Pair {
-    //         quote_denom: vault.balance.denom.clone(),
-    //         base_denom: vault.target_denom.clone(),
-    //         ..Pair::default()
-    //     },
-    // )
-    // .unwrap();
-
     let mut existing_vault = get_vault(deps.storage, vault.id);
 
     while existing_vault.is_ok() {
