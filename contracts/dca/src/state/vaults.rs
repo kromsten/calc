@@ -13,7 +13,7 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Coin, Decimal, Order, StdResult, Storage, Timestamp, Uint128};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, UniqueIndex};
 
-const VAULT_COUNTER: Item<u64> = Item::new("vault_counter_v26");
+const VAULT_COUNTER: Item<u64> = Item::new("vault_counter_v20");
 
 struct VaultIndexes<'a> {
     pub owner: UniqueIndex<'a, (Addr, u128), VaultData, u128>,
