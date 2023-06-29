@@ -1,5 +1,11 @@
 import { fetchConfig } from '../shared/config';
-import { createAdminCosmWasmClient, execute, getWallet, uploadAndInstantiate } from '../shared/cosmwasm';
+import {
+  createAdminCosmWasmClient,
+  execute,
+  getWallet,
+  uploadAndInstantiate,
+  uploadAndMigrate,
+} from '../shared/cosmwasm';
 import { Coin, coin } from '@cosmjs/proto-signing';
 import { createCosmWasmClientForWallet, createWallet } from './helpers';
 import { SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate';
@@ -48,14 +54,15 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
     address: finPairAddress,
   };
 
-  const exchangeContractAddress = await instantiateExchangeContract(cosmWasmClient, adminWalletAddress);
+  const dcaContractAddress = await instantiateDCAContract(cosmWasmClient, adminWalletAddress, feeCollectorAddress);
 
-  const dcaContractAddress = await instantiateDCAContract(
+  const exchangeContractAddress = await instantiateExchangeContract(
     cosmWasmClient,
     adminWalletAddress,
-    feeCollectorAddress,
-    exchangeContractAddress,
+    dcaContractAddress,
   );
+
+  await migrateDCAContract(cosmWasmClient, adminWalletAddress, dcaContractAddress, exchangeContractAddress);
 
   const pair: Pair = {
     base_denom: pairConfig.denoms[1].native,
@@ -130,7 +137,6 @@ const instantiateDCAContract = async (
   cosmWasmClient: SigningCosmWasmClient,
   adminWalletAddress: string,
   feeCollectorAdress: string,
-  exchangeAddress: string,
 ): Promise<string> => {
   const dcaContractAddress = await uploadAndInstantiate(
     '../artifacts/dca.wasm',
@@ -148,7 +154,6 @@ const instantiateDCAContract = async (
       default_swap_fee_percent: `${dexSwapFee}`,
       weighted_scale_swap_fee_percent: '0.01',
       risk_weighted_average_escrow_level: '0.05',
-      exchange_contract_address: exchangeAddress,
       old_staking_router_address: adminWalletAddress,
     },
     'dca',
@@ -172,9 +177,20 @@ const instantiateDCAContract = async (
   return dcaContractAddress;
 };
 
+export const migrateDCAContract = async (
+  cosmWasmClient: SigningCosmWasmClient,
+  adminWalletAddress: string,
+  dcaContractAddress: string,
+  exchangeContractAddress: string,
+) =>
+  await uploadAndMigrate('../artifacts/dca.wasm', cosmWasmClient, adminWalletAddress, dcaContractAddress, {
+    exchange_contract_address: exchangeContractAddress,
+  });
+
 export const instantiateExchangeContract = async (
   cosmWasmClient: SigningCosmWasmClient,
   adminWalletAddress: string,
+  dcaContractAddress: string,
 ): Promise<string> =>
   await uploadAndInstantiate(
     '../artifacts/fin.wasm',
@@ -182,6 +198,7 @@ export const instantiateExchangeContract = async (
     adminWalletAddress,
     {
       admin: adminWalletAddress,
+      dca_contract_address: dcaContractAddress,
     },
     'fin exchange',
   );

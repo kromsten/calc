@@ -4,7 +4,7 @@ use kujira_fin::ExecuteMsg;
 use crate::{
     contract::AFTER_SUBMIT_ORDER,
     helpers::{message::get_attribute_in_event, price::get_fin_price},
-    state::pairs::find_pair,
+    state::{config::get_config, pairs::find_pair},
     types::pair_contract::PairContract,
     ContractError,
 };
@@ -25,6 +25,12 @@ pub fn submit_order_handler(
         return Err(ContractError::InvalidFunds {
             msg: String::from("swap denom and target denom must be different"),
         });
+    }
+
+    let config = get_config(deps.storage)?;
+
+    if info.sender != config.dca_contract_address {
+        return Err(ContractError::Unauthorized {});
     }
 
     let pair = find_pair(deps.storage, [info.funds[0].denom.clone(), target_denom])?;

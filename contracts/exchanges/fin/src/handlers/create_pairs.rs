@@ -54,6 +54,7 @@ mod create_pairs_tests {
             mock_info(ADMIN, &[]),
             InstantiateMsg {
                 admin: Addr::unchecked(ADMIN),
+                dca_contract_address: Addr::unchecked("dca-contract-address"),
             },
         )
         .unwrap();
@@ -74,6 +75,7 @@ mod create_pairs_tests {
             mock_info(ADMIN, &[]),
             InstantiateMsg {
                 admin: Addr::unchecked(ADMIN),
+                dca_contract_address: Addr::unchecked("dca-contract-address"),
             },
         )
         .unwrap();

@@ -45,7 +45,6 @@ pub fn instantiate_contract(deps: DepsMut, env: Env, info: MessageInfo) {
         twap_period: 30,
         default_slippage_tolerance: Decimal::percent(2),
         old_staking_router_address: Addr::unchecked("staking-router"),
-        exchange_contract_address: Addr::unchecked(EXCHANGE_CONTRACT_ADDRESS),
     };
 
     instantiate(deps, env, info, instantiate_message).unwrap();
@@ -70,7 +69,6 @@ pub fn instantiate_contract_with_multiple_fee_collectors(
         twap_period: 30,
         default_slippage_tolerance: Decimal::percent(2),
         old_staking_router_address: Addr::unchecked("staking-router"),
-        exchange_contract_address: Addr::unchecked(EXCHANGE_CONTRACT_ADDRESS),
     };
 
     instantiate(deps, env, info, instantiate_message).unwrap();

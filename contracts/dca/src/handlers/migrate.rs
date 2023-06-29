@@ -2,11 +2,13 @@ use crate::{
     contract::{CONTRACT_NAME, CONTRACT_VERSION},
     error::ContractError,
     msg::MigrateMsg,
+    state::config::{get_config, update_config},
+    types::config::Config,
 };
 use cosmwasm_std::{DepsMut, Response, StdError};
 use cw2::{get_contract_version, set_contract_version};
 
-pub fn migrate_handler(deps: DepsMut, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate_handler(deps: DepsMut, msg: MigrateMsg) -> Result<Response, ContractError> {
     let contract_version = get_contract_version(deps.storage)?;
 
     if contract_version.contract != CONTRACT_NAME {
@@ -20,5 +22,17 @@ pub fn migrate_handler(deps: DepsMut, _msg: MigrateMsg) -> Result<Response, Cont
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    Ok(Response::new().add_attribute("migrate", "true"))
+    let config = get_config(deps.storage)?;
+
+    update_config(
+        deps.storage,
+        Config {
+            exchange_contract_address: msg.exchange_contract_address.clone(),
+            ..config
+        },
+    )?;
+
+    Ok(Response::new()
+        .add_attribute("migrate", "true")
+        .add_attribute("msg", format!("{:?}", msg)))
 }

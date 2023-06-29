@@ -18,7 +18,7 @@ use crate::handlers::submit_order::{return_order_idx, submit_order_handler};
 use crate::handlers::swap::{return_swapped_funds, swap_handler};
 use crate::handlers::withdraw_order::{return_withdrawn_funds, withdraw_order_handler};
 use crate::msg::{InstantiateMsg, InternalExecuteMsg, InternalQueryMsg, MigrateMsg};
-use crate::state::config::update_config;
+use crate::state::config::{get_config, update_config};
 use crate::types::config::Config;
 
 /*
@@ -35,21 +35,39 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     deps.api.addr_validate(msg.admin.as_ref())?;
+    deps.api.addr_validate(msg.dca_contract_address.as_ref())?;
+
     update_config(
         deps.storage,
         Config {
             admin: msg.admin.clone(),
+            dca_contract_address: msg.dca_contract_address.clone(),
         },
     )?;
 
     Ok(Response::new()
         .add_attribute("instantiate", "true")
-        .add_attribute("admin", msg.admin))
+        .add_attribute("admin", msg.admin)
+        .add_attribute("dca_contract_address", msg.dca_contract_address))
 }
 
 #[entry_point]
-pub fn migrate(_deps: DepsMut, _: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    Ok(Response::new().add_attribute("migrate", "true"))
+pub fn migrate(deps: DepsMut, _: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+    deps.api.addr_validate(msg.dca_contract_address.as_ref())?;
+
+    let config = get_config(deps.storage)?;
+
+    update_config(
+        deps.storage,
+        Config {
+            dca_contract_address: msg.dca_contract_address.clone(),
+            ..config
+        },
+    )?;
+
+    Ok(Response::new()
+        .add_attribute("migrate", "true")
+        .add_attribute("dca_contract_address", msg.dca_contract_address))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

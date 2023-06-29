@@ -8,6 +8,7 @@ use crate::{
     helpers::balance::get_balance_delta,
     state::{
         cache::{LimitOrderCache, LIMIT_ORDER_CACHE},
+        config::get_config,
         pairs::find_pair,
     },
     types::pair_contract::PairContract,
@@ -21,12 +22,16 @@ pub fn withdraw_order_handler(
     order_idx: Uint128,
     denoms: [String; 2],
 ) -> Result<Response, ContractError> {
-    deps.api.addr_validate(info.sender.as_str())?;
-
     if !info.funds.is_empty() {
         return Err(ContractError::InvalidFunds {
             msg: "must not provide funds to withdraw order".to_string(),
         });
+    }
+
+    let config = get_config(deps.storage)?;
+
+    if info.sender != config.dca_contract_address {
+        return Err(ContractError::Unauthorized {});
     }
 
     LIMIT_ORDER_CACHE.save(
@@ -70,7 +75,9 @@ pub fn return_withdrawn_funds(deps: Deps, env: Env) -> Result<Response, Contract
     let cache = LIMIT_ORDER_CACHE.load(deps.storage)?;
 
     let mut funds = cache
-        .balances.values().map(|old_balance| {
+        .balances
+        .values()
+        .map(|old_balance| {
             get_balance_delta(deps.querier, env.contract.address.clone(), old_balance)
         })
         .collect::<Result<Vec<Coin>, _>>()?
