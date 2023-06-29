@@ -104,24 +104,35 @@ mod withdraw_order_handler_tests {
 
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info},
-        Coin, SubMsg, Uint128,
+        Addr, Coin, SubMsg, Uint128,
     };
     use kujira_fin::ExecuteMsg;
 
     use crate::{
         contract::AFTER_WITHDRAW_ORDER,
         handlers::withdraw_order::withdraw_order_handler,
-        state::{cache::LIMIT_ORDER_CACHE, pairs::save_pair},
-        tests::constants::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
-        types::{pair::Pair, pair_contract::PairContract},
+        state::{cache::LIMIT_ORDER_CACHE, config::update_config, pairs::save_pair},
+        tests::constants::{ADMIN, DCA_CONTRACT, DENOM_UKUJI, DENOM_UUSK},
+        types::{config::Config, pair::Pair, pair_contract::PairContract},
         ContractError,
     };
 
     #[test]
     fn with_funds_fails() {
+        let mut deps = mock_dependencies();
+
+        update_config(
+            deps.as_mut().storage,
+            Config {
+                admin: Addr::unchecked(ADMIN),
+                dca_contract_address: Addr::unchecked(DCA_CONTRACT),
+            },
+        )
+        .unwrap();
+
         assert_eq!(
             withdraw_order_handler(
-                mock_dependencies().as_mut(),
+                deps.as_mut(),
                 mock_env(),
                 mock_info(ADMIN, &[Coin::new(3218312, DENOM_UUSK)]),
                 Uint128::new(234),
@@ -138,6 +149,15 @@ mod withdraw_order_handler_tests {
     fn caches_sender_and_pair_balances() {
         let mut deps = mock_dependencies();
         let env = mock_env();
+
+        update_config(
+            deps.as_mut().storage,
+            Config {
+                admin: Addr::unchecked(ADMIN),
+                dca_contract_address: Addr::unchecked(DCA_CONTRACT),
+            },
+        )
+        .unwrap();
 
         let uusk_balance = Coin::new(25423, DENOM_UUSK);
         let ukuji_balance = Coin::new(12234324343123, DENOM_UKUJI);
@@ -177,6 +197,15 @@ mod withdraw_order_handler_tests {
     #[test]
     fn sends_withdraw_order_message() {
         let mut deps = mock_dependencies();
+
+        update_config(
+            deps.as_mut().storage,
+            Config {
+                admin: Addr::unchecked(ADMIN),
+                dca_contract_address: Addr::unchecked(DCA_CONTRACT),
+            },
+        )
+        .unwrap();
 
         let pair = Pair::default();
 
@@ -224,14 +253,27 @@ mod return_withdrawn_funds_tests {
 
     use crate::{
         handlers::withdraw_order::return_withdrawn_funds,
-        state::cache::{LimitOrderCache, LIMIT_ORDER_CACHE},
-        tests::constants::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
+        state::{
+            cache::{LimitOrderCache, LIMIT_ORDER_CACHE},
+            config::update_config,
+        },
+        tests::constants::{ADMIN, DCA_CONTRACT, DENOM_UKUJI, DENOM_UUSK},
+        types::config::Config,
     };
 
     #[test]
     fn returns_funds_difference_to_sender() {
         let mut deps = mock_dependencies();
         let env = mock_env();
+
+        update_config(
+            deps.as_mut().storage,
+            Config {
+                admin: Addr::unchecked(ADMIN),
+                dca_contract_address: Addr::unchecked(DCA_CONTRACT),
+            },
+        )
+        .unwrap();
 
         let old_uusk_balance = Coin::new(25423, DENOM_UUSK);
         let old_ukuji_balance = Coin::new(12234324343123, DENOM_UKUJI);
@@ -274,6 +316,15 @@ mod return_withdrawn_funds_tests {
         let mut deps = mock_dependencies();
         let env = mock_env();
 
+        update_config(
+            deps.as_mut().storage,
+            Config {
+                admin: Addr::unchecked(ADMIN),
+                dca_contract_address: Addr::unchecked(DCA_CONTRACT),
+            },
+        )
+        .unwrap();
+
         let old_uusk_balance = Coin::new(25423, DENOM_UUSK);
         let old_ukuji_balance = Coin::new(12234324343123, DENOM_UKUJI);
 
@@ -313,6 +364,15 @@ mod return_withdrawn_funds_tests {
     fn with_no_differences_drops_bank_send_message() {
         let mut deps = mock_dependencies();
         let env = mock_env();
+
+        update_config(
+            deps.as_mut().storage,
+            Config {
+                admin: Addr::unchecked(ADMIN),
+                dca_contract_address: Addr::unchecked(DCA_CONTRACT),
+            },
+        )
+        .unwrap();
 
         let old_uusk_balance = Coin::new(25423, DENOM_UUSK);
         let old_ukuji_balance = Coin::new(12234324343123, DENOM_UKUJI);

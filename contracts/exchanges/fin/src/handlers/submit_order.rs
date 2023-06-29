@@ -35,12 +35,7 @@ pub fn submit_order_handler(
 
     let pair = find_pair(deps.storage, [info.funds[0].denom.clone(), target_denom])?;
 
-    let price = get_fin_price(
-        &deps.querier,
-        target_price,
-        info.funds[0].denom.clone(),
-        &pair,
-    )?;
+    let price = get_fin_price(target_price, info.funds[0].denom.clone(), &pair)?;
 
     Ok(Response::new()
         .add_attribute("submit_order", "true")
@@ -81,9 +76,9 @@ mod submit_order_tests {
 
     use crate::{
         contract::AFTER_SUBMIT_ORDER,
-        state::pairs::save_pair,
-        tests::constants::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
-        types::pair::Pair,
+        state::{config::update_config, pairs::save_pair},
+        tests::constants::{ADMIN, DCA_CONTRACT, DENOM_UKUJI, DENOM_UUSK},
+        types::{config::Config, pair::Pair},
         ContractError,
     };
 
@@ -91,9 +86,20 @@ mod submit_order_tests {
 
     #[test]
     fn with_no_assets_fails() {
+        let mut deps = mock_dependencies();
+
+        update_config(
+            deps.as_mut().storage,
+            Config {
+                admin: Addr::unchecked(ADMIN),
+                dca_contract_address: Addr::unchecked(DCA_CONTRACT),
+            },
+        )
+        .unwrap();
+
         assert_eq!(
             submit_order_handler(
-                mock_dependencies().as_ref(),
+                deps.as_ref(),
                 mock_info(ADMIN, &[]),
                 Decimal256::one(),
                 DENOM_UKUJI.to_string(),
@@ -107,11 +113,22 @@ mod submit_order_tests {
 
     #[test]
     fn with_more_than_one_asset_fails() {
+        let mut deps = mock_dependencies();
+
+        update_config(
+            deps.as_mut().storage,
+            Config {
+                admin: Addr::unchecked(ADMIN),
+                dca_contract_address: Addr::unchecked(DCA_CONTRACT),
+            },
+        )
+        .unwrap();
+
         assert_eq!(
             submit_order_handler(
                 mock_dependencies().as_ref(),
                 mock_info(
-                    ADMIN,
+                    DCA_CONTRACT,
                     &[Coin::new(43282, DENOM_UKUJI), Coin::new(234782, DENOM_UUSK)]
                 ),
                 Decimal256::one(),
@@ -126,10 +143,21 @@ mod submit_order_tests {
 
     #[test]
     fn with_the_same_swap_and_target_denom_fails() {
+        let mut deps = mock_dependencies();
+
+        update_config(
+            deps.as_mut().storage,
+            Config {
+                admin: Addr::unchecked(ADMIN),
+                dca_contract_address: Addr::unchecked(DCA_CONTRACT),
+            },
+        )
+        .unwrap();
+
         assert_eq!(
             submit_order_handler(
                 mock_dependencies().as_ref(),
-                mock_info(ADMIN, &[Coin::new(43282, DENOM_UKUJI)]),
+                mock_info(DCA_CONTRACT, &[Coin::new(43282, DENOM_UKUJI)]),
                 Decimal256::one(),
                 DENOM_UKUJI.to_string(),
             )
@@ -142,10 +170,21 @@ mod submit_order_tests {
 
     #[test]
     fn with_no_matching_pair_fails() {
+        let mut deps = mock_dependencies();
+
+        update_config(
+            deps.as_mut().storage,
+            Config {
+                admin: Addr::unchecked(ADMIN),
+                dca_contract_address: Addr::unchecked(DCA_CONTRACT),
+            },
+        )
+        .unwrap();
+
         assert_eq!(
             submit_order_handler(
-                mock_dependencies().as_ref(),
-                mock_info(ADMIN, &[Coin::new(43282, DENOM_UUSK)]),
+                deps.as_ref(),
+                mock_info(DCA_CONTRACT, &[Coin::new(43282, DENOM_UUSK)]),
                 Decimal256::one(),
                 DENOM_UKUJI.to_string(),
             )
@@ -159,6 +198,15 @@ mod submit_order_tests {
     #[test]
     fn sends_submit_order_message() {
         let mut deps = mock_dependencies();
+
+        update_config(
+            deps.as_mut().storage,
+            Config {
+                admin: Addr::unchecked(ADMIN),
+                dca_contract_address: Addr::unchecked(DCA_CONTRACT),
+            },
+        )
+        .unwrap();
 
         let pair = Pair::default();
 
@@ -184,7 +232,7 @@ mod submit_order_tests {
 
         let target_price = Decimal256::percent(24312);
 
-        let info = mock_info(ADMIN, &[Coin::new(123123, pair.quote_denom)]);
+        let info = mock_info(DCA_CONTRACT, &[Coin::new(123123, pair.quote_denom)]);
 
         let response = submit_order_handler(
             deps.as_ref(),
@@ -215,6 +263,15 @@ mod submit_order_tests {
     fn inverts_price_for_fin_sell() {
         let mut deps = mock_dependencies();
 
+        update_config(
+            deps.as_mut().storage,
+            Config {
+                admin: Addr::unchecked(ADMIN),
+                dca_contract_address: Addr::unchecked(DCA_CONTRACT),
+            },
+        )
+        .unwrap();
+
         let pair = Pair::default();
 
         save_pair(deps.as_mut().storage, &pair).unwrap();
@@ -239,7 +296,7 @@ mod submit_order_tests {
 
         let target_price = Decimal256::percent(24312);
 
-        let info = mock_info(ADMIN, &[Coin::new(123123, pair.base_denom)]);
+        let info = mock_info(DCA_CONTRACT, &[Coin::new(123123, pair.base_denom)]);
 
         let response = submit_order_handler(
             deps.as_ref(),

@@ -105,15 +105,15 @@ mod retract_order_handler_tests {
 
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info},
-        Coin, SubMsg, Uint128,
+        Addr, Coin, SubMsg, Uint128,
     };
     use kujira_fin::ExecuteMsg;
 
     use crate::{
         contract::AFTER_RETRACT_ORDER,
-        state::{cache::LIMIT_ORDER_CACHE, pairs::save_pair},
-        tests::constants::{ADMIN, DENOM_UKUJI, DENOM_UUSK},
-        types::{pair::Pair, pair_contract::PairContract},
+        state::{cache::LIMIT_ORDER_CACHE, config::update_config, pairs::save_pair},
+        tests::constants::{ADMIN, DCA_CONTRACT, DENOM_UKUJI, DENOM_UUSK},
+        types::{config::Config, pair::Pair, pair_contract::PairContract},
         ContractError,
     };
 
@@ -121,11 +121,22 @@ mod retract_order_handler_tests {
 
     #[test]
     fn with_funds_fails() {
+        let mut deps = mock_dependencies();
+
+        update_config(
+            deps.as_mut().storage,
+            Config {
+                admin: Addr::unchecked(ADMIN),
+                dca_contract_address: Addr::unchecked(DCA_CONTRACT),
+            },
+        )
+        .unwrap();
+
         assert_eq!(
             retract_order_handler(
-                mock_dependencies().as_mut(),
+                deps.as_mut(),
                 mock_env(),
-                mock_info(ADMIN, &[Coin::new(3218312, DENOM_UUSK)]),
+                mock_info(DCA_CONTRACT, &[Coin::new(3218312, DENOM_UUSK)]),
                 Uint128::new(234),
                 [DENOM_UUSK.to_string(), DENOM_UKUJI.to_string()],
             )
@@ -140,6 +151,15 @@ mod retract_order_handler_tests {
     fn caches_sender_and_pair_balances() {
         let mut deps = mock_dependencies();
         let env = mock_env();
+
+        update_config(
+            deps.as_mut().storage,
+            Config {
+                admin: Addr::unchecked(ADMIN),
+                dca_contract_address: Addr::unchecked(DCA_CONTRACT),
+            },
+        )
+        .unwrap();
 
         let uusk_balance = Coin::new(25423, DENOM_UUSK);
         let ukuji_balance = Coin::new(12234324343123, DENOM_UKUJI);
@@ -158,7 +178,7 @@ mod retract_order_handler_tests {
         retract_order_handler(
             deps.as_mut(),
             env,
-            mock_info(ADMIN, &[]),
+            mock_info(DCA_CONTRACT, &[]),
             order_idx,
             [DENOM_UUSK.to_string(), DENOM_UKUJI.to_string()],
         )
@@ -180,6 +200,15 @@ mod retract_order_handler_tests {
     fn sends_withdraw_order_message() {
         let mut deps = mock_dependencies();
 
+        update_config(
+            deps.as_mut().storage,
+            Config {
+                admin: Addr::unchecked(ADMIN),
+                dca_contract_address: Addr::unchecked(DCA_CONTRACT),
+            },
+        )
+        .unwrap();
+
         let pair = Pair::default();
 
         save_pair(deps.as_mut().storage, &pair).unwrap();
@@ -189,7 +218,7 @@ mod retract_order_handler_tests {
         let response = retract_order_handler(
             deps.as_mut(),
             mock_env(),
-            mock_info(ADMIN, &[]),
+            mock_info(DCA_CONTRACT, &[]),
             order_idx,
             [DENOM_UUSK.to_string(), DENOM_UKUJI.to_string()],
         )

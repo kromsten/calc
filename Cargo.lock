@@ -315,7 +315,7 @@ dependencies = [
 
 [[package]]
 name = "dca"
-version = "3.0.1"
+version = "3.0.2"
 dependencies = [
  "chrono",
  "cosmos-sdk-proto",
@@ -455,7 +455,7 @@ dependencies = [
 
 [[package]]
 name = "fin"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",

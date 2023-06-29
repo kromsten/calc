@@ -1,28 +1,16 @@
 use std::str::FromStr;
 
-use cosmwasm_std::{Decimal256, QuerierWrapper, StdError, StdResult};
-use kujira_fin::QueryMsg;
+use cosmwasm_std::{Decimal256, StdError, StdResult};
 use kujira_std::{Precise, Precision};
-use serde::{Deserialize, Serialize};
 
 use crate::types::{pair::Pair, position_type::PositionType};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct FinConfigResponse {
-    pub price_precision: Precision,
-    pub decimal_delta: i8,
-}
-
 pub fn get_fin_price(
-    querier: &QuerierWrapper,
     target_price: Decimal256,
     swap_denom: String,
     pair: &Pair,
 ) -> StdResult<Decimal256> {
-    let pair_config = querier
-        .query_wasm_smart::<FinConfigResponse>(pair.address.clone(), &QueryMsg::Config {})?;
-
-    if pair_config.decimal_delta < 0 {
+    if pair.decimal_delta < 0 {
         return Err(StdError::GenericErr {
             msg: "Negative decimal deltas are not supported".to_string(),
         });
@@ -33,13 +21,13 @@ pub fn get_fin_price(
         PositionType::Exit => Decimal256::one() / target_price,
     };
 
-    if pair_config.decimal_delta == 0 {
-        return Ok(directional_price.round(&pair_config.price_precision));
+    if pair.decimal_delta == 0 {
+        return Ok(directional_price.round(&Precision::DecimalPlaces(pair.price_precision)));
     }
 
     let adjustment = Decimal256::from_str(
         &10u128
-            .pow(pair_config.decimal_delta.unsigned_abs() as u32)
+            .pow(pair.decimal_delta.unsigned_abs() as u32)
             .to_string(),
     )
     .unwrap();
@@ -47,7 +35,7 @@ pub fn get_fin_price(
     let rounded_price = directional_price
         .checked_mul(adjustment)
         .unwrap()
-        .round(&pair_config.price_precision);
+        .round(&Precision::DecimalPlaces(pair.price_precision));
 
     Ok(rounded_price.checked_div(adjustment).unwrap())
 }
@@ -93,13 +81,7 @@ mod calculate_target_price_tests {
         let target_price = Decimal256::percent(500);
 
         assert_eq!(
-            get_fin_price(
-                &deps.as_ref().querier,
-                target_price,
-                pair.quote_denom.clone(),
-                &pair
-            )
-            .unwrap(),
+            get_fin_price(target_price, pair.quote_denom.clone(), &pair).unwrap(),
             target_price
         );
     }
@@ -131,13 +113,7 @@ mod calculate_target_price_tests {
         let target_price = Decimal256::percent(500);
 
         assert_eq!(
-            get_fin_price(
-                &deps.as_ref().querier,
-                target_price,
-                pair.base_denom.clone(),
-                &pair
-            )
-            .unwrap(),
+            get_fin_price(target_price, pair.base_denom.clone(), &pair).unwrap(),
             Decimal256::one() / target_price
         );
     }
@@ -169,13 +145,7 @@ mod calculate_target_price_tests {
         let target_price = Decimal256::percent(300);
 
         assert_eq!(
-            get_fin_price(
-                &deps.as_ref().querier,
-                target_price,
-                pair.base_denom.clone(),
-                &pair
-            )
-            .unwrap(),
+            get_fin_price(target_price, pair.base_denom.clone(), &pair).unwrap(),
             (Decimal256::one() / target_price).round(&Precision::DecimalPlaces(3))
         );
     }
@@ -184,7 +154,11 @@ mod calculate_target_price_tests {
     fn for_fin_buy_should_truncate_price_to_pair_precision_plus_decimal_delta_decimal_places() {
         let mut deps = mock_dependencies();
 
-        let pair = Pair::default();
+        let pair = Pair {
+            price_precision: 2,
+            decimal_delta: 12,
+            ..Pair::default()
+        };
 
         deps.querier.update_wasm(move |_| {
             SystemResult::Ok(ContractResult::Ok(
@@ -210,13 +184,7 @@ mod calculate_target_price_tests {
         );
 
         assert_eq!(
-            get_fin_price(
-                &deps.as_ref().querier,
-                target_price,
-                pair.quote_denom.clone(),
-                &pair
-            )
-            .unwrap(),
+            get_fin_price(target_price, pair.quote_denom.clone(), &pair).unwrap(),
             target_price.round(&Precision::DecimalPlaces(12 + 2))
         );
     }
@@ -225,7 +193,11 @@ mod calculate_target_price_tests {
     fn for_fin_sell_should_truncate_price_to_pair_precision_plus_decimal_delta_decimal_places() {
         let mut deps = mock_dependencies();
 
-        let pair = Pair::default();
+        let pair = Pair {
+            price_precision: 2,
+            decimal_delta: 12,
+            ..Pair::default()
+        };
 
         deps.querier.update_wasm(move |_| {
             SystemResult::Ok(ContractResult::Ok(
@@ -249,13 +221,7 @@ mod calculate_target_price_tests {
             Decimal256::from_ratio(Uint128::new(1000000), Uint128::new(747943156999999));
 
         assert_eq!(
-            get_fin_price(
-                &deps.as_ref().querier,
-                target_price,
-                pair.base_denom.clone(),
-                &pair
-            )
-            .unwrap(),
+            get_fin_price(target_price, pair.base_denom.clone(), &pair).unwrap(),
             (Decimal256::one() / target_price).round(&Precision::DecimalPlaces(12 + 2))
         );
     }

@@ -11,6 +11,7 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub struct MigrateMsg {
+    pub admin: Addr,
     pub dca_contract_address: Addr,
 }
 
