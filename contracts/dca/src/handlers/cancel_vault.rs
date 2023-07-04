@@ -1,3 +1,4 @@
+use crate::constants::FAIL_SILENTLY_REPLY_ID;
 use crate::error::ContractError;
 use crate::helpers::validation::{
     assert_sender_is_admin_or_vault_owner, assert_vault_is_not_cancelled,
@@ -60,25 +61,31 @@ pub fn cancel_vault_handler(
     if let Some(TriggerConfiguration::Price { order_idx, .. }) = vault.trigger {
         let config = get_config(deps.storage)?;
 
-        submessages.push(SubMsg::new(WasmMsg::Execute {
-            contract_addr: config.exchange_contract_address.to_string(),
-            msg: to_binary(&ExecuteMsg::RetractOrder {
-                order_idx,
-                denoms: vault.denoms(),
-            })
-            .unwrap(),
-            funds: vec![],
-        }));
+        submessages.push(SubMsg::reply_on_error(
+            WasmMsg::Execute {
+                contract_addr: config.exchange_contract_address.to_string(),
+                msg: to_binary(&ExecuteMsg::RetractOrder {
+                    order_idx,
+                    denoms: vault.denoms(),
+                })
+                .unwrap(),
+                funds: vec![],
+            },
+            FAIL_SILENTLY_REPLY_ID,
+        ));
 
-        submessages.push(SubMsg::new(WasmMsg::Execute {
-            contract_addr: config.exchange_contract_address.to_string(),
-            msg: to_binary(&ExecuteMsg::WithdrawOrder {
-                order_idx,
-                denoms: vault.denoms(),
-            })
-            .unwrap(),
-            funds: vec![],
-        }));
+        submessages.push(SubMsg::reply_on_error(
+            WasmMsg::Execute {
+                contract_addr: config.exchange_contract_address.to_string(),
+                msg: to_binary(&ExecuteMsg::WithdrawOrder {
+                    order_idx,
+                    denoms: vault.denoms(),
+                })
+                .unwrap(),
+                funds: vec![],
+            },
+            FAIL_SILENTLY_REPLY_ID,
+        ));
     };
 
     delete_trigger(deps.storage, vault.id)?;
@@ -339,15 +346,18 @@ mod cancel_vault_tests {
 
         assert_eq!(
             response.messages.get(1).unwrap(),
-            &SubMsg::new(WasmMsg::Execute {
-                contract_addr: config.exchange_contract_address.to_string(),
-                msg: to_binary(&ExecuteMsg::RetractOrder {
-                    order_idx,
-                    denoms: vault.denoms()
-                })
-                .unwrap(),
-                funds: vec![]
-            })
+            &SubMsg::reply_on_error(
+                WasmMsg::Execute {
+                    contract_addr: config.exchange_contract_address.to_string(),
+                    msg: to_binary(&ExecuteMsg::RetractOrder {
+                        order_idx,
+                        denoms: vault.denoms()
+                    })
+                    .unwrap(),
+                    funds: vec![]
+                },
+                FAIL_SILENTLY_REPLY_ID
+            )
         );
     }
 
@@ -379,15 +389,18 @@ mod cancel_vault_tests {
 
         assert_eq!(
             response.messages.get(2).unwrap(),
-            &SubMsg::new(WasmMsg::Execute {
-                contract_addr: config.exchange_contract_address.to_string(),
-                msg: to_binary(&ExecuteMsg::WithdrawOrder {
-                    order_idx,
-                    denoms: vault.denoms()
-                })
-                .unwrap(),
-                funds: vec![]
-            })
+            &SubMsg::reply_on_error(
+                WasmMsg::Execute {
+                    contract_addr: config.exchange_contract_address.to_string(),
+                    msg: to_binary(&ExecuteMsg::WithdrawOrder {
+                        order_idx,
+                        denoms: vault.denoms()
+                    })
+                    .unwrap(),
+                    funds: vec![]
+                },
+                FAIL_SILENTLY_REPLY_ID
+            )
         );
     }
 }

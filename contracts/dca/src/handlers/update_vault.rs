@@ -807,7 +807,7 @@ mod update_vault_tests {
                 multiplier: Decimal::percent(150),
                 increase_only: false,
             })
-            .clone(),
+            ,
             Some(Uint128::new(436753262)),
         )
         .unwrap_err();
@@ -1280,7 +1280,7 @@ mod update_vault_tests {
                     updates: vec![
                         Update {
                             field: "label".to_string(),
-                            old_value: vault.label.unwrap().to_string(),
+                            old_value: vault.label.unwrap(),
                             new_value: new_label.to_string(),
                         },
                         Update {

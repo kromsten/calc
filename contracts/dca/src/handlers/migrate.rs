@@ -2,7 +2,7 @@ use crate::{
     contract::{CONTRACT_NAME, CONTRACT_VERSION},
     error::ContractError,
     msg::MigrateMsg,
-    state::config::{get_config, update_config},
+    state::config::update_config,
     types::config::Config,
 };
 use cosmwasm_std::{DepsMut, Response, StdError};
@@ -22,13 +22,22 @@ pub fn migrate_handler(deps: DepsMut, msg: MigrateMsg) -> Result<Response, Contr
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let config = get_config(deps.storage)?;
-
     update_config(
         deps.storage,
         Config {
             exchange_contract_address: msg.exchange_contract_address.clone(),
-            ..config
+            admin: msg.admin.clone(),
+            executors: msg.executors.clone(),
+            fee_collectors: msg.fee_collectors.clone(),
+            default_swap_fee_percent: msg.default_swap_fee_percent,
+            weighted_scale_swap_fee_percent: msg.weighted_scale_swap_fee_percent,
+            automation_fee_percent: msg.automation_fee_percent,
+            default_page_limit: msg.default_page_limit,
+            paused: msg.paused,
+            risk_weighted_average_escrow_level: msg.risk_weighted_average_escrow_level,
+            twap_period: msg.twap_period,
+            default_slippage_tolerance: msg.default_slippage_tolerance,
+            old_staking_router_address: msg.old_staking_router_address.clone(),
         },
     )?;
 

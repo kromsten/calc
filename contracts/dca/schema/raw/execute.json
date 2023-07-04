@@ -491,19 +491,15 @@
     {
       "type": "object",
       "required": [
-        "update_price_trigger"
+        "migrate_limit_order"
       ],
       "properties": {
-        "update_price_trigger": {
+        "migrate_limit_order": {
           "type": "object",
           "required": [
-            "order_idx",
             "vault_id"
           ],
           "properties": {
-            "order_idx": {
-              "$ref": "#/definitions/Uint128"
-            },
             "vault_id": {
               "$ref": "#/definitions/Uint128"
             }

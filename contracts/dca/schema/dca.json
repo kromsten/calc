@@ -1,6 +1,6 @@
 {
   "contract_name": "dca",
-  "contract_version": "3.0.2",
+  "contract_version": "3.0.3",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -589,19 +589,15 @@
       {
         "type": "object",
         "required": [
-          "update_price_trigger"
+          "migrate_limit_order"
         ],
         "properties": {
-          "update_price_trigger": {
+          "migrate_limit_order": {
             "type": "object",
             "required": [
-              "order_idx",
               "vault_id"
             ],
             "properties": {
-              "order_idx": {
-                "$ref": "#/definitions/Uint128"
-              },
               "vault_id": {
                 "$ref": "#/definitions/Uint128"
               }

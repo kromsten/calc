@@ -182,10 +182,16 @@ export const migrateDCAContract = async (
   adminWalletAddress: string,
   dcaContractAddress: string,
   exchangeContractAddress: string,
-) =>
+) => {
+  let configResponse = await cosmWasmClient.queryContractSmart(dcaContractAddress, {
+    get_config: {},
+  });
+
   await uploadAndMigrate('../artifacts/dca.wasm', cosmWasmClient, adminWalletAddress, dcaContractAddress, {
+    ...configResponse.config,
     exchange_contract_address: exchangeContractAddress,
   });
+};
 
 export const instantiateExchangeContract = async (
   cosmWasmClient: SigningCosmWasmClient,
