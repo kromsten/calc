@@ -1,5 +1,7 @@
-use cosmwasm_std::{Addr, Coin, Decimal, QuerierWrapper, StdResult, Uint128};
+use cosmwasm_std::{Addr, Coin, Decimal, QuerierWrapper, StdResult, Storage, Uint128};
 use exchange::msg::QueryMsg;
+
+use crate::state::config::get_config;
 
 pub fn get_twap_to_now(
     querier: &QuerierWrapper,
@@ -47,9 +49,13 @@ pub fn get_slippage(
         exchange_contract_address,
         swap_amount.clone(),
         target_denom,
-    )?;
+    );
 
-    let expected_price = Decimal::from_ratio(swap_amount.amount, expected_receive_amount);
+    if expected_receive_amount.is_err() {
+        return Ok(Decimal::percent(0));
+    }
+
+    let expected_price = Decimal::from_ratio(swap_amount.amount, expected_receive_amount?);
     let price_diff = expected_price - beleif_price;
 
     Ok(price_diff / beleif_price)
@@ -57,6 +63,7 @@ pub fn get_slippage(
 
 pub fn get_price(
     querier: &QuerierWrapper,
+    storage: &dyn Storage,
     exchange_contract_address: Addr,
     swap_amount: Coin,
     target_denom: String,
@@ -65,11 +72,23 @@ pub fn get_price(
         querier,
         exchange_contract_address,
         swap_amount.clone(),
-        target_denom,
-    )?;
+        target_denom.clone(),
+    );
+
+    if expected_receive_amount.is_err() {
+        let config = get_config(storage)?;
+
+        return get_twap_to_now(
+            querier,
+            config.exchange_contract_address,
+            swap_amount.denom,
+            target_denom,
+            config.twap_period,
+        );
+    }
 
     Ok(Decimal::from_ratio(
         swap_amount.amount,
-        expected_receive_amount,
+        expected_receive_amount?,
     ))
 }

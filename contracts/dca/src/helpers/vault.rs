@@ -153,6 +153,7 @@ pub fn simulate_standard_dca_execution(
 
             let actual_price = get_price(
                 querier,
+                storage,
                 config.exchange_contract_address.clone(),
                 Coin::new(swap_amount.into(), vault.get_swap_denom()),
                 vault.target_denom.clone(),

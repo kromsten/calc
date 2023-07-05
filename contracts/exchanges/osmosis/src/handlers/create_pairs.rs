@@ -97,7 +97,6 @@ mod create_pairs_tests {
                         base_denom: String::from("base"),
                         quote_denom: String::from("quote"),
                         route: vec![0],
-                        ..Pair::default()
                     }],
                 })
                 .unwrap(),
@@ -132,7 +131,6 @@ mod create_pairs_tests {
                         quote_denom: DENOM_UOSMO.to_string(),
                         base_denom: DENOM_STAKE.to_string(),
                         route: vec![],
-                        ..Pair::default()
                     }],
                 })
                 .unwrap(),
@@ -172,7 +170,6 @@ mod create_pairs_tests {
                         quote_denom: DENOM_UOSMO.to_string(),
                         base_denom: DENOM_STAKE.to_string(),
                         route: vec![2],
-                        ..Pair::default()
                     }],
                 })
                 .unwrap(),
@@ -208,7 +205,6 @@ mod create_pairs_tests {
                     base_denom: DENOM_UOSMO.to_string(),
                     quote_denom: DENOM_STAKE.to_string(),
                     route: vec![4, 1, 4, 1],
-                    ..Pair::default()
                 }],
             })
             .unwrap(),
@@ -244,7 +240,6 @@ mod create_pairs_tests {
                     base_denom: DENOM_UOSMO.to_string(),
                     quote_denom: DENOM_STAKE.to_string(),
                     route: vec![3],
-                    ..Pair::default()
                 }],
             })
             .unwrap(),
@@ -283,7 +278,6 @@ mod create_pairs_tests {
                     base_denom: DENOM_UOSMO.to_string(),
                     quote_denom: DENOM_STAKE.to_string(),
                     route: vec![4, 1],
-                    ..Pair::default()
                 }],
             })
             .unwrap(),
@@ -295,7 +289,6 @@ mod create_pairs_tests {
                     base_denom: DENOM_UOSMO.to_string(),
                     quote_denom: DENOM_STAKE.to_string(),
                     route: vec![3],
-                    ..Pair::default()
                 }],
             })
             .unwrap(),
@@ -335,7 +328,6 @@ mod create_pairs_tests {
                     quote_denom: DENOM_UOSMO.to_string(),
                     base_denom: DENOM_STAKE.to_string(),
                     route: vec![1, 4],
-                    ..Pair::default()
                 }],
             })
             .unwrap(),
@@ -347,7 +339,6 @@ mod create_pairs_tests {
                     quote_denom: DENOM_UOSMO.to_string(),
                     base_denom: DENOM_STAKE.to_string(),
                     route: vec![3],
-                    ..Pair::default()
                 }],
             })
             .unwrap(),

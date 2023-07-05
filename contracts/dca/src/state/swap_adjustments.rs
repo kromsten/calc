@@ -9,7 +9,7 @@ struct SwapAdjustment {
     timestamp: u64,
 }
 
-const SWAP_ADJUSTMENTS: Map<u64, SwapAdjustment> = Map::new("swap_adjustments_v30");
+const SWAP_ADJUSTMENTS: Map<u64, SwapAdjustment> = Map::new("swap_adjustments_v8");
 
 pub fn update_swap_adjustment(
     storage: &mut dyn Storage,

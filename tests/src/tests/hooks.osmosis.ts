@@ -1,5 +1,11 @@
 import { fetchConfig } from '../shared/config';
-import { createAdminCosmWasmClient, execute, getWallet, uploadAndInstantiate } from '../shared/cosmwasm';
+import {
+  createAdminCosmWasmClient,
+  execute,
+  getWallet,
+  uploadAndInstantiate,
+  uploadAndMigrate,
+} from '../shared/cosmwasm';
 import { createCosmWasmClientForWallet, createWallet } from './helpers';
 import { SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate';
 import { cosmos, osmosis } from 'osmojs';
@@ -30,17 +36,18 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
   const feeCollectorWallet = await createWallet(config);
   const feeCollectorAddress = (await feeCollectorWallet.getAccounts())[0].address;
 
-  const exchangeContractAddress = await instantiateExchangeContract(cosmWasmClient, adminWalletAddress);
-
   const twapPeriod = 60;
 
   const dcaContractAddress = await instantiateDCAContract(
     cosmWasmClient,
     adminWalletAddress,
     feeCollectorAddress,
-    exchangeContractAddress,
     twapPeriod,
   );
+
+  const exchangeContractAddress = await instantiateExchangeContract(cosmWasmClient, adminWalletAddress);
+
+  await migrateDCAContract(cosmWasmClient, adminWalletAddress, dcaContractAddress, exchangeContractAddress);
 
   const denoms = ['stake', 'uion'];
 
@@ -134,7 +141,6 @@ const instantiateDCAContract = async (
   cosmWasmClient: SigningCosmWasmClient,
   adminWalletAddress: string,
   feeCollectorAdress: string,
-  exchangeContractAddress: string,
   twapPeriod: number,
 ): Promise<string> => {
   const dcaContractAddress = await uploadAndInstantiate(
@@ -154,7 +160,6 @@ const instantiateDCAContract = async (
       weighted_scale_swap_fee_percent: '0.01',
       risk_weighted_average_escrow_level: '0.05',
       old_staking_router_address: adminWalletAddress,
-      exchange_contract_address: exchangeContractAddress,
     },
     'dca',
   );
@@ -175,4 +180,20 @@ const instantiateDCAContract = async (
   }
 
   return dcaContractAddress;
+};
+
+export const migrateDCAContract = async (
+  cosmWasmClient: SigningCosmWasmClient,
+  adminWalletAddress: string,
+  dcaContractAddress: string,
+  exchangeContractAddress: string,
+) => {
+  let configResponse = await cosmWasmClient.queryContractSmart(dcaContractAddress, {
+    get_config: {},
+  });
+
+  await uploadAndMigrate('../artifacts/dca.wasm', cosmWasmClient, adminWalletAddress, dcaContractAddress, {
+    ...configResponse.config,
+    exchange_contract_address: exchangeContractAddress,
+  });
 };
