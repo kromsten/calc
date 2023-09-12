@@ -1,6 +1,6 @@
 [package]
 name = "dca"
-version = "3.0.2-osmosis"
+version = "3.0.5-kujira"
 authors = ["aidan <aidan@calculated.fi>"]
 edition = "2021"
 
