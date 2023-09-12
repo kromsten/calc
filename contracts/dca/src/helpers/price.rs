@@ -42,8 +42,12 @@ pub fn get_slippage(
     exchange_contract_address: Addr,
     swap_amount: Coin,
     target_denom: String,
-    beleif_price: Decimal,
+    belief_price: Decimal,
 ) -> StdResult<Decimal> {
+    if swap_amount.amount == Uint128::zero() {
+        return Ok(Decimal::percent(0));
+    }
+
     let expected_receive_amount = get_expected_receive_amount(
         querier,
         exchange_contract_address,
@@ -55,10 +59,14 @@ pub fn get_slippage(
         return Ok(Decimal::percent(0));
     }
 
-    let expected_price = Decimal::from_ratio(swap_amount.amount, expected_receive_amount?);
-    let price_diff = expected_price - beleif_price;
+    let expected_receive_amount = expected_receive_amount?;
+    let expected_price = Decimal::from_ratio(swap_amount.amount, expected_receive_amount);
 
-    Ok(price_diff / beleif_price)
+    if belief_price >= expected_price {
+        return Ok(Decimal::percent(0));
+    }
+
+    Ok(expected_price.abs_diff(belief_price) / belief_price)
 }
 
 pub fn get_price(
@@ -87,8 +95,14 @@ pub fn get_price(
         );
     }
 
+    let expected_receive_amount = expected_receive_amount?;
+
+    if expected_receive_amount.is_zero() {
+        return Ok(Decimal::percent(0));
+    }
+
     Ok(Decimal::from_ratio(
         swap_amount.amount,
-        expected_receive_amount?,
+        expected_receive_amount,
     ))
 }

@@ -1,11 +1,5 @@
 import { fetchConfig } from '../shared/config';
-import {
-  createAdminCosmWasmClient,
-  execute,
-  getWallet,
-  uploadAndInstantiate,
-  uploadAndMigrate,
-} from '../shared/cosmwasm';
+import { createAdminCosmWasmClient, execute, getWallet, uploadAndInstantiate } from '../shared/cosmwasm';
 import { Coin, coin } from '@cosmjs/proto-signing';
 import { createCosmWasmClientForWallet, createWallet } from './helpers';
 import { SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate';
@@ -183,13 +177,10 @@ export const migrateDCAContract = async (
   dcaContractAddress: string,
   exchangeContractAddress: string,
 ) => {
-  let configResponse = await cosmWasmClient.queryContractSmart(dcaContractAddress, {
-    get_config: {},
-  });
-
-  await uploadAndMigrate('../artifacts/dca.wasm', cosmWasmClient, adminWalletAddress, dcaContractAddress, {
-    ...configResponse.config,
-    exchange_contract_address: exchangeContractAddress,
+  await execute(cosmWasmClient, adminWalletAddress, dcaContractAddress, {
+    update_config: {
+      exchange_contract_address: exchangeContractAddress,
+    },
   });
 };
 

@@ -136,7 +136,9 @@ impl<C: CustomQuery + DeserializeOwned> CalcMockQuerier<C> {
                             swap_amount,
                             target_denom,
                         } => to_binary(&Coin {
-                            amount: swap_amount.amount * Decimal::percent(95),
+                            amount: swap_amount.amount
+                                * (Decimal::one() / price)
+                                * Decimal::percent(95),
                             denom: target_denom,
                         })
                         .unwrap(),
