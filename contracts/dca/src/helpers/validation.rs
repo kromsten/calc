@@ -266,11 +266,7 @@ pub fn assert_dca_plus_escrow_level_is_less_than_100_percent(
 
 pub fn assert_page_limit_is_valid(limit: Option<u16>) -> Result<(), ContractError> {
     if let Some(limit) = limit {
-        if limit < 30 {
-            return Err(ContractError::CustomError {
-                val: "limit cannot be less than 30.".to_string(),
-            });
-        } else if limit > 1000 {
+        if limit > 1000 {
             return Err(ContractError::CustomError {
                 val: "limit cannot be greater than 1000.".to_string(),
             });

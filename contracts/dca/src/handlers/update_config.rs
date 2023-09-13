@@ -507,31 +507,4 @@ mod update_config_tests {
             "Error: no more than 10 fee collectors are allowed"
         )
     }
-
-    #[test]
-    fn with_page_limit_less_than_30_should_fail() {
-        let mut deps = mock_dependencies();
-        let info = mock_info(ADMIN, &[]);
-
-        instantiate_contract(deps.as_mut(), mock_env(), info.clone());
-
-        let err = update_config_handler(
-            deps.as_mut(),
-            info,
-            None,
-            None,
-            None,
-            None,
-            None,
-            Some(10),
-            None,
-            None,
-            None,
-            None,
-            None,
-        )
-        .unwrap_err();
-
-        assert_eq!(err.to_string(), "Error: limit cannot be less than 30.")
-    }
 }
