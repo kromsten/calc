@@ -2,8 +2,7 @@ use cosmwasm_std::{Decimal, Decimal256, Deps, Env, QuerierWrapper, StdError, Std
 use osmosis_std::{
     shim::Timestamp,
     types::osmosis::{
-        gamm::v1beta1::{GammQuerier, Pool},
-        twap::v1beta1::TwapQuerier,
+        gamm::v1beta1::Pool, poolmanager::v1beta1::PoolmanagerQuerier, twap::v1beta1::TwapQuerier,
     },
 };
 use prost::DecodeError;
@@ -87,7 +86,7 @@ fn get_token_out_denom(
 }
 
 pub fn get_pool(querier: &QuerierWrapper, pool_id: u64) -> Result<Pool, StdError> {
-    GammQuerier::new(querier).pool(pool_id)?.pool.map_or(
+    PoolmanagerQuerier::new(querier).pool(pool_id)?.pool.map_or(
         Err(StdError::generic_err("pool not found")),
         |pool| {
             pool.try_into()

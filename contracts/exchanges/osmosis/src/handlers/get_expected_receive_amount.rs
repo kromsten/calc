@@ -1,11 +1,10 @@
-use cosmwasm_std::{Coin, Deps, Env, StdError, StdResult, Uint128};
+use cosmwasm_std::{Coin, Deps, StdError, StdResult, Uint128};
 use osmosis_std::types::osmosis::poolmanager::v1beta1::PoolmanagerQuerier;
 
 use crate::{helpers::routes::calculate_route, state::pairs::find_pair};
 
 pub fn get_expected_receive_amount_handler(
     deps: Deps,
-    env: Env,
     swap_amount: Coin,
     target_denom: String,
 ) -> StdResult<Coin> {
@@ -17,12 +16,7 @@ pub fn get_expected_receive_amount_handler(
     let routes = calculate_route(&deps.querier, &pair, swap_amount.denom.clone())?;
 
     let token_out_amount = PoolmanagerQuerier::new(&deps.querier)
-        .estimate_swap_exact_amount_in(
-            env.contract.address.to_string(),
-            0,
-            swap_amount.to_string(),
-            routes.clone(),
-        )
+        .estimate_swap_exact_amount_in(0, swap_amount.to_string(), routes.clone())
         .map_err(|_| {
             StdError::generic_err(format!(
                 "amount of {} received for swapping {} via {:#?}",
@@ -39,10 +33,7 @@ pub fn get_expected_receive_amount_handler(
 
 #[cfg(test)]
 mod get_expected_receive_amount_handler_tests {
-    use cosmwasm_std::{
-        testing::{mock_dependencies, mock_env},
-        Coin, StdError, Uint128,
-    };
+    use cosmwasm_std::{testing::mock_dependencies, Coin, StdError, Uint128};
 
     use crate::{
         handlers::get_expected_receive_amount::get_expected_receive_amount_handler,
@@ -59,7 +50,6 @@ mod get_expected_receive_amount_handler_tests {
         assert_eq!(
             get_expected_receive_amount_handler(
                 mock_dependencies().as_ref(),
-                mock_env(),
                 Coin {
                     denom: DENOM_UOSMO.to_string(),
                     amount: Uint128::zero()
@@ -84,7 +74,6 @@ mod get_expected_receive_amount_handler_tests {
         assert_eq!(
             get_expected_receive_amount_handler(
                 deps.as_ref(),
-                mock_env(),
                 Coin {
                     denom: pair.base_denom.to_string(),
                     amount: Uint128::zero()
