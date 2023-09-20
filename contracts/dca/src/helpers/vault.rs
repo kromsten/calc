@@ -546,11 +546,6 @@ mod get_swap_amount_tests {
 
         let swap_amount = get_swap_amount(&deps.as_ref(), &env, &vault).unwrap();
 
-        println!(
-            "{:?}",
-            (current_price.abs_diff(base_price) / base_price) * multiplier
-        );
-
         assert_eq!(
             swap_amount.amount,
             vault.swap_amount

@@ -2,8 +2,7 @@ use crate::{
     constants::AFTER_DELEGATION_REPLY_ID,
     error::ContractError,
     helpers::validation::{
-        assert_address_is_valid, assert_denom_is_bond_denom, assert_exactly_one_asset,
-        assert_validator_is_valid,
+        assert_address_is_valid, assert_exactly_one_asset, assert_validator_is_valid,
     },
     state::config::get_config,
 };
@@ -34,8 +33,6 @@ pub fn old_z_delegate_handler(
     assert_validator_is_valid(deps, validator_address.to_string())?;
 
     let amount_to_delegate = info.funds[0].clone();
-
-    assert_denom_is_bond_denom(amount_to_delegate.denom.clone())?;
 
     let config = get_config(deps.storage)?;
 
@@ -117,22 +114,6 @@ mod old_z_delegate_handler_tests {
         assert_eq!(
             err.to_string(),
             "Error: received 0 denoms but required exactly 1"
-        );
-    }
-
-    #[test]
-    fn with_non_bondable_asset_fails() {
-        let err = old_z_delegate_handler(
-            mock_dependencies().as_ref(),
-            mock_info(ADMIN, &[Coin::new(213312, "asdasd")]),
-            Addr::unchecked("delegator"),
-            Addr::unchecked("validator"),
-        )
-        .unwrap_err();
-
-        assert_eq!(
-            err.to_string(),
-            "Error: asdasd is not the bond denomination"
         );
     }
 

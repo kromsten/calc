@@ -289,15 +289,6 @@ pub fn assert_validator_is_valid(
     Ok(())
 }
 
-pub fn assert_denom_is_bond_denom(denom: String) -> Result<(), ContractError> {
-    if denom != *"ukuji" {
-        return Err(ContractError::CustomError {
-            val: format!("{} is not the bond denomination", denom),
-        });
-    }
-    Ok(())
-}
-
 pub fn assert_contract_destination_callbacks_are_valid(
     destinations: &[Destination],
     contract_address: &Addr,
