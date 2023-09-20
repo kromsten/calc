@@ -22,6 +22,8 @@ None
 2. `cd duality` && `git checkout devnet`.
 3. Replace the version of the duality docker image in heighliner.Dockerfile with the latest image version from ghcr.io/duality-labs/duality.
 4. Set `export STARTUP_MODE="${MODE:-new}"` in the `startup.sh` script.
+5. Replace `ARG BASE_IMAGE_TAG=latest` with the latest version from https://github.com/orgs/duality-labs/packages/container/package/duality in the heighliner.Dockerfile.
+6. run `docker build . -f heighliner.Dockerfile -t duality-localnet && docker run duality-localnet` from the duality directory.
 
 ### Tests
 

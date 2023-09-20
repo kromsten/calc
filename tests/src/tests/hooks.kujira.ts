@@ -1,5 +1,5 @@
 import { fetchConfig } from '../shared/config';
-import { createAdminCosmWasmClient, execute, getWallet, uploadAndInstantiate } from '../shared/cosmwasm';
+import { createSigningCosmWasmClient, execute, getWallet, uploadAndInstantiate } from '../shared/cosmwasm';
 import { Coin, coin } from '@cosmjs/proto-signing';
 import { createCosmWasmClientForWallet, createWallet } from './helpers';
 import { SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate';
@@ -23,18 +23,17 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
   }
 
   const config = await fetchConfig();
-  const httpClient = new HttpBatchClient(config.netUrl, {
+  const httpClient = new HttpBatchClient(config.rpcUrl, {
     dispatchInterval: 100,
     batchSizeLimit: 200,
   });
   const tmClient = (await Tendermint34Client.create(httpClient)) as any;
   const queryClient = kujiraQueryClient({ client: tmClient });
 
-  const cosmWasmClient = await createAdminCosmWasmClient(config);
+  const cosmWasmClient = await createSigningCosmWasmClient(config);
 
-  const adminWalletAddress = (
-    await (await getWallet(config.adminWalletMnemonic, config.bech32AddressPrefix)).getAccounts()
-  )[0].address;
+  const adminWalletAddress = (await (await getWallet(config.mnemonic, config.bech32AddressPrefix)).getAccounts())[0]
+    .address;
 
   const feeCollectorWallet = await createWallet(config);
   const feeCollectorAddress = (await feeCollectorWallet.getAccounts())[0].address;

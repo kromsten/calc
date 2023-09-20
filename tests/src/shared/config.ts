@@ -1,9 +1,9 @@
 export type Config = {
   bech32AddressPrefix: string;
-  netUrl: string;
+  rpcUrl: string;
   gasPrice: number;
   feeDenom: string;
-  adminWalletMnemonic: string;
+  mnemonic: string;
 };
 
 export const fetchConfig = async (): Promise<Config> => {
@@ -19,15 +19,15 @@ export const fetchConfig = async (): Promise<Config> => {
   if (process.env.FEE_DENOM === undefined) {
     throw new Error('Missing FEE_DENOM environment variable');
   }
-  if (process.env.ADMIN_CONTRACT_MNEMONIC === undefined) {
-    throw new Error('Missing ADMIN_CONTRACT_MNEMONIC environment variable');
+  if (process.env.MNEMONIC === undefined) {
+    throw new Error('Missing MNEMONIC environment variable');
   }
 
   return {
     bech32AddressPrefix: process.env.BECH32_ADDRESS_PREFIX,
-    netUrl: process.env.NET_URL,
+    rpcUrl: process.env.NET_URL,
     feeDenom: process.env.FEE_DENOM,
     gasPrice: parseFloat(process.env.GAS_PRICE),
-    adminWalletMnemonic: process.env.ADMIN_CONTRACT_MNEMONIC,
+    mnemonic: process.env.MNEMONIC,
   };
 };

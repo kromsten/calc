@@ -1,9 +1,7 @@
 use crate::types::{pair::Pair, position_type::PositionType};
 use cosmwasm_std::{QuerierWrapper, StdError, StdResult};
-use osmosis_std::types::osmosis::{
-    gamm::v1beta1::Pool,
-    poolmanager::v1beta1::{PoolmanagerQuerier, SwapAmountInRoute},
-};
+use osmosis_std::types::osmosis::gamm::v1beta1::Pool;
+use osmosis_std::types::osmosis::poolmanager::v1beta1::{PoolmanagerQuerier, SwapAmountInRoute};
 use prost::DecodeError;
 
 pub fn get_token_out_denom(

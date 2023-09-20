@@ -8,26 +8,50 @@ import {
 } from '../shared/cosmwasm';
 import { createCosmWasmClientForWallet, createWallet } from './helpers';
 import { SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate';
-import { cosmos, osmosis } from 'osmojs';
 import { find, map } from 'ramda';
 import { PositionType } from '../types/dca/execute';
 import { coin } from '@cosmjs/proto-signing';
-import { Pair } from '../types/exchanges/osmosis/pair';
-import { Pool } from 'osmojs/dist/codegen/osmosis/gamm/pool-models/balancer/balancerPool';
+import { dualitylabs, getSigningDualitylabsClient } from '@duality-labs/dualityjs';
+import { CoinSDKType } from '@duality-labs/dualityjs/types/codegen/cosmos/base/v1beta1/coin';
+import Long from 'long';
 
 const dexSwapFee = 0.0005;
 const automationFee = 0.0075;
 const swapAdjustment = 1.3;
 
+export function getShareInfo(coin: CoinSDKType) {
+  const match = coin.denom.match(/^DualityPoolShares-([^-]+)-([^-]+)-t(-?\d+)-f(\d+)$/);
+  if (match) {
+    const [, token0Address, token1Address, tickIndexString, feeString] = match;
+    return {
+      token0Address,
+      token1Address,
+      tickIndex1To0String: tickIndexString,
+      feeString,
+      tickIndex1To0: Number(tickIndexString),
+      fee: Number(feeString),
+    };
+  }
+}
+
 export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
-  if (process.env.BECH32_ADDRESS_PREFIX !== 'osmo') {
+  if (process.env.BECH32_ADDRESS_PREFIX !== 'neutron') {
     return;
   }
 
   const config = await fetchConfig();
 
-  const queryClient = await osmosis.ClientFactory.createRPCQueryClient({ rpcEndpoint: config.rpcUrl });
+  const queryClient = await dualitylabs.ClientFactory.createRPCQueryClient({ rpcEndpoint: config.rpcUrl });
   const cosmWasmClient = await createSigningCosmWasmClient(config);
+  const dClient = getSigningDualitylabsClient({
+    rpcEndpoint: config.rpcUrl,
+    signer: await getWallet(config.mnemonic, config.bech32AddressPrefix),
+  });
+
+  //   const balances = await queryClient.dualitylabs.duality.dex.poolReservesAll({
+  //     pairID: '',
+  //     tokenIn: '',
+  //   });
 
   const adminWalletAddress = (await (await getWallet(config.mnemonic, config.bech32AddressPrefix)).getAccounts())[0]
     .address;
@@ -50,37 +74,49 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
 
   const denoms = ['stake', 'uion'];
 
-  const pools = map(
-    (pool: any) => osmosis.gamm.v1beta1.Pool.decode(pool.value) as Pool,
-    (
-      await queryClient.osmosis.gamm.v1beta1.pools({
-        pagination: null,
-      })
-    ).pools,
-  );
+  const { deposit } = dualitylabs.duality.dex.MessageComposer.withTypeUrl;
 
-  const pool = find((pool: Pool) => {
-    const assets = map((asset) => asset.token.denom, pool.poolAssets);
-    return assets.length == 2 && assets.includes(denoms[0]) && assets.includes(denoms[1]);
-  }, pools);
-
-  const pair: Pair = {
-    base_denom: denoms[0],
-    quote_denom: denoms[1],
-    route: [Number(pool.id)],
-  };
-
-  await execute(cosmWasmClient, adminWalletAddress, exchangeContractAddress, {
-    internal_msg: {
-      msg: Buffer.from(
-        JSON.stringify({
-          create_pairs: {
-            pairs: [pair],
-          },
-        }),
-      ).toString('base64'),
-    },
+  const msg = deposit({
+    creator: adminWalletAddress,
+    receiver: adminWalletAddress,
+    tokenA: 'token',
+    tokenB: 'stake',
+    amountsA: ['10000'],
+    amountsB: ['10000'],
+    tickIndexesAToB: [Long.fromNumber(0), Long.fromNumber(1)],
+    fees: [],
+    Options: [],
   });
+
+  await cosmWasmClient.signAndBroadcast(adminWalletAddress, [msg], 'auto');
+
+  //   const pools = map(
+  //     (pool: any) => osmosis.gamm.v1beta1.Pool.decode(pool.value) as Pool,
+  //     (await queryClient.osmosis.gamm.v1beta1.pools({})).pools,
+  //   );
+
+  //   const pool = find((pool: Pool) => {
+  //     const assets = map((asset) => asset.token.denom, pool.poolAssets);
+  //     return assets.length == 2 && assets.includes(denoms[0]) && assets.includes(denoms[1]);
+  //   }, pools);
+
+  //   const pair: Pair = {
+  //     base_denom: denoms[0],
+  //     quote_denom: denoms[1],
+  //     route: [Number(pool.id)],
+  //   };
+
+  //   await execute(cosmWasmClient, adminWalletAddress, exchangeContractAddress, {
+  //     internal_msg: {
+  //       msg: Buffer.from(
+  //         JSON.stringify({
+  //           create_pairs: {
+  //             pairs: [pair],
+  //           },
+  //         }),
+  //       ).toString('base64'),
+  //     },
+  //   });
 
   const userWallet = await createWallet(config);
   const userWalletAddress = (await userWallet.getAccounts())[0].address;
@@ -93,12 +129,11 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
 
   await cosmWasmClient.sendTokens(adminWalletAddress, userWalletAddress, [coin('1000000000', config.feeDenom)], 2);
 
-  const validatorAddress = (
-    await queryClient.cosmos.staking.v1beta1.validators({
-      status: cosmos.staking.v1beta1.bondStatusToJSON(cosmos.staking.v1beta1.BondStatus.BOND_STATUS_BONDED),
-      pagination: null,
-    })
-  ).validators[0].operatorAddress;
+  //   const validatorAddress = (
+  //     await queryClient.cosmos.staking.v1beta1.validators({
+  //       status: queryClient.cosmos.staking.v1beta1.,
+  //     })
+  //   ).validators[0].operatorAddress;
 
   return {
     beforeAll(this: Mocha.Context) {
@@ -115,9 +150,9 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
         feeCollectorAddress,
         userWalletAddress,
         pair: {
-          denoms: [pair.base_denom, pair.quote_denom],
+          //   denoms: [pair.base_denom, pair.quote_denom],
         },
-        validatorAddress,
+        validatorAddress: '',
         swapAdjustment,
         twapPeriod,
       };

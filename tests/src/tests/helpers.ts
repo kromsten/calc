@@ -23,7 +23,7 @@ export const createCosmWasmClientForWallet = async (
   adminWalletAddress: Addr,
   userWallet: DirectSecp256k1HdWallet,
 ): Promise<SigningCosmWasmClient> => {
-  const userCosmWasmClient = await SigningCosmWasmClient.connectWithSigner(config.netUrl, userWallet, {
+  const userCosmWasmClient = await SigningCosmWasmClient.connectWithSigner(config.rpcUrl, userWallet, {
     prefix: config.bech32AddressPrefix,
     gasPrice: GasPrice.fromString(`${config.gasPrice}${config.feeDenom}`),
   });
