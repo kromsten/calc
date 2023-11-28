@@ -31,7 +31,7 @@ use crate::types::swap_adjustment_strategy::{
 use crate::types::time_interval::TimeInterval;
 use crate::types::trigger::{Trigger, TriggerConfiguration};
 use crate::types::vault::{Vault, VaultBuilder, VaultStatus};
-use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Reply, SubMsg, WasmMsg};
+use cosmwasm_std::{to_json_binary, Addr, Coin, Decimal, Reply, SubMsg, WasmMsg};
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Timestamp, Uint128, Uint64};
 use exchange::msg::ExecuteMsg as ExchangeExecuteMsg;
 
@@ -222,7 +222,7 @@ pub fn create_vault_handler(
             if target_start_time_utc_seconds.is_none() {
                 response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
                     contract_addr: env.contract.address.to_string(),
-                    msg: to_binary(&ExecuteMsg::ExecuteTrigger {
+                    msg: to_json_binary(&ExecuteMsg::ExecuteTrigger {
                         trigger_id: vault.id,
                     })
                     .unwrap(),
@@ -255,7 +255,7 @@ pub fn create_vault_handler(
                 .add_submessage(SubMsg::reply_on_success(
                     WasmMsg::Execute {
                         contract_addr: config.exchange_contract_address.to_string(),
-                        msg: to_binary(&ExchangeExecuteMsg::SubmitOrder {
+                        msg: to_json_binary(&ExchangeExecuteMsg::SubmitOrder {
                             target_price: target_price.into(),
                             target_denom: vault.target_denom.clone(),
                         })
@@ -324,7 +324,7 @@ mod create_vault_tests {
     use crate::types::vault::{Vault, VaultStatus};
     use cosmwasm_std::testing::{mock_env, mock_info};
     use cosmwasm_std::{
-        to_binary, Addr, Coin, ContractResult, Decimal, Decimal256, SubMsg, SystemResult,
+        to_json_binary, Addr, Coin, ContractResult, Decimal, Decimal256, SubMsg, SystemResult,
         Timestamp, Uint128, WasmMsg,
     };
     use exchange::msg::Pair;
@@ -407,7 +407,9 @@ mod create_vault_tests {
         instantiate_contract(deps.as_mut(), env.clone(), info.clone());
 
         deps.querier.update_wasm(|_| {
-            SystemResult::Ok(ContractResult::Ok(to_binary::<Vec<Pair>>(&vec![]).unwrap()))
+            SystemResult::Ok(ContractResult::Ok(
+                to_json_binary::<Vec<Pair>>(&vec![]).unwrap(),
+            ))
         });
 
         let err = create_vault_handler(
@@ -1160,7 +1162,7 @@ mod create_vault_tests {
                 allocation: Decimal::percent(50),
                 address: env.contract.address.clone(),
                 msg: Some(
-                    to_binary(&ExecuteMsg::ZDelegate {
+                    to_json_binary(&ExecuteMsg::ZDelegate {
                         delegator_address: Addr::unchecked("dest-1"),
                         validator_address: Addr::unchecked(VALIDATOR),
                     })
@@ -1171,7 +1173,7 @@ mod create_vault_tests {
                 allocation: Decimal::percent(50),
                 address: env.contract.address.clone(),
                 msg: Some(
-                    to_binary(&ExecuteMsg::ZDelegate {
+                    to_json_binary(&ExecuteMsg::ZDelegate {
                         delegator_address: Addr::unchecked("dest-2"),
                         validator_address: Addr::unchecked(VALIDATOR),
                     })
@@ -1405,7 +1407,7 @@ mod create_vault_tests {
             &SubMsg::new(WasmMsg::Execute {
                 contract_addr: env.contract.address.to_string(),
                 funds: vec![],
-                msg: to_binary(&ExecuteMsg::ExecuteTrigger {
+                msg: to_json_binary(&ExecuteMsg::ExecuteTrigger {
                     trigger_id: Uint128::one()
                 })
                 .unwrap()
@@ -1453,7 +1455,7 @@ mod create_vault_tests {
                 WasmMsg::Execute {
                     contract_addr: config.exchange_contract_address.to_string(),
                     funds: vec![Coin::new(TWO_MICRONS.into(), info.funds[0].denom.clone())],
-                    msg: to_binary(&ExchangeExecuteMsg::SubmitOrder {
+                    msg: to_json_binary(&ExchangeExecuteMsg::SubmitOrder {
                         target_price: Decimal256::percent(200),
                         target_denom: pair.denoms[0].clone(),
                     })
@@ -1561,7 +1563,7 @@ mod create_vault_tests {
                 address: env.contract.address,
                 allocation: Decimal::percent(100),
                 msg: Some(
-                    to_binary(&ExecuteMsg::DisburseEscrow {
+                    to_json_binary(&ExecuteMsg::DisburseEscrow {
                         vault_id: Uint128::one(),
                     })
                     .unwrap(),
@@ -1605,7 +1607,7 @@ mod create_vault_tests {
                 address: env.contract.address.clone(),
                 allocation: Decimal::percent(100),
                 msg: Some(
-                    to_binary(&ExecuteMsg::Deposit {
+                    to_json_binary(&ExecuteMsg::Deposit {
                         address: Addr::unchecked(USER),
                         vault_id: Uint128::one(),
                     })
@@ -1634,7 +1636,7 @@ mod create_vault_tests {
                 address: env.contract.address,
                 allocation: Decimal::percent(100),
                 msg: Some(
-                    to_binary(&ExecuteMsg::Deposit {
+                    to_json_binary(&ExecuteMsg::Deposit {
                         address: Addr::unchecked(USER),
                         vault_id: Uint128::one(),
                     })

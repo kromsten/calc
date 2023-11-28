@@ -8,7 +8,7 @@ use crate::{
 };
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Addr, BankMsg, Deps, MessageInfo, Response, SubMsg, Uint128, WasmMsg,
+    to_json_binary, Addr, BankMsg, Deps, MessageInfo, Response, SubMsg, Uint128, WasmMsg,
 };
 use std::vec;
 
@@ -51,7 +51,7 @@ pub fn old_z_delegate_handler(
             SubMsg::reply_always(
                 WasmMsg::Execute {
                     contract_addr: config.old_staking_router_address.to_string(),
-                    msg: to_binary(&StakingRouterExecuteMsg::ZDelegate {
+                    msg: to_json_binary(&StakingRouterExecuteMsg::ZDelegate {
                         delegator_address,
                         validator_address,
                         amount: amount_to_delegate.amount,
@@ -79,7 +79,7 @@ mod old_z_delegate_handler_tests {
     };
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info},
-        to_binary, Addr, BankMsg, Coin, SubMsg,
+        to_json_binary, Addr, BankMsg, Coin, SubMsg,
     };
 
     #[test]
@@ -168,7 +168,7 @@ mod old_z_delegate_handler_tests {
             &SubMsg::reply_always(
                 cosmwasm_std::WasmMsg::Execute {
                     contract_addr: config.old_staking_router_address.to_string(),
-                    msg: to_binary(&StakingRouterExecuteMsg::ZDelegate {
+                    msg: to_json_binary(&StakingRouterExecuteMsg::ZDelegate {
                         delegator_address,
                         validator_address,
                         amount: info.funds[0].amount,

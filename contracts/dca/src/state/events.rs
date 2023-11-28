@@ -1,6 +1,6 @@
 use super::state_helpers::fetch_and_increment_counter;
 use crate::types::event::{Event, EventBuilder};
-use cosmwasm_std::{from_binary, to_binary, Binary, StdResult, Storage};
+use cosmwasm_std::{from_json, to_json_binary, Binary, StdResult, Storage};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, UniqueIndex};
 
 const EVENT_COUNTER: Item<u64> = Item::new("event_counter_v8");
@@ -20,7 +20,7 @@ pub fn event_store<'a>() -> IndexedMap<'a, u64, Binary, EventIndexes<'a>> {
     let indexes = EventIndexes {
         resource_id: UniqueIndex::new(
             |event| {
-                from_binary(event)
+                from_json(event)
                     .map(|event: Event| (event.resource_id.into(), event.id))
                     .expect("deserialised event")
             },
@@ -35,7 +35,7 @@ pub fn create_event(store: &mut dyn Storage, event_builder: EventBuilder) -> Std
     event_store().save(
         store,
         event.id,
-        &to_binary(&event).expect("serialised event"),
+        &to_json_binary(&event).expect("serialised event"),
     )?;
     Ok(event.id)
 }

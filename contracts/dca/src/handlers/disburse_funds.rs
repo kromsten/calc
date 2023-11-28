@@ -9,7 +9,7 @@ use crate::state::triggers::delete_trigger;
 use crate::state::vaults::{get_vault, update_vault};
 use crate::types::event::{EventBuilder, EventData, ExecutionSkippedReason};
 use crate::types::vault::{Vault, VaultStatus};
-use cosmwasm_std::{to_binary, SubMsg, SubMsgResult, Uint128, WasmMsg};
+use cosmwasm_std::{to_json_binary, SubMsg, SubMsgResult, Uint128, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{Attribute, Coin, DepsMut, Env, Reply, Response};
 use shared::coin::{add_to, subtract};
@@ -122,7 +122,7 @@ pub fn disburse_funds_handler(
         if vault.escrowed_amount.amount > Uint128::zero() {
             sub_msgs.push(SubMsg::new(WasmMsg::Execute {
                 contract_addr: env.contract.address.to_string(),
-                msg: to_binary(&ExecuteMsg::DisburseEscrow { vault_id: vault.id })?,
+                msg: to_json_binary(&ExecuteMsg::DisburseEscrow { vault_id: vault.id })?,
                 funds: vec![],
             }));
         }
@@ -1155,7 +1155,7 @@ mod disburse_funds_tests {
 
         assert!(response.messages.contains(&SubMsg::new(WasmMsg::Execute {
             contract_addr: env.contract.address.to_string(),
-            msg: to_binary(&ExecuteMsg::DisburseEscrow { vault_id: vault.id }).unwrap(),
+            msg: to_json_binary(&ExecuteMsg::DisburseEscrow { vault_id: vault.id }).unwrap(),
             funds: vec![],
         })));
     }

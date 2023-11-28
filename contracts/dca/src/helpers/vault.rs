@@ -502,15 +502,6 @@ mod get_swap_amount_tests {
             },
         );
 
-        // deps.querier.update_stargate(|path, _| match path {
-        //     "/osmosis.twap.v1beta1.Query/ArithmeticTwapToNow" => {
-        //         to_binary(&ArithmeticTwapResponse {
-        //             arithmetic_twap: "1.2".to_string(),
-        //         })
-        //     }
-        //     _ => Err(StdError::generic_err("message not customised")),
-        // });
-
         let swap_amount = get_swap_amount(&deps.as_ref(), &env, &vault).unwrap();
 
         assert_eq!(swap_amount.amount, vault.swap_amount);

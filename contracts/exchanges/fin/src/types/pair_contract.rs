@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, Addr, Coin, CosmosMsg, StdResult, WasmMsg};
+use cosmwasm_std::{to_json_binary, Addr, Coin, CosmosMsg, StdResult, WasmMsg};
 use kujira_fin::ExecuteMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -12,7 +12,7 @@ impl PairContract {
     }
 
     pub fn call<T: Into<ExecuteMsg>>(&self, msg: T, funds: Vec<Coin>) -> StdResult<CosmosMsg> {
-        let msg = to_binary(&msg.into())?;
+        let msg = to_json_binary(&msg.into())?;
         Ok(WasmMsg::Execute {
             contract_addr: self.addr().into(),
             msg,

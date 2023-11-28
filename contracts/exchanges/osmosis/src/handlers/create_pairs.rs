@@ -56,7 +56,7 @@ pub fn create_pairs_handler(
 mod create_pairs_tests {
     use cosmwasm_std::{
         testing::{mock_env, mock_info},
-        to_binary, Addr,
+        to_json_binary, Addr,
     };
     use exchange::msg::ExecuteMsg;
 
@@ -92,7 +92,7 @@ mod create_pairs_tests {
             env,
             info_with_unauthorised_sender,
             ExecuteMsg::InternalMsg {
-                msg: to_binary(&InternalExternalMsg::CreatePairs {
+                msg: to_json_binary(&InternalExternalMsg::CreatePairs {
                     pairs: vec![Pair {
                         base_denom: String::from("base"),
                         quote_denom: String::from("quote"),
@@ -126,7 +126,7 @@ mod create_pairs_tests {
             env,
             info,
             ExecuteMsg::InternalMsg {
-                msg: to_binary(&InternalExternalMsg::CreatePairs {
+                msg: to_json_binary(&InternalExternalMsg::CreatePairs {
                     pairs: vec![Pair {
                         quote_denom: DENOM_UOSMO.to_string(),
                         base_denom: DENOM_STAKE.to_string(),
@@ -165,7 +165,7 @@ mod create_pairs_tests {
             env,
             info,
             ExecuteMsg::InternalMsg {
-                msg: to_binary(&InternalExternalMsg::CreatePairs {
+                msg: to_json_binary(&InternalExternalMsg::CreatePairs {
                     pairs: vec![Pair {
                         quote_denom: DENOM_UOSMO.to_string(),
                         base_denom: DENOM_STAKE.to_string(),
@@ -200,7 +200,7 @@ mod create_pairs_tests {
         .unwrap();
 
         let create_pair_execute_message = ExecuteMsg::InternalMsg {
-            msg: to_binary(&InternalExternalMsg::CreatePairs {
+            msg: to_json_binary(&InternalExternalMsg::CreatePairs {
                 pairs: vec![Pair {
                     base_denom: DENOM_UOSMO.to_string(),
                     quote_denom: DENOM_STAKE.to_string(),
@@ -235,7 +235,7 @@ mod create_pairs_tests {
         .unwrap();
 
         let create_pair_execute_message = ExecuteMsg::InternalMsg {
-            msg: to_binary(&InternalExternalMsg::CreatePairs {
+            msg: to_json_binary(&InternalExternalMsg::CreatePairs {
                 pairs: vec![Pair {
                     base_denom: DENOM_UOSMO.to_string(),
                     quote_denom: DENOM_STAKE.to_string(),
@@ -273,7 +273,7 @@ mod create_pairs_tests {
         .unwrap();
 
         let original_message = ExecuteMsg::InternalMsg {
-            msg: to_binary(&InternalExternalMsg::CreatePairs {
+            msg: to_json_binary(&InternalExternalMsg::CreatePairs {
                 pairs: vec![Pair {
                     base_denom: DENOM_UOSMO.to_string(),
                     quote_denom: DENOM_STAKE.to_string(),
@@ -284,7 +284,7 @@ mod create_pairs_tests {
         };
 
         let message = ExecuteMsg::InternalMsg {
-            msg: to_binary(&InternalExternalMsg::CreatePairs {
+            msg: to_json_binary(&InternalExternalMsg::CreatePairs {
                 pairs: vec![Pair {
                     base_denom: DENOM_UOSMO.to_string(),
                     quote_denom: DENOM_STAKE.to_string(),
@@ -323,7 +323,7 @@ mod create_pairs_tests {
         .unwrap();
 
         let original_message = ExecuteMsg::InternalMsg {
-            msg: to_binary(&InternalExternalMsg::CreatePairs {
+            msg: to_json_binary(&InternalExternalMsg::CreatePairs {
                 pairs: vec![Pair {
                     quote_denom: DENOM_UOSMO.to_string(),
                     base_denom: DENOM_STAKE.to_string(),
@@ -334,7 +334,7 @@ mod create_pairs_tests {
         };
 
         let message = ExecuteMsg::InternalMsg {
-            msg: to_binary(&InternalExternalMsg::CreatePairs {
+            msg: to_json_binary(&InternalExternalMsg::CreatePairs {
                 pairs: vec![Pair {
                     quote_denom: DENOM_UOSMO.to_string(),
                     base_denom: DENOM_STAKE.to_string(),

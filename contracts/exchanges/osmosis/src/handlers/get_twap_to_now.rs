@@ -1,13 +1,10 @@
-use cosmwasm_std::{Decimal, Decimal256, Deps, Env, QuerierWrapper, StdError, StdResult};
-use osmosis_std::{
-    shim::Timestamp,
-    types::osmosis::{
-        gamm::v1beta1::Pool, poolmanager::v1beta1::PoolmanagerQuerier, twap::v1beta1::TwapQuerier,
-    },
-};
-use prost::DecodeError;
+use cosmwasm_std::{Decimal, Decimal256, Deps, Env, StdResult};
+use osmosis_std::{shim::Timestamp, types::osmosis::twap::v1beta1::TwapQuerier};
 
-use crate::{state::pairs::find_pair, types::position_type::PositionType};
+use crate::{
+    helpers::routes::get_token_out_denom, state::pairs::find_pair,
+    types::position_type::PositionType,
+};
 
 pub fn get_twap_to_now_handler(
     deps: Deps,
@@ -50,59 +47,11 @@ pub fn get_twap_to_now_handler(
     Ok(price.into())
 }
 
-fn get_token_out_denom(
-    querier: &QuerierWrapper,
-    token_in_denom: String,
-    pool_id: u64,
-) -> StdResult<String> {
-    let pool = get_pool(querier, pool_id)?;
-
-    if pool.pool_assets.len() != 2 {
-        return Err(StdError::generic_err(format!(
-            "pool id {} is not a 2 asset pool",
-            pool_id
-        )));
-    }
-
-    if pool
-        .pool_assets
-        .iter()
-        .all(|asset| asset.token.clone().unwrap().denom != token_in_denom)
-    {
-        return Err(StdError::generic_err(format!(
-            "denom {} not found in pool id {}",
-            token_in_denom, pool_id
-        )));
-    }
-
-    let token_out_denom = pool
-        .pool_assets
-        .iter()
-        .find(|asset| asset.token.clone().unwrap().denom != token_in_denom)
-        .map(|asset| asset.token.clone().unwrap().denom)
-        .ok_or_else(|| StdError::generic_err("no token out denom found"));
-
-    token_out_denom
-}
-
-pub fn get_pool(querier: &QuerierWrapper, pool_id: u64) -> Result<Pool, StdError> {
-    PoolmanagerQuerier::new(querier).pool(pool_id)?.pool.map_or(
-        Err(StdError::generic_err("pool not found")),
-        |pool| {
-            pool.try_into()
-                .map_err(|e: DecodeError| StdError::ParseErr {
-                    target_type: Pool::TYPE_URL.to_string(),
-                    msg: e.to_string(),
-                })
-        },
-    )
-}
-
 #[cfg(test)]
 mod get_twap_to_now_tests {
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env},
-        to_binary, Decimal256, StdError,
+        to_json_binary, Decimal256, StdError,
     };
     use osmosis_std::types::osmosis::twap::v1beta1::{
         ArithmeticTwapRequest, ArithmeticTwapResponse,
@@ -151,7 +100,7 @@ mod get_twap_to_now_tests {
                     _ => "1.0",
                 };
 
-                return to_binary(&ArithmeticTwapResponse {
+                return to_json_binary(&ArithmeticTwapResponse {
                     arithmetic_twap: price.to_string(),
                 });
             }
@@ -185,7 +134,7 @@ mod get_twap_to_now_tests {
                     _ => "1.0",
                 };
 
-                return to_binary(&ArithmeticTwapResponse {
+                return to_json_binary(&ArithmeticTwapResponse {
                     arithmetic_twap: price.to_string(),
                 });
             }

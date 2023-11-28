@@ -9,7 +9,7 @@ use crate::types::swap_adjustment_strategy::{
 };
 use crate::types::time_interval::TimeInterval;
 use crate::types::vault::{Vault, VaultStatus};
-use cosmwasm_std::{from_binary, Addr, Coin, Decimal, Deps, Env, Storage, Timestamp, Uint128};
+use cosmwasm_std::{from_json, Addr, Coin, Decimal, Deps, Env, Storage, Timestamp, Uint128};
 use exchange::msg::QueryMsg;
 
 pub fn assert_exactly_one_asset(funds: Vec<Coin>) -> Result<(), ContractError> {
@@ -299,7 +299,7 @@ pub fn assert_contract_destination_callbacks_are_valid(
         .try_for_each(|d| {
             d.msg
                 .clone()
-                .map_or(Ok(()), |msg| match from_binary(&msg).unwrap() {
+                .map_or(Ok(()), |msg| match from_json(msg).unwrap() {
                     ExecuteMsg::ZDelegate { .. }
                     | ExecuteMsg::Deposit { .. }
                     | ExecuteMsg::OldZDelegate { .. } => Ok(()),

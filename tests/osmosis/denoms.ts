@@ -1,3 +1,8 @@
+const DYDX = {
+  name: 'DYDX',
+  denom: 'ibc/831F0B1BBB1D08A2B75311892876D71565478C532967545476DF4C2D7492E48C',
+  poolId: 1245,
+};
 const NTRN = {
   name: 'NTRN',
   denom: 'ibc/126DA09104B71B164883842B769C0E9EC1486C0887D27A9999E395C2C8FB5682',
@@ -182,10 +187,15 @@ const UMEE = {
   denom: 'ibc/67795E528DF67C5606FC20F824EA39A6EF55BA133F4DC79C90A8C47A0901E17C',
   poolId: 641,
 };
-const USDC = {
-  name: 'USDC',
+const axlUSDC = {
+  name: 'axlUSDC',
   denom: 'ibc/D189335C6E4A68B513C10AB227BF1C1D38C746766278BA3EEB4FB14124F1D858',
   poolId: 678,
+};
+const USDC = {
+  name: 'USDC',
+  denom: 'ibc/498A0751C798A0D9A389AA3691123DADA57DAA4FE165D5C75894505B876BA6E4',
+  poolId: 1221,
 };
 const WHALE = {
   name: 'WHALE',
@@ -238,14 +248,17 @@ const USDT = {
   denom: 'ibc/4ABBEF4C8926DDDB320AE5188CFD63267ABBCEFC0583E4AE05D6E5AA2401DDAB',
   poolId: 1077,
 };
+const TIA = {
+  name: 'TIA',
+  denom: 'ibc/D79E7D83AB399BFFF93433E54FAA480C191248FC556924A2A8351AE2638B3877',
+  poolId: 1249,
+};
 
-const stablecoins = [IST, USDC, axlDAI, axlUSDT];
+const stablecoins = [IST, axlUSDC, axlDAI, axlUSDT, USDC, USDT];
 
 const DENOMS = [
-  BCNA,
-  ARCH,
-  NCT,
   AKT,
+  ARCH,
   ATOM,
   AVAX,
   AXL,
@@ -253,12 +266,14 @@ const DENOMS = [
   axlFTM,
   axlMATIC,
   axlPEPE,
+  BCNA,
   BLD,
   BTC,
   BTSG,
   CRO,
   DOT,
   DVPN,
+  DYDX,
   ETH,
   EVMOS,
   FET,
@@ -281,10 +296,12 @@ const DENOMS = [
   MARS,
   MED,
   MNTL,
+  NCT,
   NGM,
   NTRN,
-  PSTAKE,
+  NTRN,
   PLQ,
+  PSTAKE,
   QCK,
   QSR,
   REGEN,
@@ -292,6 +309,7 @@ const DENOMS = [
   SOMM,
   STARS,
   STRD,
+  TIA,
   UMEE,
   WHALE,
   XPRT,

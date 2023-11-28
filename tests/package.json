@@ -12,10 +12,10 @@
     "test:duality": "env-cmd -e duality,shared mocha --recursive '**/*.test.ts' --timeout 90000 --exit"
   },
   "devDependencies": {
-    "@cosmjs/cosmwasm-stargate": "^0.29.3",
-    "@cosmjs/proto-signing": "^0.29.3",
-    "@cosmjs/stargate": "^0.29.3",
-    "@cosmjs/tendermint-rpc": "^0.29.4",
+    "@cosmjs/cosmwasm-stargate": "^0.31.1",
+    "@cosmjs/proto-signing": "^0.31.1",
+    "@cosmjs/stargate": "^0.31.1",
+    "@cosmjs/tendermint-rpc": "^0.31.1",
     "@duality-labs/dualityjs": "^0.3.3-ibc",
     "@types/chai-as-promised": "^7.1.5",
     "@types/mocha": "^10.0.0",

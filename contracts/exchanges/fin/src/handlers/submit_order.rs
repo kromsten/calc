@@ -68,7 +68,8 @@ pub fn return_order_idx(reply: Reply) -> Result<Response, ContractError> {
 mod submit_order_tests {
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_info},
-        to_binary, Addr, Coin, ContractResult, Decimal256, StdError, SubMsg, SystemResult, WasmMsg,
+        to_json_binary, Addr, Coin, ContractResult, Decimal256, StdError, SubMsg, SystemResult,
+        WasmMsg,
     };
     use cw20::Denom;
     use kujira_fin::{ConfigResponse, ExecuteMsg};
@@ -214,7 +215,7 @@ mod submit_order_tests {
 
         deps.querier.update_wasm(move |_| {
             SystemResult::Ok(ContractResult::Ok(
-                to_binary(&ConfigResponse {
+                to_json_binary(&ConfigResponse {
                     price_precision: Precision::DecimalPlaces(3),
                     decimal_delta: 0,
                     owner: Addr::unchecked("Hans"),
@@ -247,7 +248,7 @@ mod submit_order_tests {
             &SubMsg::reply_on_success(
                 WasmMsg::Execute {
                     contract_addr: pair.address.to_string(),
-                    msg: to_binary(&ExecuteMsg::SubmitOrder {
+                    msg: to_json_binary(&ExecuteMsg::SubmitOrder {
                         price: target_price,
                         callback: None
                     })
@@ -278,7 +279,7 @@ mod submit_order_tests {
 
         deps.querier.update_wasm(move |_| {
             SystemResult::Ok(ContractResult::Ok(
-                to_binary(&ConfigResponse {
+                to_json_binary(&ConfigResponse {
                     price_precision: Precision::DecimalPlaces(3),
                     decimal_delta: 0,
                     owner: Addr::unchecked("Hans"),
@@ -311,7 +312,7 @@ mod submit_order_tests {
             &SubMsg::reply_on_success(
                 WasmMsg::Execute {
                     contract_addr: pair.address.to_string(),
-                    msg: to_binary(&ExecuteMsg::SubmitOrder {
+                    msg: to_json_binary(&ExecuteMsg::SubmitOrder {
                         price: (Decimal256::one() / target_price)
                             .round(&Precision::DecimalPlaces(3)),
                         callback: None

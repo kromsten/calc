@@ -11,7 +11,7 @@ use crate::state::vaults::{get_vault, update_vault};
 use crate::types::event::{EventBuilder, EventData};
 use crate::types::trigger::TriggerConfiguration;
 use crate::types::vault::{Vault, VaultStatus};
-use cosmwasm_std::{to_binary, BankMsg, DepsMut, Response, Uint128, WasmMsg};
+use cosmwasm_std::{to_json_binary, BankMsg, DepsMut, Response, Uint128, WasmMsg};
 use cosmwasm_std::{Env, MessageInfo, SubMsg};
 use exchange::msg::ExecuteMsg;
 use shared::coin::empty_of;
@@ -64,7 +64,7 @@ pub fn cancel_vault_handler(
         submessages.push(SubMsg::reply_on_error(
             WasmMsg::Execute {
                 contract_addr: config.exchange_contract_address.to_string(),
-                msg: to_binary(&ExecuteMsg::RetractOrder {
+                msg: to_json_binary(&ExecuteMsg::RetractOrder {
                     order_idx,
                     denoms: vault.denoms(),
                 })
@@ -77,7 +77,7 @@ pub fn cancel_vault_handler(
         submessages.push(SubMsg::reply_on_error(
             WasmMsg::Execute {
                 contract_addr: config.exchange_contract_address.to_string(),
-                msg: to_binary(&ExecuteMsg::WithdrawOrder {
+                msg: to_json_binary(&ExecuteMsg::WithdrawOrder {
                     order_idx,
                     denoms: vault.denoms(),
                 })
@@ -349,7 +349,7 @@ mod cancel_vault_tests {
             &SubMsg::reply_on_error(
                 WasmMsg::Execute {
                     contract_addr: config.exchange_contract_address.to_string(),
-                    msg: to_binary(&ExecuteMsg::RetractOrder {
+                    msg: to_json_binary(&ExecuteMsg::RetractOrder {
                         order_idx,
                         denoms: vault.denoms()
                     })
@@ -392,7 +392,7 @@ mod cancel_vault_tests {
             &SubMsg::reply_on_error(
                 WasmMsg::Execute {
                     contract_addr: config.exchange_contract_address.to_string(),
-                    msg: to_binary(&ExecuteMsg::WithdrawOrder {
+                    msg: to_json_binary(&ExecuteMsg::WithdrawOrder {
                         order_idx,
                         denoms: vault.denoms()
                     })

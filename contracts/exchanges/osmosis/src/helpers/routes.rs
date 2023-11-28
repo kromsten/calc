@@ -1,6 +1,7 @@
 use crate::types::{pair::Pair, position_type::PositionType};
 use cosmwasm_std::{QuerierWrapper, StdError, StdResult};
-use osmosis_std::types::osmosis::gamm::v1beta1::Pool;
+use osmosis_std::types::osmosis::concentratedliquidity::v1beta1::Pool as ConcentratedLiquidityPool;
+use osmosis_std::types::osmosis::gamm::v1beta1::Pool as GammPool;
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{PoolmanagerQuerier, SwapAmountInRoute};
 use prost::DecodeError;
 
@@ -9,45 +10,58 @@ pub fn get_token_out_denom(
     token_in_denom: String,
     pool_id: u64,
 ) -> StdResult<String> {
-    let pool = get_pool(querier, pool_id)?;
+    let pool_assets = get_pool_assets(querier, pool_id)?;
 
-    if pool.pool_assets.len() != 2 {
+    if pool_assets.len() != 2 {
         return Err(StdError::generic_err(format!(
             "pool id {} is not a 2 asset pool",
             pool_id
         )));
     }
 
-    if pool
-        .pool_assets
-        .iter()
-        .all(|asset| asset.token.clone().unwrap().denom != token_in_denom)
-    {
+    if pool_assets.iter().all(|asset| *asset != token_in_denom) {
         return Err(StdError::generic_err(format!(
             "denom {} not found in pool id {}",
             token_in_denom, pool_id
         )));
     }
 
-    let token_out_denom = pool
-        .pool_assets
+    let token_out_denom = pool_assets
         .iter()
-        .find(|asset| asset.token.clone().unwrap().denom != token_in_denom)
-        .map(|asset| asset.token.clone().unwrap().denom)
+        .find(|asset| **asset != token_in_denom)
+        .map(|asset| asset)
         .ok_or_else(|| StdError::generic_err("no token out denom found"));
 
-    token_out_denom
+    token_out_denom.cloned()
 }
 
-pub fn get_pool(querier: &QuerierWrapper, pool_id: u64) -> Result<Pool, StdError> {
+pub fn get_pool_assets(querier: &QuerierWrapper, pool_id: u64) -> Result<Vec<String>, StdError> {
     PoolmanagerQuerier::new(querier).pool(pool_id)?.pool.map_or(
         Err(StdError::generic_err("pool not found")),
-        |pool| {
-            pool.try_into()
-                .map_err(|e: DecodeError| StdError::ParseErr {
-                    target_type: Pool::TYPE_URL.to_string(),
-                    msg: e.to_string(),
+        |pool| match pool.type_url.as_str() {
+            GammPool::TYPE_URL => pool
+                .try_into()
+                .map(|pool: GammPool| {
+                    pool.pool_assets
+                        .into_iter()
+                        .map(|asset| asset.token.unwrap().denom)
+                        .collect::<Vec<String>>()
                 })
+                .map_err(|e: DecodeError| StdError::ParseErr {
+                    target_type: GammPool::TYPE_URL.to_string(),
+                    msg: e.to_string(),
+                }),
+            ConcentratedLiquidityPool::TYPE_URL => pool
+                .try_into()
+                .map(|pool: ConcentratedLiquidityPool| vec![pool.token0, pool.token1])
+                .map_err(|e: DecodeError| StdError::ParseErr {
+                    target_type: GammPool::TYPE_URL.to_string(),
+                    msg: e.to_string(),
+                }),
+            _ => Err(StdError::generic_err(format!(
+                "pool type {} not supported",
+                pool.type_url
+            ))),
         },
     )
 }
@@ -340,6 +354,209 @@ mod calculate_route_tests {
                 },
                 SwapAmountInRoute {
                     pool_id: 2,
+                    token_out_denom: DENOM_USDC.to_string(),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn with_cl_pools_when_swap_denom_not_in_pair_denoms_fails() {
+        let deps = calc_mock_dependencies();
+
+        let pair = Pair {
+            route: vec![5],
+            quote_denom: DENOM_UATOM.to_string(),
+            base_denom: DENOM_UOSMO.to_string(),
+        };
+
+        let swap_denom = "not_in_pair".to_string();
+
+        let err = calculate_route(&deps.as_ref().querier, &pair, swap_denom.clone()).unwrap_err();
+
+        assert_eq!(
+            err.to_string(),
+            format!(
+                "Generic error: swap denom {} not in pair denoms {:?}",
+                swap_denom,
+                pair.denoms()
+            )
+        );
+    }
+
+    #[test]
+    fn with_cl_pools_when_initial_pool_does_not_contain_swap_denom_fails() {
+        let deps = calc_mock_dependencies();
+
+        let pair = Pair {
+            route: vec![7],
+            quote_denom: DENOM_UATOM.to_string(),
+            base_denom: DENOM_UOSMO.to_string(),
+        };
+
+        let err =
+            calculate_route(&deps.as_ref().querier, &pair, pair.quote_denom.clone()).unwrap_err();
+
+        assert_eq!(
+            err.to_string(),
+            format!(
+                "Generic error: denom {} not found in pool id {}",
+                pair.quote_denom, pair.route[0]
+            )
+        );
+    }
+
+    #[test]
+    fn with_cl_pools_when_intermediary_pool_does_not_contain_target_denom_fails() {
+        let deps = calc_mock_dependencies();
+
+        let pair = Pair {
+            route: vec![5, 7],
+            quote_denom: DENOM_UATOM.to_string(),
+            base_denom: DENOM_UOSMO.to_string(),
+        };
+
+        let err =
+            calculate_route(&deps.as_ref().querier, &pair, pair.quote_denom.clone()).unwrap_err();
+
+        assert_eq!(
+            err.to_string(),
+            format!(
+                "Generic error: denom {} not found in pool id {}",
+                pair.base_denom, pair.route[1]
+            )
+        );
+    }
+
+    #[test]
+    fn with_cl_pools_when_final_pool_does_not_contain_target_denom_fails() {
+        let deps = calc_mock_dependencies();
+
+        let pair = Pair {
+            route: vec![5, 6],
+            quote_denom: DENOM_UATOM.to_string(),
+            base_denom: DENOM_UOSMO.to_string(),
+        };
+
+        let err =
+            calculate_route(&deps.as_ref().querier, &pair, pair.quote_denom.clone()).unwrap_err();
+
+        assert_eq!(
+            err.to_string(),
+            format!(
+                "Generic error: last token out denom uion not in pair denoms {:?}",
+                pair.denoms()
+            )
+        );
+    }
+
+    #[test]
+    fn with_cl_pools_calculates_1_pool_route() {
+        let deps = calc_mock_dependencies();
+
+        let pair = Pair {
+            route: vec![5],
+            quote_denom: DENOM_UATOM.to_string(),
+            base_denom: DENOM_UOSMO.to_string(),
+        };
+
+        assert_eq!(
+            calculate_route(&deps.as_ref().querier, &pair, DENOM_UATOM.to_string()).unwrap(),
+            vec![SwapAmountInRoute {
+                pool_id: 5,
+                token_out_denom: DENOM_UOSMO.to_string(),
+            }]
+        );
+
+        assert_eq!(
+            calculate_route(&deps.as_ref().querier, &pair, DENOM_UOSMO.to_string()).unwrap(),
+            vec![SwapAmountInRoute {
+                pool_id: 5,
+                token_out_denom: DENOM_UATOM.to_string(),
+            }]
+        );
+    }
+
+    #[test]
+    fn with_cl_pools_calculates_2_pool_route() {
+        let deps = calc_mock_dependencies();
+
+        let pair = Pair {
+            route: vec![5, 6],
+            quote_denom: DENOM_UATOM.to_string(),
+            base_denom: DENOM_UION.to_string(),
+        };
+
+        assert_eq!(
+            calculate_route(&deps.as_ref().querier, &pair, DENOM_UATOM.to_string()).unwrap(),
+            vec![
+                SwapAmountInRoute {
+                    pool_id: 5,
+                    token_out_denom: DENOM_UOSMO.to_string(),
+                },
+                SwapAmountInRoute {
+                    pool_id: 6,
+                    token_out_denom: DENOM_UION.to_string(),
+                }
+            ]
+        );
+
+        assert_eq!(
+            calculate_route(&deps.as_ref().querier, &pair, DENOM_UION.to_string()).unwrap(),
+            vec![
+                SwapAmountInRoute {
+                    pool_id: 6,
+                    token_out_denom: DENOM_UOSMO.to_string(),
+                },
+                SwapAmountInRoute {
+                    pool_id: 5,
+                    token_out_denom: DENOM_UATOM.to_string(),
+                }
+            ]
+        );
+    }
+
+    #[test]
+    fn with_cl_pools_calculates_3_pool_route() {
+        let deps = calc_mock_dependencies();
+
+        let pair = Pair {
+            route: vec![7, 6, 5],
+            quote_denom: DENOM_USDC.to_string(),
+            base_denom: DENOM_UATOM.to_string(),
+        };
+
+        assert_eq!(
+            calculate_route(&deps.as_ref().querier, &pair, DENOM_USDC.to_string()).unwrap(),
+            vec![
+                SwapAmountInRoute {
+                    pool_id: 7,
+                    token_out_denom: DENOM_UION.to_string(),
+                },
+                SwapAmountInRoute {
+                    pool_id: 6,
+                    token_out_denom: DENOM_UOSMO.to_string(),
+                },
+                SwapAmountInRoute {
+                    pool_id: 5,
+                    token_out_denom: DENOM_UATOM.to_string(),
+                }
+            ]
+        );
+
+        assert_eq!(
+            calculate_route(&deps.as_ref().querier, &pair, DENOM_UATOM.to_string()).unwrap(),
+            vec![
+                SwapAmountInRoute {
+                    pool_id: 5,
+                    token_out_denom: DENOM_UOSMO.to_string(),
+                },
+                SwapAmountInRoute {
+                    pool_id: 6,
+                    token_out_denom: DENOM_UION.to_string(),
+                },
+                SwapAmountInRoute {
+                    pool_id: 7,
                     token_out_denom: DENOM_USDC.to_string(),
                 },
             ]

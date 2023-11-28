@@ -29,8 +29,8 @@ pub fn get_order_handler(deps: Deps, order_idx: Uint128, denoms: [String; 2]) ->
 #[cfg(test)]
 mod get_order_handler_tests {
     use cosmwasm_std::{
-        testing::mock_dependencies, to_binary, Addr, Coin, ContractResult, Decimal256, StdError,
-        SystemResult, Timestamp, Uint128, Uint256,
+        testing::mock_dependencies, to_json_binary, Addr, Coin, ContractResult, Decimal256,
+        StdError, SystemResult, Timestamp, Uint128, Uint256,
     };
     use cw20::Denom;
     use exchange::msg::Order;
@@ -87,7 +87,7 @@ mod get_order_handler_tests {
 
         deps.querier.update_wasm(|_| {
             SystemResult::Ok(ContractResult::Ok(
-                to_binary(&OrderResponse {
+                to_json_binary(&OrderResponse {
                     original_offer_amount: Uint256::from_u128(13123213u128),
                     offer_amount: Uint256::from_u128(2u128),
                     filled_amount: Uint256::from_u128(3223423u128),

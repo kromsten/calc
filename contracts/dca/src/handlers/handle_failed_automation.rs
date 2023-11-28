@@ -69,7 +69,7 @@ mod handle_failed_automation_handler_tests {
     };
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info},
-        to_binary, Addr, BankMsg, Coin, Decimal, Reply, SubMsg, SubMsgResponse, SubMsgResult,
+        to_json_binary, Addr, BankMsg, Coin, Decimal, Reply, SubMsg, SubMsgResponse, SubMsgResult,
         WasmMsg,
     };
     use std::collections::VecDeque;
@@ -89,9 +89,9 @@ mod handle_failed_automation_handler_tests {
                 address: Addr::unchecked("contract"),
                 allocation: Decimal::percent(80),
                 msg: Some(
-                    to_binary(&WasmMsg::Execute {
+                    to_json_binary(&WasmMsg::Execute {
                         contract_addr: "contract".to_string(),
-                        msg: to_binary("test").unwrap(),
+                        msg: to_json_binary("test").unwrap(),
                         funds: vec![],
                     })
                     .unwrap(),
@@ -164,9 +164,9 @@ mod handle_failed_automation_handler_tests {
                 address: Addr::unchecked("contract"),
                 allocation: Decimal::percent(80),
                 msg: Some(
-                    to_binary(&WasmMsg::Execute {
+                    to_json_binary(&WasmMsg::Execute {
                         contract_addr: "contract".to_string(),
-                        msg: to_binary("test").unwrap(),
+                        msg: to_json_binary("test").unwrap(),
                         funds: vec![],
                     })
                     .unwrap(),
@@ -216,9 +216,9 @@ mod handle_failed_automation_handler_tests {
                 address: Addr::unchecked("contract"),
                 allocation: Decimal::percent(80),
                 msg: Some(
-                    to_binary(&WasmMsg::Execute {
+                    to_json_binary(&WasmMsg::Execute {
                         contract_addr: "contract".to_string(),
-                        msg: to_binary("test").unwrap(),
+                        msg: to_json_binary("test").unwrap(),
                         funds: vec![],
                     })
                     .unwrap(),
@@ -285,9 +285,9 @@ mod handle_failed_automation_handler_tests {
                 address: Addr::unchecked("contract1"),
                 allocation: Decimal::percent(30),
                 msg: Some(
-                    to_binary(&WasmMsg::Execute {
+                    to_json_binary(&WasmMsg::Execute {
                         contract_addr: "contract2".to_string(),
-                        msg: to_binary("test").unwrap(),
+                        msg: to_json_binary("test").unwrap(),
                         funds: vec![],
                     })
                     .unwrap(),
@@ -297,9 +297,9 @@ mod handle_failed_automation_handler_tests {
                 address: Addr::unchecked("contract2"),
                 allocation: Decimal::percent(80),
                 msg: Some(
-                    to_binary(&WasmMsg::Execute {
+                    to_json_binary(&WasmMsg::Execute {
                         contract_addr: "contract2".to_string(),
-                        msg: to_binary("test").unwrap(),
+                        msg: to_json_binary("test").unwrap(),
                         funds: vec![],
                     })
                     .unwrap(),
@@ -371,9 +371,9 @@ mod handle_failed_automation_handler_tests {
                 address: Addr::unchecked("contract1"),
                 allocation: Decimal::percent(30),
                 msg: Some(
-                    to_binary(&WasmMsg::Execute {
+                    to_json_binary(&WasmMsg::Execute {
                         contract_addr: "contract2".to_string(),
-                        msg: to_binary("test").unwrap(),
+                        msg: to_json_binary("test").unwrap(),
                         funds: vec![],
                     })
                     .unwrap(),
@@ -383,9 +383,9 @@ mod handle_failed_automation_handler_tests {
                 address: Addr::unchecked("contract2"),
                 allocation: Decimal::percent(80),
                 msg: Some(
-                    to_binary(&WasmMsg::Execute {
+                    to_json_binary(&WasmMsg::Execute {
                         contract_addr: "contract2".to_string(),
-                        msg: to_binary("test").unwrap(),
+                        msg: to_json_binary("test").unwrap(),
                         funds: vec![],
                     })
                     .unwrap(),

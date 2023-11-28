@@ -27,9 +27,9 @@ mod get_pairs_tests {
         },
     };
     use cosmwasm_std::{
-        from_binary,
+        from_json,
         testing::{mock_dependencies, mock_env, mock_info},
-        to_binary, ContractResult, SystemResult,
+        to_json_binary, ContractResult, SystemResult,
     };
     use exchange::msg::Pair;
 
@@ -45,11 +45,11 @@ mod get_pairs_tests {
 
         deps.querier.update_wasm(|_| {
             SystemResult::Ok(ContractResult::Ok(
-                to_binary::<Vec<Pair>>(&vec![Pair::default()]).unwrap(),
+                to_json_binary::<Vec<Pair>>(&vec![Pair::default()]).unwrap(),
             ))
         });
 
-        let response = from_binary::<PairsResponse>(
+        let response = from_json::<PairsResponse>(
             &query(
                 deps.as_ref(),
                 env,
@@ -75,10 +75,12 @@ mod get_pairs_tests {
         instantiate_contract(deps.as_mut(), env.clone(), info);
 
         deps.querier.update_wasm(|_| {
-            SystemResult::Ok(ContractResult::Ok(to_binary::<Vec<Pair>>(&vec![]).unwrap()))
+            SystemResult::Ok(ContractResult::Ok(
+                to_json_binary::<Vec<Pair>>(&vec![]).unwrap(),
+            ))
         });
 
-        let response = from_binary::<PairsResponse>(
+        let response = from_json::<PairsResponse>(
             &query(
                 deps.as_ref(),
                 env,

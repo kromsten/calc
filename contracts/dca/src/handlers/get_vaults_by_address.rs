@@ -26,7 +26,7 @@ mod get_vaults_by_address_tests {
     use crate::tests::mocks::ADMIN;
     use crate::types::vault::{Vault, VaultStatus};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{from_binary, Uint128};
+    use cosmwasm_std::{from_json, Uint128};
 
     #[test]
     fn with_no_vaults_should_return_all_vaults() {
@@ -36,7 +36,7 @@ mod get_vaults_by_address_tests {
 
         instantiate_contract(deps.as_mut(), env.clone(), info);
 
-        let vaults = from_binary::<VaultsResponse>(
+        let vaults = from_json::<VaultsResponse>(
             &query(
                 deps.as_ref(),
                 env,
@@ -66,7 +66,7 @@ mod get_vaults_by_address_tests {
         setup_vault(deps.as_mut(), env.clone(), Vault::default());
         setup_vault(deps.as_mut(), env.clone(), Vault::default());
 
-        let vaults = from_binary::<VaultsResponse>(
+        let vaults = from_json::<VaultsResponse>(
             &query(
                 deps.as_ref(),
                 env,
@@ -97,7 +97,7 @@ mod get_vaults_by_address_tests {
             setup_vault(deps.as_mut(), env.clone(), Vault::default());
         }
 
-        let vaults = from_binary::<VaultsResponse>(
+        let vaults = from_json::<VaultsResponse>(
             &query(
                 deps.as_ref(),
                 env,
@@ -128,7 +128,7 @@ mod get_vaults_by_address_tests {
         setup_vault(deps.as_mut(), env.clone(), Vault::default());
         setup_vault(deps.as_mut(), env.clone(), Vault::default());
 
-        let vaults = from_binary::<VaultsResponse>(
+        let vaults = from_json::<VaultsResponse>(
             &query(
                 deps.as_ref(),
                 env,
@@ -160,7 +160,7 @@ mod get_vaults_by_address_tests {
             setup_vault(deps.as_mut(), env.clone(), Vault::default());
         }
 
-        let vaults = from_binary::<VaultsResponse>(
+        let vaults = from_json::<VaultsResponse>(
             &query(
                 deps.as_ref(),
                 env,
@@ -241,7 +241,7 @@ mod get_vaults_by_address_tests {
             },
         );
 
-        let vaults = from_binary::<VaultsResponse>(
+        let vaults = from_json::<VaultsResponse>(
             &query(
                 deps.as_ref(),
                 env,

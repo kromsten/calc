@@ -2,7 +2,7 @@ use crate::state::config::get_config;
 use crate::state::events::event_store;
 use crate::types::event::Event;
 use crate::{helpers::validation::assert_page_limit_is_valid, msg::EventsResponse};
-use cosmwasm_std::{from_binary, Deps, Order, StdResult};
+use cosmwasm_std::{from_json, Deps, Order, StdResult};
 use cw_storage_plus::Bound;
 
 pub fn get_events_handler(
@@ -26,7 +26,7 @@ pub fn get_events_handler(
         .take(
             limit.unwrap_or_else(|| get_config(deps.storage).unwrap().default_page_limit) as usize,
         )
-        .flat_map(|result| result.map(|(_, data)| from_binary(&data)))
+        .flat_map(|result| result.map(|(_, data)| from_json(data)))
         .flatten()
         .collect::<Vec<Event>>();
 

@@ -34,8 +34,10 @@ pub fn get_expected_receive_amount_handler(
 
 #[cfg(test)]
 mod get_expected_receive_amount_handler_tests {
+    use std::any::type_name;
+
     use cosmwasm_std::{
-        testing::mock_dependencies, to_binary, Coin, ContractResult, StdError, SystemResult,
+        testing::mock_dependencies, to_json_binary, Coin, ContractResult, StdError, SystemResult,
         Uint128, Uint256,
     };
     use kujira_fin::SimulationResponse;
@@ -59,9 +61,7 @@ mod get_expected_receive_amount_handler_tests {
                 DENOM_UUSK.to_string()
             )
             .unwrap_err(),
-            StdError::NotFound {
-                kind: "fin::types::pair::Pair".to_string()
-            }
+            StdError::not_found(type_name::<Pair>())
         )
     }
 
@@ -99,7 +99,7 @@ mod get_expected_receive_amount_handler_tests {
 
         deps.querier.update_wasm(|_| {
             SystemResult::Ok(ContractResult::Ok(
-                to_binary(&SimulationResponse {
+                to_json_binary(&SimulationResponse {
                     return_amount: Uint256::from(83211293u128),
                     spread_amount: Uint256::from(13312u128),
                     commission_amount: Uint256::from(23312u128),

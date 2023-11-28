@@ -24,7 +24,7 @@ use crate::{
     },
 };
 use cosmwasm_std::{
-    to_binary, Addr, BlockInfo, Coin, Decimal, DepsMut, Env, MessageInfo, Timestamp, Uint128,
+    to_json_binary, Addr, BlockInfo, Coin, Decimal, DepsMut, Env, MessageInfo, Timestamp, Uint128,
 };
 use std::{cmp::max, str::FromStr};
 
@@ -118,7 +118,7 @@ impl Default for Vault {
                 allocation: Decimal::percent(100),
                 address: Addr::unchecked("staking-router"),
                 msg: Some(
-                    to_binary(&ExecuteMsg::ZDelegate {
+                    to_json_binary(&ExecuteMsg::ZDelegate {
                         delegator_address: Addr::unchecked(USER),
                         validator_address: Addr::unchecked(VALIDATOR),
                     })

@@ -32,7 +32,8 @@ use crate::handlers::z_delegate::{log_delegation_result, z_delegate_handler};
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{
-    entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
+    StdResult,
 };
 
 pub const CONTRACT_NAME: &str = "crates.io:calc-dca";
@@ -189,38 +190,38 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, Contract
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetPairs { limit, start_after } => {
-            to_binary(&get_pairs_handler(deps, limit, start_after)?)
+            to_json_binary(&get_pairs_handler(deps, limit, start_after)?)
         }
         QueryMsg::GetTimeTriggerIds { limit } => {
-            to_binary(&get_time_trigger_ids_handler(deps, env, limit)?)
+            to_json_binary(&get_time_trigger_ids_handler(deps, env, limit)?)
         }
-        QueryMsg::GetTriggerIdByFinLimitOrderIdx { order_idx } => to_binary(
+        QueryMsg::GetTriggerIdByFinLimitOrderIdx { order_idx } => to_json_binary(
             &get_trigger_id_by_fin_limit_order_idx_handler(deps, order_idx)?,
         ),
         QueryMsg::GetVaults {
             start_after,
             limit,
             reverse,
-        } => to_binary(&get_vaults_handler(deps, start_after, limit, reverse)?),
+        } => to_json_binary(&get_vaults_handler(deps, start_after, limit, reverse)?),
         QueryMsg::GetVaultsByAddress {
             address,
             status,
             start_after,
             limit,
-        } => to_binary(&get_vaults_by_address_handler(
+        } => to_json_binary(&get_vaults_by_address_handler(
             deps,
             address,
             status,
             start_after,
             limit,
         )?),
-        QueryMsg::GetVault { vault_id } => to_binary(&get_vault_handler(deps, vault_id)?),
+        QueryMsg::GetVault { vault_id } => to_json_binary(&get_vault_handler(deps, vault_id)?),
         QueryMsg::GetEventsByResourceId {
             resource_id,
             start_after,
             limit,
             reverse,
-        } => to_binary(&get_events_by_resource_id_handler(
+        } => to_json_binary(&get_events_by_resource_id_handler(
             deps,
             resource_id,
             start_after,
@@ -231,13 +232,13 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             start_after,
             limit,
             reverse,
-        } => to_binary(&get_events_handler(deps, start_after, limit, reverse)?),
-        QueryMsg::GetConfig {} => to_binary(&get_config_handler(deps)?),
+        } => to_json_binary(&get_events_handler(deps, start_after, limit, reverse)?),
+        QueryMsg::GetConfig {} => to_json_binary(&get_config_handler(deps)?),
         QueryMsg::GetVaultPerformance { vault_id } => {
-            to_binary(&get_vault_performance_handler(deps, vault_id)?)
+            to_json_binary(&get_vault_performance_handler(deps, vault_id)?)
         }
         QueryMsg::GetDisburseEscrowTasks { limit } => {
-            to_binary(&get_disburse_escrow_tasks_handler(deps, env, limit)?)
+            to_json_binary(&get_disburse_escrow_tasks_handler(deps, env, limit)?)
         }
     }
 }

@@ -14,7 +14,7 @@ use crate::types::event::{EventBuilder, EventData, ExecutionSkippedReason};
 use crate::types::swap_adjustment_strategy::SwapAdjustmentStrategy;
 use crate::types::trigger::{Trigger, TriggerConfiguration};
 use crate::types::vault::{Vault, VaultStatus};
-use cosmwasm_std::{to_binary, Coin, Decimal, SubMsg, WasmMsg};
+use cosmwasm_std::{to_json_binary, Coin, Decimal, SubMsg, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{DepsMut, Env, Response, Uint128};
 use exchange::msg::{ExecuteMsg as ExchangeExecuteMsg, Order, QueryMsg as ExchangeQueryMsg};
@@ -76,7 +76,7 @@ pub fn execute_trigger_handler(
 
             response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
                 contract_addr: config.exchange_contract_address.to_string(),
-                msg: to_binary(&ExchangeExecuteMsg::WithdrawOrder {
+                msg: to_json_binary(&ExchangeExecuteMsg::WithdrawOrder {
                     order_idx,
                     denoms: vault.denoms(),
                 })
@@ -168,7 +168,7 @@ pub fn execute_trigger_handler(
         if vault.should_not_continue() && vault.escrowed_amount.amount > Uint128::zero() {
             response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
                 contract_addr: env.contract.address.to_string(),
-                msg: to_binary(&ExecuteMsg::DisburseEscrow { vault_id: vault.id })?,
+                msg: to_json_binary(&ExecuteMsg::DisburseEscrow { vault_id: vault.id })?,
                 funds: vec![],
             }));
         }
@@ -286,7 +286,7 @@ pub fn execute_trigger_handler(
         .add_submessage(SubMsg::reply_always(
             WasmMsg::Execute {
                 contract_addr: config.exchange_contract_address.to_string(),
-                msg: to_binary(&ExchangeExecuteMsg::Swap {
+                msg: to_json_binary(&ExchangeExecuteMsg::Swap {
                     minimum_receive_amount: Coin {
                         amount: adjusted_minimum_receive_amount,
                         denom: vault.target_denom,
@@ -322,7 +322,7 @@ mod execute_trigger_tests {
     use crate::types::trigger::TriggerConfiguration;
     use crate::types::vault::{Vault, VaultStatus};
     use cosmwasm_std::testing::{mock_env, mock_info};
-    use cosmwasm_std::{to_binary, Coin, Decimal, SubMsg, Uint128, WasmMsg};
+    use cosmwasm_std::{to_json_binary, Coin, Decimal, SubMsg, Uint128, WasmMsg};
 
     #[test]
     fn when_contract_is_paused_should_fail() {
@@ -557,7 +557,7 @@ mod execute_trigger_tests {
             response.messages.first().unwrap(),
             &SubMsg::new(WasmMsg::Execute {
                 contract_addr: config.exchange_contract_address.to_string(),
-                msg: to_binary(&ExchangeExecuteMsg::WithdrawOrder {
+                msg: to_json_binary(&ExchangeExecuteMsg::WithdrawOrder {
                     order_idx,
                     denoms: vault.denoms()
                 })
@@ -768,7 +768,7 @@ mod execute_trigger_tests {
             &SubMsg::reply_always(
                 WasmMsg::Execute {
                     contract_addr: config.exchange_contract_address.to_string(),
-                    msg: to_binary(&ExchangeExecuteMsg::Swap {
+                    msg: to_json_binary(&ExchangeExecuteMsg::Swap {
                         minimum_receive_amount: Coin {
                             amount: vault.minimum_receive_amount.unwrap_or(Uint128::zero()),
                             denom: vault.target_denom.clone(),
@@ -985,7 +985,7 @@ mod execute_trigger_tests {
 
         assert!(response.messages.contains(&SubMsg::new(WasmMsg::Execute {
             contract_addr: env.contract.address.to_string(),
-            msg: to_binary(&ExecuteMsg::DisburseEscrow { vault_id: vault.id }).unwrap(),
+            msg: to_json_binary(&ExecuteMsg::DisburseEscrow { vault_id: vault.id }).unwrap(),
             funds: vec![],
         })));
     }
@@ -1219,7 +1219,7 @@ mod execute_trigger_tests {
             &SubMsg::reply_always(
                 WasmMsg::Execute {
                     contract_addr: config.exchange_contract_address.to_string(),
-                    msg: to_binary(&ExchangeExecuteMsg::Swap {
+                    msg: to_json_binary(&ExchangeExecuteMsg::Swap {
                         minimum_receive_amount: Coin {
                             amount: vault.minimum_receive_amount.unwrap_or(Uint128::zero()),
                             denom: vault.target_denom.clone(),
@@ -1260,7 +1260,7 @@ mod execute_trigger_tests {
             &SubMsg::reply_always(
                 WasmMsg::Execute {
                     contract_addr: config.exchange_contract_address.to_string(),
-                    msg: to_binary(&ExchangeExecuteMsg::Swap {
+                    msg: to_json_binary(&ExchangeExecuteMsg::Swap {
                         minimum_receive_amount: Coin {
                             amount: vault.minimum_receive_amount.unwrap_or(Uint128::zero()),
                             denom: vault.target_denom.clone(),
@@ -1300,7 +1300,7 @@ mod execute_trigger_tests {
             &SubMsg::reply_always(
                 WasmMsg::Execute {
                     contract_addr: config.exchange_contract_address.to_string(),
-                    msg: to_binary(&ExchangeExecuteMsg::Swap {
+                    msg: to_json_binary(&ExchangeExecuteMsg::Swap {
                         minimum_receive_amount: Coin {
                             amount: vault.minimum_receive_amount.unwrap_or(Uint128::zero()),
                             denom: vault.target_denom.clone(),
@@ -1420,7 +1420,7 @@ mod execute_trigger_tests {
             &SubMsg::reply_always(
                 WasmMsg::Execute {
                     contract_addr: config.exchange_contract_address.to_string(),
-                    msg: to_binary(&ExchangeExecuteMsg::Swap {
+                    msg: to_json_binary(&ExchangeExecuteMsg::Swap {
                         minimum_receive_amount: Coin {
                             amount: vault.minimum_receive_amount.unwrap_or(Uint128::zero()),
                             denom: vault.target_denom.clone(),

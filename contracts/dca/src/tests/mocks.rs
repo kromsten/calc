@@ -1,8 +1,8 @@
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{
-    from_binary, from_slice, to_binary, Binary, Coin, ContractResult, CustomQuery, Decimal,
-    Decimal256, Empty, OwnedDeps, Querier, QuerierResult, QueryRequest, StdError, StdResult,
-    SystemError, SystemResult, Uint128, Uint256, WasmQuery,
+    from_json, to_json_binary, Binary, Coin, ContractResult, CustomQuery, Decimal, Decimal256,
+    Empty, OwnedDeps, Querier, QuerierResult, QueryRequest, StdError, StdResult, SystemError,
+    SystemResult, Uint128, Uint256, WasmQuery,
 };
 use exchange::msg::Order;
 use exchange::msg::Pair;
@@ -32,35 +32,33 @@ impl<C: DeserializeOwned> CalcMockQuerier<C> {
 
         querier.update_wasm(|query| {
             SystemResult::Ok(ContractResult::Ok(match query {
-                WasmQuery::Smart { msg, .. } => {
-                    match from_binary::<ExchangeQueryMsg>(msg).unwrap() {
-                        ExchangeQueryMsg::GetPairs { .. } => {
-                            to_binary(&vec![Pair::default()]).unwrap()
-                        }
-                        ExchangeQueryMsg::GetOrder { .. } => to_binary(&Order {
-                            order_idx: Uint128::new(328472),
-                            remaining_offer_amount: Coin {
-                                amount: Uint256::zero().try_into().unwrap(),
-                                denom: DENOM_UUSK.to_string(),
-                            },
-                        })
-                        .unwrap(),
-                        ExchangeQueryMsg::GetTwapToNow { .. } => {
-                            to_binary(&Decimal256::percent(100)).unwrap()
-                        }
-                        ExchangeQueryMsg::GetExpectedReceiveAmount {
-                            swap_amount,
-                            target_denom,
-                        } => to_binary(&Coin {
-                            amount: swap_amount.amount * Decimal::percent(95),
-                            denom: target_denom,
-                        })
-                        .unwrap(),
-                        ExchangeQueryMsg::InternalQuery { .. } => {
-                            unimplemented!("Internal query unsupported")
-                        }
+                WasmQuery::Smart { msg, .. } => match from_json::<ExchangeQueryMsg>(msg).unwrap() {
+                    ExchangeQueryMsg::GetPairs { .. } => {
+                        to_json_binary(&vec![Pair::default()]).unwrap()
                     }
-                }
+                    ExchangeQueryMsg::GetOrder { .. } => to_json_binary(&Order {
+                        order_idx: Uint128::new(328472),
+                        remaining_offer_amount: Coin {
+                            amount: Uint256::zero().try_into().unwrap(),
+                            denom: DENOM_UUSK.to_string(),
+                        },
+                    })
+                    .unwrap(),
+                    ExchangeQueryMsg::GetTwapToNow { .. } => {
+                        to_json_binary(&Decimal256::percent(100)).unwrap()
+                    }
+                    ExchangeQueryMsg::GetExpectedReceiveAmount {
+                        swap_amount,
+                        target_denom,
+                    } => to_json_binary(&Coin {
+                        amount: swap_amount.amount * Decimal::percent(95),
+                        denom: target_denom,
+                    })
+                    .unwrap(),
+                    ExchangeQueryMsg::InternalQuery { .. } => {
+                        unimplemented!("Internal query unsupported")
+                    }
+                },
                 _ => panic!("Unsupported contract addr"),
             }))
         });
@@ -87,7 +85,7 @@ impl<C: DeserializeOwned> Default for CalcMockQuerier<C> {
 
 impl<C: CustomQuery + DeserializeOwned> Querier for CalcMockQuerier<C> {
     fn raw_query(&self, bin_request: &[u8]) -> QuerierResult {
-        let request: QueryRequest<C> = match from_slice(bin_request) {
+        let request: QueryRequest<C> = match from_json(bin_request) {
             Ok(v) => v,
             Err(e) => {
                 return SystemResult::Err(SystemError::InvalidRequest {
@@ -118,35 +116,33 @@ impl<C: CustomQuery + DeserializeOwned> CalcMockQuerier<C> {
     pub fn update_fin_price(&mut self, price: &'static Decimal) {
         self.mock_querier.update_wasm(move |query| {
             SystemResult::Ok(ContractResult::Ok(match query {
-                WasmQuery::Smart { msg, .. } => {
-                    match from_binary::<ExchangeQueryMsg>(msg).unwrap() {
-                        ExchangeQueryMsg::GetPairs { .. } => {
-                            to_binary(&vec![Pair::default()]).unwrap()
-                        }
-                        ExchangeQueryMsg::GetOrder { .. } => to_binary(&Order {
-                            order_idx: Uint128::new(328472),
-                            remaining_offer_amount: Coin {
-                                amount: Uint256::zero().try_into().unwrap(),
-                                denom: DENOM_UUSK.to_string(),
-                            },
-                        })
-                        .unwrap(),
-                        ExchangeQueryMsg::GetTwapToNow { .. } => to_binary(&price).unwrap(),
-                        ExchangeQueryMsg::GetExpectedReceiveAmount {
-                            swap_amount,
-                            target_denom,
-                        } => to_binary(&Coin {
-                            amount: swap_amount.amount
-                                * (Decimal::one() / price)
-                                * Decimal::percent(95),
-                            denom: target_denom,
-                        })
-                        .unwrap(),
-                        ExchangeQueryMsg::InternalQuery { .. } => {
-                            unimplemented!("Internal query unsupported")
-                        }
+                WasmQuery::Smart { msg, .. } => match from_json::<ExchangeQueryMsg>(msg).unwrap() {
+                    ExchangeQueryMsg::GetPairs { .. } => {
+                        to_json_binary(&vec![Pair::default()]).unwrap()
                     }
-                }
+                    ExchangeQueryMsg::GetOrder { .. } => to_json_binary(&Order {
+                        order_idx: Uint128::new(328472),
+                        remaining_offer_amount: Coin {
+                            amount: Uint256::zero().try_into().unwrap(),
+                            denom: DENOM_UUSK.to_string(),
+                        },
+                    })
+                    .unwrap(),
+                    ExchangeQueryMsg::GetTwapToNow { .. } => to_json_binary(&price).unwrap(),
+                    ExchangeQueryMsg::GetExpectedReceiveAmount {
+                        swap_amount,
+                        target_denom,
+                    } => to_json_binary(&Coin {
+                        amount: swap_amount.amount
+                            * (Decimal::one() / price)
+                            * Decimal::percent(95),
+                        denom: target_denom,
+                    })
+                    .unwrap(),
+                    ExchangeQueryMsg::InternalQuery { .. } => {
+                        unimplemented!("Internal query unsupported")
+                    }
+                },
                 _ => panic!("Unsupported contract addr"),
             }))
         });

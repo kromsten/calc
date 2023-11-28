@@ -1,13 +1,14 @@
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{
-    from_slice, to_binary, Addr, Binary, Coin as CosmosCoin, ContractResult, CustomQuery, Empty,
-    OwnedDeps, Querier, QuerierResult, QueryRequest, StdError, StdResult, SystemError,
+    from_json, to_json_binary, Addr, Binary, Coin as CosmosCoin, ContractResult, CustomQuery,
+    Empty, OwnedDeps, Querier, QuerierResult, QueryRequest, StdError, StdResult, SystemError,
     SystemResult, Uint128, WasmQuery,
 };
 use osmosis_std::shim::Any;
 use osmosis_std::types::cosmos::base::v1beta1::Coin;
+use osmosis_std::types::osmosis::concentratedliquidity::v1beta1::Pool as ConcentratedLiquidityPool;
 use osmosis_std::types::osmosis::gamm::v1beta1::{
-    Pool, PoolAsset, PoolParams, QueryCalcJoinPoolSharesResponse,
+    Pool as GammPool, PoolAsset, PoolParams, QueryCalcJoinPoolSharesResponse,
 };
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{
     EstimateSwapExactAmountInResponse, PoolRequest, PoolResponse,
@@ -34,24 +35,24 @@ impl<C: DeserializeOwned> CalcMockQuerier<C> {
         Self {
             default_stargate_handler: Box::new(|path, data| match path {
                 "/osmosis.twap.v1beta1.Query/ArithmeticTwapToNow" => {
-                    to_binary(&ArithmeticTwapResponse {
+                    to_json_binary(&ArithmeticTwapResponse {
                         arithmetic_twap: ONE_DECIMAL.to_string(),
                     })
                 }
                 "/osmosis.poolmanager.v1beta1.Query/EstimateSwapExactAmountIn" => {
-                    to_binary(&EstimateSwapExactAmountInResponse {
+                    to_json_binary(&EstimateSwapExactAmountInResponse {
                         token_out_amount: Uint128::new(1231232).to_string(),
                     })
                 }
                 "/osmosis.gamm.v1beta1.Query/CalcJoinPoolShares" => {
-                    to_binary(&QueryCalcJoinPoolSharesResponse {
+                    to_json_binary(&QueryCalcJoinPoolSharesResponse {
                         share_out_amount: TEN.to_string(),
                         tokens_out: vec![],
                     })
                 }
                 "/osmosis.poolmanager.v1beta1.Query/Pool" => {
-                    let pools = vec![
-                        Pool {
+                    let gamm_pools = vec![
+                        GammPool {
                             id: 0,
                             pool_assets: vec![
                                 PoolAsset {
@@ -74,9 +75,9 @@ impl<C: DeserializeOwned> CalcMockQuerier<C> {
                                 exit_fee: ".01".to_string(),
                                 smooth_weight_change_params: None,
                             }),
-                            ..Pool::default()
+                            ..GammPool::default()
                         },
-                        Pool {
+                        GammPool {
                             id: 1,
                             pool_assets: vec![
                                 PoolAsset {
@@ -98,9 +99,9 @@ impl<C: DeserializeOwned> CalcMockQuerier<C> {
                                 swap_fee: SWAP_FEE_RATE.to_string(),
                                 ..PoolParams::default()
                             }),
-                            ..Pool::default()
+                            ..GammPool::default()
                         },
-                        Pool {
+                        GammPool {
                             id: 2,
                             pool_assets: vec![
                                 PoolAsset {
@@ -122,9 +123,9 @@ impl<C: DeserializeOwned> CalcMockQuerier<C> {
                                 swap_fee: SWAP_FEE_RATE.to_string(),
                                 ..PoolParams::default()
                             }),
-                            ..Pool::default()
+                            ..GammPool::default()
                         },
-                        Pool {
+                        GammPool {
                             id: 3,
                             pool_assets: vec![
                                 PoolAsset {
@@ -146,9 +147,9 @@ impl<C: DeserializeOwned> CalcMockQuerier<C> {
                                 swap_fee: SWAP_FEE_RATE.to_string(),
                                 ..PoolParams::default()
                             }),
-                            ..Pool::default()
+                            ..GammPool::default()
                         },
-                        Pool {
+                        GammPool {
                             id: 4,
                             pool_assets: vec![
                                 PoolAsset {
@@ -170,16 +171,65 @@ impl<C: DeserializeOwned> CalcMockQuerier<C> {
                                 swap_fee: SWAP_FEE_RATE.to_string(),
                                 ..PoolParams::default()
                             }),
-                            ..Pool::default()
+                            ..GammPool::default()
+                        },
+                    ];
+
+                    let cl_pools = vec![
+                        ConcentratedLiquidityPool {
+                            id: 5,
+                            token0: DENOM_UOSMO.to_string(),
+                            token1: DENOM_UATOM.to_string(),
+                            ..ConcentratedLiquidityPool::default()
+                        },
+                        ConcentratedLiquidityPool {
+                            id: 6,
+                            token0: DENOM_UOSMO.to_string(),
+                            token1: DENOM_UION.to_string(),
+                            ..ConcentratedLiquidityPool::default()
+                        },
+                        ConcentratedLiquidityPool {
+                            id: 7,
+                            token0: DENOM_UION.to_string(),
+                            token1: DENOM_USDC.to_string(),
+                            ..ConcentratedLiquidityPool::default()
+                        },
+                        ConcentratedLiquidityPool {
+                            id: 8,
+                            token0: DENOM_STAKE.to_string(),
+                            token1: DENOM_UOSMO.to_string(),
+                            ..ConcentratedLiquidityPool::default()
+                        },
+                        ConcentratedLiquidityPool {
+                            id: 9,
+                            token0: DENOM_STAKE.to_string(),
+                            token1: DENOM_UION.to_string(),
+                            ..ConcentratedLiquidityPool::default()
                         },
                     ];
 
                     let pool_id = PoolRequest::decode(data.as_slice()).unwrap().pool_id;
 
-                    to_binary(&PoolResponse {
+                    to_json_binary(&PoolResponse {
                         pool: Some(Any {
-                            type_url: Pool::TYPE_URL.to_string(),
-                            value: pools[pool_id as usize].clone().encode_to_vec(),
+                            type_url: match pool_id {
+                                0..=4 => GammPool::TYPE_URL.to_string(),
+                                5.. => ConcentratedLiquidityPool::TYPE_URL.to_string(),
+                            },
+                            value: match pool_id {
+                                0..=4 => gamm_pools
+                                    .iter()
+                                    .find(|pool| pool.id == pool_id)
+                                    .unwrap()
+                                    .clone()
+                                    .encode_to_vec(),
+                                5.. => cl_pools
+                                    .iter()
+                                    .find(|pool| pool.id == pool_id)
+                                    .unwrap()
+                                    .clone()
+                                    .encode_to_vec(),
+                            },
                         }),
                     })
                 }
@@ -197,7 +247,7 @@ impl<C: DeserializeOwned> CalcMockQuerier<C> {
 
 impl<C: CustomQuery + DeserializeOwned> Querier for CalcMockQuerier<C> {
     fn raw_query(&self, bin_request: &[u8]) -> QuerierResult {
-        let request: QueryRequest<C> = match from_slice(bin_request) {
+        let request: QueryRequest<C> = match from_json(bin_request) {
             Ok(v) => v,
             Err(e) => {
                 return SystemResult::Err(SystemError::InvalidRequest {

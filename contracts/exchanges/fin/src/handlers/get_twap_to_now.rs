@@ -56,8 +56,8 @@ pub fn get_twap_to_now_handler(
 #[cfg(test)]
 mod get_twap_to_now_tests {
     use cosmwasm_std::{
-        testing::mock_dependencies, to_binary, ContractResult, Decimal256, StdError, SystemResult,
-        Uint256,
+        testing::mock_dependencies, to_json_binary, ContractResult, Decimal256, StdError,
+        SystemResult, Uint256,
     };
     use cw20::Denom;
     use kujira_fin::{BookResponse, PoolResponse};
@@ -109,7 +109,7 @@ mod get_twap_to_now_tests {
 
         deps.querier.update_wasm(|_| {
             SystemResult::Ok(ContractResult::Ok(
-                to_binary(&BookResponse {
+                to_json_binary(&BookResponse {
                     base: vec![],
                     quote: vec![],
                 })
@@ -142,7 +142,7 @@ mod get_twap_to_now_tests {
 
         deps.querier.update_wasm(move |_| {
             SystemResult::Ok(ContractResult::Ok(
-                to_binary(&BookResponse {
+                to_json_binary(&BookResponse {
                     base: vec![PoolResponse {
                         quote_price: Decimal256::percent(50),
                         offer_denom: Denom::Native(pair.base_denom.to_string()),
@@ -182,7 +182,7 @@ mod get_twap_to_now_tests {
 
         deps.querier.update_wasm(move |_| {
             SystemResult::Ok(ContractResult::Ok(
-                to_binary(&BookResponse {
+                to_json_binary(&BookResponse {
                     base: vec![PoolResponse {
                         quote_price: Decimal256::percent(50),
                         offer_denom: Denom::Native(pair.base_denom.to_string()),

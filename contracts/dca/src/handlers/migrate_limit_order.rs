@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, Coin, DepsMut, Reply, Response, SubMsg, Uint128, WasmMsg};
+use cosmwasm_std::{to_json_binary, Coin, DepsMut, Reply, Response, SubMsg, Uint128, WasmMsg};
 use exchange::msg::ExecuteMsg;
 
 use crate::{
@@ -33,7 +33,7 @@ pub fn migrate_limit_order(deps: DepsMut, vault_id: Uint128) -> Result<Response,
         response = response.add_submessage(SubMsg::reply_on_error(
             WasmMsg::Execute {
                 contract_addr: config.exchange_contract_address.to_string(),
-                msg: to_binary(&ExecuteMsg::RetractOrder {
+                msg: to_json_binary(&ExecuteMsg::RetractOrder {
                     order_idx,
                     denoms: vault.denoms(),
                 })
@@ -46,7 +46,7 @@ pub fn migrate_limit_order(deps: DepsMut, vault_id: Uint128) -> Result<Response,
         response = response.add_submessage(SubMsg::reply_on_error(
             WasmMsg::Execute {
                 contract_addr: config.exchange_contract_address.to_string(),
-                msg: to_binary(&ExecuteMsg::WithdrawOrder {
+                msg: to_json_binary(&ExecuteMsg::WithdrawOrder {
                     order_idx,
                     denoms: vault.denoms(),
                 })
@@ -59,7 +59,7 @@ pub fn migrate_limit_order(deps: DepsMut, vault_id: Uint128) -> Result<Response,
         response = response.add_submessage(SubMsg::reply_on_success(
             WasmMsg::Execute {
                 contract_addr: config.exchange_contract_address.to_string(),
-                msg: to_binary(&ExecuteMsg::SubmitOrder {
+                msg: to_json_binary(&ExecuteMsg::SubmitOrder {
                     target_price: target_price.into(),
                     target_denom: vault.target_denom.clone(),
                 })

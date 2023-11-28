@@ -1,5 +1,7 @@
+use std::any::type_name;
+
 use crate::types::pair::Pair;
-use cosmwasm_std::{Order, StdResult, Storage};
+use cosmwasm_std::{Order, StdError, StdResult, Storage};
 use cw_storage_plus::{Bound, Map};
 
 const PAIRS: Map<String, Pair> = Map::new("pairs_v1");
@@ -14,7 +16,9 @@ fn key_from(mut denoms: [String; 2]) -> String {
 }
 
 pub fn find_pair(storage: &dyn Storage, denoms: [String; 2]) -> StdResult<Pair> {
-    PAIRS.load(storage, key_from(denoms))
+    PAIRS
+        .load(storage, key_from(denoms))
+        .map_err(|_| StdError::not_found(type_name::<Pair>()))
 }
 
 pub fn get_pairs(

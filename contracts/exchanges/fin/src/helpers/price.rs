@@ -43,7 +43,7 @@ pub fn get_fin_price(
 #[cfg(test)]
 mod calculate_target_price_tests {
     use cosmwasm_std::{
-        testing::mock_dependencies, to_binary, Addr, ContractResult, Decimal256, SystemResult,
+        testing::mock_dependencies, to_json_binary, Addr, ContractResult, Decimal256, SystemResult,
         Uint128, Uint256,
     };
     use cw20::Denom;
@@ -62,7 +62,7 @@ mod calculate_target_price_tests {
 
         deps.querier.update_wasm(move |_| {
             SystemResult::Ok(ContractResult::Ok(
-                to_binary(&ConfigResponse {
+                to_json_binary(&ConfigResponse {
                     price_precision: Precision::DecimalPlaces(3),
                     decimal_delta: 0,
                     owner: Addr::unchecked("Hans"),
@@ -94,7 +94,7 @@ mod calculate_target_price_tests {
 
         deps.querier.update_wasm(move |_| {
             SystemResult::Ok(ContractResult::Ok(
-                to_binary(&ConfigResponse {
+                to_json_binary(&ConfigResponse {
                     price_precision: Precision::DecimalPlaces(3),
                     decimal_delta: 0,
                     owner: Addr::unchecked("Hans"),
@@ -126,7 +126,7 @@ mod calculate_target_price_tests {
 
         deps.querier.update_wasm(move |_| {
             SystemResult::Ok(ContractResult::Ok(
-                to_binary(&ConfigResponse {
+                to_json_binary(&ConfigResponse {
                     price_precision: Precision::DecimalPlaces(3),
                     decimal_delta: 0,
                     owner: Addr::unchecked("Hans"),
@@ -162,7 +162,7 @@ mod calculate_target_price_tests {
 
         deps.querier.update_wasm(move |_| {
             SystemResult::Ok(ContractResult::Ok(
-                to_binary(&ConfigResponse {
+                to_json_binary(&ConfigResponse {
                     price_precision: Precision::DecimalPlaces(2),
                     decimal_delta: 12,
                     owner: Addr::unchecked("Hans"),
@@ -201,7 +201,7 @@ mod calculate_target_price_tests {
 
         deps.querier.update_wasm(move |_| {
             SystemResult::Ok(ContractResult::Ok(
-                to_binary(&ConfigResponse {
+                to_json_binary(&ConfigResponse {
                     price_precision: Precision::DecimalPlaces(2),
                     decimal_delta: 12,
                     owner: Addr::unchecked("Hans"),
