@@ -1,0 +1,32 @@
+[package]
+name = "astrovault-calc"
+version = "1.0.1"
+authors = ["Kromsten <kromsten@pm.me>"]
+edition = "2021"
+
+exclude = ["contract.wasm", "hash.txt"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+
+[features]
+backtraces = ["cosmwasm-std/backtraces"]
+library = []
+
+[dependencies]
+astrovault              = "0.1.2"
+cosmwasm-schema         =  { workspace = true }
+cosmwasm-std            =  { workspace = true }
+cosmwasm-storage        =  { workspace = true }
+cw-storage-plus         =  { workspace = true }
+cw-utils                =  { workspace = true }
+cw20                    =  { workspace = true }
+
+schemars                =  { workspace = true }
+serde                   =  { workspace = true }
+thiserror               =  { workspace = true }
+
+shared                  =  { workspace = true }
+exchange                =  { workspace = true }
+exchange-macros         =  { workspace = true }
