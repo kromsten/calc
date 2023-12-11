@@ -66,17 +66,19 @@ mod get_twap_to_now_tests {
 
     #[test]
     fn with_no_pair_for_denoms_fails() {
-        assert_eq!(
-            get_twap_to_now_handler(
-                mock_dependencies().as_ref(),
-                DENOM_AARCH.to_string(),
-                DENOM_UUSDC.to_string(),
-                0
-            )
-            .unwrap_err(),
-            StdError::NotFound {
-                kind: "astrovault_calc::types::pair::Pair".to_string()
-            }
+
+        let err = get_twap_to_now_handler(
+            mock_dependencies().as_ref(),
+            DENOM_AARCH.to_string(),
+            DENOM_UUSDC.to_string(),
+            0
         )
+        .unwrap_err();
+
+        match err {
+            StdError::NotFound { kind } => assert!(kind.starts_with("type: astrovault_calc::types::pair::Pair")),
+            _ => panic!("unexpected error type"),
+        }
+
     }
 }

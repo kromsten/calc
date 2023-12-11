@@ -1,5 +1,5 @@
 use cosmwasm_std::{Coin, Deps, StdResult};
-use crate::helpers::balance::coin_to_asset;
+use crate::helpers::balance::{coin_to_asset, to_asset_info};
 use crate::helpers::message::pool_swap_simulate;
 use crate::state::pairs::find_pair;
 
@@ -19,6 +19,7 @@ pub fn get_expected_receive_amount_handler(
         pair.address,
         pair.pool_type,
         coin_to_asset(swap_amount),
+        to_asset_info(target_denom.clone())
     )?;
 
     Ok(Coin {
@@ -30,8 +31,8 @@ pub fn get_expected_receive_amount_handler(
 #[cfg(test)]
 mod get_expected_receive_amount_handler_tests {
     use cosmwasm_std::{
-        testing::mock_dependencies, to_binary, Coin, ContractResult, StdError, SystemResult,
-        Uint128,
+        testing::mock_dependencies, Coin, ContractResult, StdError, SystemResult,
+        Uint128, to_json_binary,
     };
 
     use astrovault::standard_pool::query_msg::SimulationResponse;
@@ -45,21 +46,23 @@ mod get_expected_receive_amount_handler_tests {
 
     #[test]
     fn for_missing_pair_fails() {
-        assert_eq!(
-            get_expected_receive_amount_handler(
-                mock_dependencies().as_ref(),
-                Coin {
-                    denom: DENOM_AARCH.to_string(),
-                    amount: Uint128::zero()
-                },
-                DENOM_UUSDC.to_string()
-            )
-            .unwrap_err(),
-            StdError::NotFound {
-                kind: "astrovault_calc::types::pair::Pair".to_string()
-            }
-        )
+
+        let err = get_expected_receive_amount_handler(
+            mock_dependencies().as_ref(),
+            Coin {
+                denom: DENOM_AARCH.to_string(),
+                amount: Uint128::zero()
+            },
+            DENOM_UUSDC.to_string()
+        );
+
+        match err {
+            Err(StdError::NotFound { kind }) => assert!(kind.starts_with("type: astrovault_calc::types::pair::Pair")),
+            _ => panic!("Unexpected error type"),
+            
+        }
     }
+
 
     #[test]
     fn for_failed_simulation_fails() {
@@ -95,7 +98,7 @@ mod get_expected_receive_amount_handler_tests {
 
         deps.querier.update_wasm(|_| {
             SystemResult::Ok(ContractResult::Ok(
-                to_binary(&SimulationResponse {
+                to_json_binary(&SimulationResponse {
                     return_amount: Uint128::from(83211293u128),
                     spread_amount: Uint128::default(),
                     commission_amount: Uint128::from(23312u128),

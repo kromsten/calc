@@ -1,5 +1,5 @@
 use astrovault::assets::asset::{AssetInfo, Asset};
-use cosmwasm_std::{Addr, Coin, QuerierWrapper, StdResult, QueryRequest, WasmQuery, to_binary, Uint128, BalanceResponse, BankQuery};
+use cosmwasm_std::{Addr, Coin, QuerierWrapper, StdResult, QueryRequest, WasmQuery, to_json_binary, Uint128, BalanceResponse, BankQuery};
 use cw20::BalanceResponse as Cw20BalanceResponse;
 use shared::coin::subtract;
 
@@ -22,7 +22,7 @@ pub fn get_asset_balance(
         AssetInfo::Token { contract_addr, .. } => {
             let res : Cw20BalanceResponse =  querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                 contract_addr: contract_addr.to_string(),
-                msg: to_binary(&cw20::Cw20QueryMsg::Balance { 
+                msg: to_json_binary(&cw20::Cw20QueryMsg::Balance { 
                     address: address.to_string()
                 })?,
             }))?;

@@ -1,9 +1,8 @@
-use cosmwasm_std::{to_binary, Addr, Coin, CosmosMsg, StdResult, WasmMsg, Binary};
+use cosmwasm_schema::cw_serde;
+use cosmwasm_std::{to_json_binary, Addr, Coin, CosmosMsg, StdResult, WasmMsg, Binary};
 use astrovault::standard_pool::handle_msg::ExecuteMsg;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[cw_serde]
 pub struct PairContract(pub Addr);
 
 impl PairContract {
@@ -12,7 +11,7 @@ impl PairContract {
     }
 
     pub fn call<T: Into<ExecuteMsg>>(&self, msg: T, funds: Vec<Coin>) -> StdResult<CosmosMsg> {
-        let msg = to_binary(&msg.into())?;
+        let msg = to_json_binary(&msg.into())?;
         self.call_binary(msg, funds)
     }
 

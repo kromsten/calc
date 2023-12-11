@@ -1,5 +1,5 @@
 use astrovault::assets::asset::{Asset, AssetInfo};
-use cosmwasm_std::{Coin, Deps, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128, Addr, to_binary, Binary, WasmMsg};
+use cosmwasm_std::{Coin, Deps, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128, Addr, WasmMsg, to_json_binary};
 use cw_utils::one_coin;
 
 
@@ -10,7 +10,8 @@ use crate::{
         pairs::find_pair,
     },
     types::{pair_contract::PairContract, pair},
-    ContractError, helpers::{balance::get_asset_balance, message::{send_asset_msg, pool_swap_binary_msg, stable_pool_response}},
+    helpers::{balance::get_asset_balance, message::{send_asset_msg, pool_swap_binary_msg, query_assets}},
+    ContractError, 
 };
 
 
@@ -84,16 +85,23 @@ fn swap_handler(
         },
     )?;
 
-    let swap_to_asset_index = if pair.pool_type == pair::PoolType::Stable { 
-        let res = stable_pool_response(&deps.querier, pair.address.clone())?;
-        Some(
-            res.assets
-            .iter()
-            .position(|a| a.info == pair.other_asset(&offer_asset.info))
-            .unwrap_or(0) as u32
-        )
-    } else { 
-        None
+    let swap_to_asset_index = match pair.pool_type {
+        pair::PoolType::Ratio => None,
+        _ => {
+            let assets = query_assets(
+                    &deps.querier, 
+                    pair.address.clone(),
+                    pair.pool_type.clone()
+            )?;
+
+            Some(
+                assets
+                .iter()
+                .position(|a| a.info.equal(&minimum_receive_amount.info))
+                .unwrap_or(1) as u32
+            )
+        }
+        
     };
 
     let swap_msg = pool_swap_binary_msg(
@@ -106,13 +114,14 @@ fn swap_handler(
         None
     )?;
 
+
     let msg = if offer_asset.is_native_token() {
         PairContract(pair.address).call_binary(swap_msg,funds,)?
     } else {
 
         WasmMsg::Execute { 
             contract_addr: offer_asset.info.to_string(), 
-            msg: to_binary(&cw20::Cw20ExecuteMsg::Send { 
+            msg: to_json_binary(&cw20::Cw20ExecuteMsg::Send { 
                 contract: pair.address.to_string(),
                 amount: offer_asset.amount, 
                 msg: swap_msg 
@@ -164,7 +173,6 @@ pub fn return_swapped_funds(deps: Deps, env: Env) -> Result<Response, ContractEr
         swap_cache.target_asset_balance.info,
         return_amount 
     )?;
-
 
     Ok(Response::new()
         .add_attribute("return_amount", return_amount.to_string())
@@ -240,18 +248,18 @@ mod swap_tests {
 
     #[test]
     fn with_no_pair_fails() {
-        assert_eq!(
-            swap_native_handler(
-                mock_dependencies().as_mut(),
-                mock_env(),
-                mock_info(ADMIN, &[Coin::new(12312, DENOM_AARCH)]),
-                Asset { info: AssetInfo::NativeToken { denom: DENOM_UUSDC.into() }, amount: 12312u128.into() } 
-            )
-            .unwrap_err(),
-            ContractError::Std(StdError::NotFound {
-                kind: "astrovault_calc::types::pair::Pair".to_string()
-            })
-        )
+
+        let err = swap_native_handler(
+            mock_dependencies().as_mut(),
+            mock_env(),
+            mock_info(ADMIN, &[Coin::new(12312, DENOM_AARCH)]),
+            Asset { info: AssetInfo::NativeToken { denom: DENOM_AARCH.into() }, amount: 12312u128.into() } 
+        ).unwrap_err();
+
+        match err {
+            ContractError::Std(StdError::NotFound { kind }) => assert!(kind.starts_with("type: astrovault_calc::types::pair::Pair")),
+            _ => panic!("Wrong error type returned")
+        }
     }
 
     #[test]

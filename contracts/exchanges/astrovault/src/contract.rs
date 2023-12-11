@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, from_json, to_json_binary,
 };
 // use cw2::set_contract_version;
 
@@ -95,12 +95,12 @@ pub fn execute(
             order_idx: _, 
             denoms: _ 
         } => not_implemented_handle(),
-        ExecuteMsg::InternalMsg { msg } => match from_binary(&msg).unwrap() {
+        ExecuteMsg::InternalMsg { msg } => match from_json(&msg).unwrap() {
             InternalExecuteMsg::CreatePairs { pairs } => create_pairs_handler(deps, info, pairs),
         },
 
         ExecuteMsg::Receive(receive_msg) => {
-            let msg : ExecuteMsg = from_binary(&receive_msg.msg)?;
+            let msg : ExecuteMsg = from_json(&receive_msg.msg)?;
             match msg {
                 ExecuteMsg::Swap { 
                     minimum_receive_amount
@@ -123,17 +123,17 @@ pub fn execute(
 pub fn query(deps: Deps, _: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetPairs { start_after, limit } => {
-            to_binary(&get_pairs_handler(deps, start_after, limit)?)
+            to_json_binary(&get_pairs_handler(deps, start_after, limit)?)
         }
         QueryMsg::GetOrder { 
             order_idx: _, 
             denoms: _ 
-        } => to_binary(&not_implemented_query()?),
+        } => to_json_binary(&not_implemented_query()?),
         QueryMsg::GetTwapToNow {
             swap_denom,
             target_denom,
             period,
-        } => to_binary(&get_twap_to_now_handler(
+        } => to_json_binary(&get_twap_to_now_handler(
             deps,
             swap_denom,
             target_denom,
@@ -142,14 +142,14 @@ pub fn query(deps: Deps, _: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::GetExpectedReceiveAmount {
             swap_amount,
             target_denom,
-        } => to_binary(&get_expected_receive_amount_handler(
+        } => to_json_binary(&get_expected_receive_amount_handler(
             deps,
             swap_amount,
             target_denom,
         )?),
-        QueryMsg::InternalQuery { msg } => match from_binary(&msg).unwrap() {
+        QueryMsg::InternalQuery { msg } => match from_json(&msg).unwrap() {
             InternalQueryMsg::GetPairs { start_after, limit } => {
-                to_binary(&get_pairs_internal_handler(deps, start_after, limit)?)
+                to_json_binary(&get_pairs_internal_handler(deps, start_after, limit)?)
             }
         },
     }

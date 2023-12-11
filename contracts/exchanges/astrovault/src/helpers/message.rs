@@ -1,4 +1,4 @@
-use cosmwasm_std::{Event, StdError, StdResult, CosmosMsg, to_binary, WasmMsg, BankMsg, Coin, Uint128, Binary, Decimal, QuerierWrapper, Addr};
+use cosmwasm_std::{Event, StdError, StdResult, CosmosMsg, to_json_binary, WasmMsg, BankMsg, Coin, Uint128, Binary, Decimal, QuerierWrapper, Addr};
 use cw20::Cw20ExecuteMsg;
 
 use astrovault::{
@@ -26,7 +26,6 @@ use astrovault::{
         }
     },
     assets::asset::{Asset, AssetInfo}, 
-    
     ratio_pool_factory::query_msg::SwapCalcResponse
 };
 
@@ -62,7 +61,7 @@ pub fn send_asset_msg(
     match info {
         AssetInfo::Token { contract_addr } => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+            msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                 recipient,
                 amount,
             })?,
@@ -91,7 +90,7 @@ fn swap_standard_msg(
         to,
     };
 
-    to_binary(&msg)
+    to_json_binary(&msg)
 }
 
 
@@ -100,14 +99,12 @@ fn swap_stable_msg(
     swap_to_asset_index: Option<u32>,
     to: Option<String>,
 ) -> StdResult<Binary> {    
-
     let msg = StableExecute::Swap {
         expected_return,
         to,
-        swap_to_asset_index: swap_to_asset_index.unwrap_or(0),
+        swap_to_asset_index: swap_to_asset_index.unwrap_or(1),
     };
-    to_binary(&msg)
-
+    to_json_binary(&msg)
 }
 
 
@@ -119,7 +116,7 @@ pub fn swap_ratio_msg(
         expected_return,
         to,
     };
-    to_binary(&msg)
+    to_json_binary(&msg)
 }
 
 
@@ -142,12 +139,25 @@ fn simulate_swap_stable(
     querier: &QuerierWrapper,
     contract_addr: Addr,
     offer_asset: Asset,
+    target_asset: AssetInfo
 ) -> StdResult<Uint128> {
+
+    let assets = query_assets(querier, contract_addr.clone(), PoolType::Stable)?;
+
+    let from_index = assets
+        .iter()
+        .position(|a| a.info.equal(&offer_asset.info))
+        .unwrap_or(0) as u32;
+
+    let to_index = assets
+        .iter()
+        .position(|a| a.info.equal(&target_asset))
+        .unwrap_or(1);
 
     let msg = StableQuery::SwapSimulation { 
         amount: offer_asset.amount, 
-        swap_from_asset_index: 0, 
-        swap_to_asset_index: 0
+        swap_from_asset_index: from_index, 
+        swap_to_asset_index: to_index as u32
     };
 
     let res = querier.query_wasm_smart::<StablePoolQuerySwapSimulation>(
@@ -155,7 +165,10 @@ fn simulate_swap_stable(
         &msg
     )?;
 
-    Ok(res.swap_to_assets_amount.first().unwrap().clone())
+    let swap_amount = res.swap_to_assets_amount.get(to_index).unwrap().clone();
+    let mint_amount = res.mint_to_assets_amount.get(to_index).unwrap().clone();
+
+    Ok(swap_amount.checked_add(mint_amount)?)
 }
 
 
@@ -192,10 +205,11 @@ pub fn pool_swap_simulate(
     contract_addr: Addr,
     pool_type: PoolType,
     offer_asset: Asset,
+    target_asset: AssetInfo,
 ) -> StdResult<Uint128> {
     match pool_type {
         PoolType::Standard => simulate_swap_standard(querier, contract_addr, offer_asset),
-        PoolType::Stable => simulate_swap_stable(querier, contract_addr, offer_asset),
+        PoolType::Stable => simulate_swap_stable(querier, contract_addr, offer_asset, target_asset),
         PoolType::Ratio => simulate_swap_ratio(querier, contract_addr, offer_asset),
     }
 }
