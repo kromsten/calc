@@ -1,8 +1,9 @@
-use cosmwasm_std::{Decimal, Decimal256, Deps, Env, StdResult};
-use osmosis_std::{shim::Timestamp, types::osmosis::twap::v1beta1::TwapQuerier};
+use cosmwasm_std::{from_json, Binary, Decimal, Decimal256, Deps, Env, StdError, StdResult};
+use osmosis_std::types::osmosis::poolmanager::v1beta1::SwapAmountInRoute;
 
 use crate::{
-    helpers::routes::get_token_out_denom, state::pairs::find_pair,
+    helpers::{price::get_arithmetic_twap_to_now, routes::get_token_out_denom},
+    state::pairs::find_pair,
     types::position_type::PositionType,
 };
 
@@ -12,37 +13,63 @@ pub fn get_twap_to_now_handler(
     mut swap_denom: String,
     target_denom: String,
     period: u64,
+    injected_route: Option<Binary>,
 ) -> StdResult<Decimal256> {
-    let pair = find_pair(deps.storage, [swap_denom.clone(), target_denom])?;
+    let route = injected_route.map_or_else(
+        || {
+            let pair = find_pair(deps.storage, [swap_denom.clone(), target_denom.clone()])?;
 
-    let route = match pair.position_type(swap_denom.clone()) {
-        PositionType::Enter => pair.route,
-        PositionType::Exit => pair.route.into_iter().rev().collect(),
-    };
+            Ok(match pair.position_type(swap_denom.clone()) {
+                PositionType::Enter => pair.route,
+                PositionType::Exit => pair.route.into_iter().rev().collect(),
+            })
+        },
+        |r| {
+            from_json::<Vec<SwapAmountInRoute>>(r.as_slice()).map_or_else(
+                |e| Err(StdError::generic_err(e.to_string())),
+                |r| {
+                    Ok(r.into_iter()
+                        .map(|r: SwapAmountInRoute| r.pool_id)
+                        .collect::<Vec<u64>>())
+                },
+            )
+        },
+    )?;
 
     let mut price = Decimal::one();
 
-    for pool_id in route.into_iter() {
-        let target_denom = get_token_out_denom(&deps.querier, swap_denom.clone(), pool_id)?;
+    for adjacent_pools in route.windows(2).into_iter() {
+        let token_out_denom = get_token_out_denom(
+            &deps.querier,
+            swap_denom.clone(),
+            adjacent_pools[0],
+            adjacent_pools[1],
+        )?;
 
-        let pool_price = TwapQuerier::new(&deps.querier)
-            .arithmetic_twap_to_now(
-                pool_id,
-                target_denom.clone(),
-                swap_denom.clone(),
-                Some(Timestamp {
-                    seconds: (env.block.time.seconds() - period) as i64,
-                    nanos: 0,
-                }),
-            )
-            .unwrap()
-            .arithmetic_twap
-            .parse::<Decimal>()?;
+        let pool_price = get_arithmetic_twap_to_now(
+            &deps.querier,
+            env.clone(),
+            adjacent_pools[0],
+            swap_denom,
+            token_out_denom.clone(),
+            period,
+        )?;
 
         price = pool_price * price;
 
-        swap_denom = target_denom;
+        swap_denom = token_out_denom;
     }
+
+    let final_pool_price = get_arithmetic_twap_to_now(
+        &deps.querier,
+        env,
+        *route.last().unwrap(),
+        swap_denom,
+        target_denom,
+        period,
+    )?;
+
+    price = final_pool_price * price;
 
     Ok(price.into())
 }
@@ -76,7 +103,8 @@ mod get_twap_to_now_tests {
                 mock_env(),
                 DENOM_UOSMO.to_string(),
                 DENOM_UATOM.to_string(),
-                0
+                0,
+                None
             )
             .unwrap_err(),
             StdError::NotFound {
@@ -111,9 +139,15 @@ mod get_twap_to_now_tests {
 
         save_pair(deps.as_mut().storage, &pair).unwrap();
 
-        let price =
-            get_twap_to_now_handler(deps.as_ref(), env, pair.quote_denom, pair.base_denom, 60)
-                .unwrap();
+        let price = get_twap_to_now_handler(
+            deps.as_ref(),
+            env,
+            pair.quote_denom,
+            pair.base_denom,
+            60,
+            None,
+        )
+        .unwrap();
 
         assert_eq!(price, Decimal256::percent(80));
     }
@@ -148,9 +182,15 @@ mod get_twap_to_now_tests {
 
         save_pair(deps.as_mut().storage, &pair).unwrap();
 
-        let price =
-            get_twap_to_now_handler(deps.as_ref(), env, pair.quote_denom, pair.base_denom, 60)
-                .unwrap();
+        let price = get_twap_to_now_handler(
+            deps.as_ref(),
+            env,
+            pair.quote_denom,
+            pair.base_denom,
+            60,
+            None,
+        )
+        .unwrap();
 
         assert_eq!(price, Decimal256::percent(20) * Decimal256::percent(120));
     }

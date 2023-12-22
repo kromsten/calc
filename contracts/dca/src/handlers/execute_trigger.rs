@@ -14,7 +14,7 @@ use crate::types::event::{EventBuilder, EventData, ExecutionSkippedReason};
 use crate::types::swap_adjustment_strategy::SwapAdjustmentStrategy;
 use crate::types::trigger::{Trigger, TriggerConfiguration};
 use crate::types::vault::{Vault, VaultStatus};
-use cosmwasm_std::{to_json_binary, Coin, Decimal, SubMsg, WasmMsg};
+use cosmwasm_std::{to_json_binary, Binary, Coin, Decimal, SubMsg, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{DepsMut, Env, Response, Uint128};
 use exchange::msg::{ExecuteMsg as ExchangeExecuteMsg, Order, QueryMsg as ExchangeQueryMsg};
@@ -23,6 +23,7 @@ pub fn execute_trigger_handler(
     deps: DepsMut,
     env: Env,
     trigger_id: Uint128,
+    route: Option<Binary>,
 ) -> Result<Response, ContractError> {
     assert_contract_is_not_paused(deps.storage)?;
 
@@ -106,6 +107,7 @@ pub fn execute_trigger_handler(
     }
 
     let config = get_config(deps.storage)?;
+    let route = route.map_or(vault.route.clone(), Some);
 
     let belief_price = get_twap_to_now(
         &deps.querier,
@@ -113,6 +115,7 @@ pub fn execute_trigger_handler(
         vault.get_swap_denom(),
         vault.target_denom.clone(),
         config.twap_period,
+        route.clone(),
     )?;
 
     create_event(
@@ -220,6 +223,7 @@ pub fn execute_trigger_handler(
         adjusted_swap_amount.clone(),
         vault.target_denom.clone(),
         belief_price,
+        route.clone(),
     );
 
     match get_slippage_result {
@@ -291,6 +295,7 @@ pub fn execute_trigger_handler(
                         amount: adjusted_minimum_receive_amount,
                         denom: vault.target_denom,
                     },
+                    route,
                 })?,
                 funds: vec![adjusted_swap_amount],
             },
@@ -343,7 +348,7 @@ mod execute_trigger_tests {
         )
         .unwrap();
 
-        let err = execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap_err();
+        let err = execute_trigger_handler(deps.as_mut(), env, vault.id, None).unwrap_err();
 
         assert_eq!(err.to_string(), "Error: contract is paused");
     }
@@ -365,7 +370,7 @@ mod execute_trigger_tests {
             },
         );
 
-        let err = execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap_err();
+        let err = execute_trigger_handler(deps.as_mut(), env, vault.id, None).unwrap_err();
 
         assert_eq!(
             err.to_string(),
@@ -390,7 +395,7 @@ mod execute_trigger_tests {
             },
         );
 
-        execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap_err();
+        execute_trigger_handler(deps.as_mut(), env, vault.id, None).unwrap_err();
 
         let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
 
@@ -417,7 +422,7 @@ mod execute_trigger_tests {
 
         delete_trigger(deps.as_mut().storage, vault.id).unwrap();
 
-        let err = execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap_err();
+        let err = execute_trigger_handler(deps.as_mut(), env, vault.id, None).unwrap_err();
 
         assert_eq!(
             err.to_string(),
@@ -437,7 +442,7 @@ mod execute_trigger_tests {
 
         env.block.time = env.block.time.minus_seconds(10);
 
-        let err = execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap_err();
+        let err = execute_trigger_handler(deps.as_mut(), env, vault.id, None).unwrap_err();
 
         assert_eq!(
             err.to_string(),
@@ -462,7 +467,7 @@ mod execute_trigger_tests {
             },
         );
 
-        execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap();
+        execute_trigger_handler(deps.as_mut(), env, vault.id, None).unwrap();
 
         let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
 
@@ -487,7 +492,7 @@ mod execute_trigger_tests {
             },
         );
 
-        execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
+        execute_trigger_handler(deps.as_mut(), env.clone(), vault.id, None).unwrap();
 
         let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
 
@@ -505,7 +510,7 @@ mod execute_trigger_tests {
 
         let vault = setup_vault(deps.as_mut(), env.clone(), Vault::default());
 
-        execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
+        execute_trigger_handler(deps.as_mut(), env.clone(), vault.id, None).unwrap();
 
         let events = get_events_by_resource_id_handler(deps.as_ref(), vault.id, None, None, None)
             .unwrap()
@@ -549,7 +554,7 @@ mod execute_trigger_tests {
             },
         );
 
-        let response = execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap();
+        let response = execute_trigger_handler(deps.as_mut(), env, vault.id, None).unwrap();
 
         let config = get_config(deps.as_ref().storage).unwrap();
 
@@ -585,7 +590,7 @@ mod execute_trigger_tests {
             },
         );
 
-        execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap();
+        execute_trigger_handler(deps.as_mut(), env, vault.id, None).unwrap();
 
         let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
 
@@ -643,7 +648,7 @@ mod execute_trigger_tests {
             },
         );
 
-        execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap();
+        execute_trigger_handler(deps.as_mut(), env, vault.id, None).unwrap();
 
         let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
 
@@ -676,7 +681,7 @@ mod execute_trigger_tests {
 
         deps.querier.update_fin_price(&THREE_DECIMAL);
 
-        execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
+        execute_trigger_handler(deps.as_mut(), env.clone(), vault.id, None).unwrap();
 
         let events = get_events_by_resource_id_handler(deps.as_ref(), vault.id, None, None, None)
             .unwrap()
@@ -716,7 +721,7 @@ mod execute_trigger_tests {
 
         deps.querier.update_fin_price(&THREE_DECIMAL);
 
-        let response = execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap();
+        let response = execute_trigger_handler(deps.as_mut(), env, vault.id, None).unwrap();
 
         assert!(response.messages.is_empty());
     }
@@ -759,7 +764,7 @@ mod execute_trigger_tests {
                 .unwrap();
             });
 
-        let response = execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap();
+        let response = execute_trigger_handler(deps.as_mut(), env, vault.id, None).unwrap();
 
         let config = get_config(deps.as_ref().storage).unwrap();
 
@@ -773,6 +778,7 @@ mod execute_trigger_tests {
                             amount: vault.minimum_receive_amount.unwrap_or(Uint128::zero()),
                             denom: vault.target_denom.clone(),
                         },
+                        route: vault.route.clone()
                     })
                     .unwrap(),
                     funds: vec![Coin::new(
@@ -806,7 +812,7 @@ mod execute_trigger_tests {
 
         deps.querier.update_fin_price(&HALF_DECIMAL);
 
-        execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap();
+        execute_trigger_handler(deps.as_mut(), env, vault.id, None).unwrap();
 
         let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
 
@@ -837,7 +843,7 @@ mod execute_trigger_tests {
             },
         );
 
-        execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
+        execute_trigger_handler(deps.as_mut(), env.clone(), vault.id, None).unwrap();
 
         let events = get_events_by_resource_id_handler(deps.as_ref(), vault.id, None, None, None)
             .unwrap()
@@ -881,7 +887,7 @@ mod execute_trigger_tests {
 
         deps.querier.update_fin_price(&HALF_DECIMAL);
 
-        execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
+        execute_trigger_handler(deps.as_mut(), env.clone(), vault.id, None).unwrap();
 
         let events = get_events_by_resource_id_handler(deps.as_ref(), vault.id, None, None, None)
             .unwrap()
@@ -919,7 +925,7 @@ mod execute_trigger_tests {
             },
         );
 
-        execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap();
+        execute_trigger_handler(deps.as_mut(), env, vault.id, None).unwrap();
 
         let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
 
@@ -981,7 +987,7 @@ mod execute_trigger_tests {
 
         deps.querier.update_fin_price(&HALF_DECIMAL);
 
-        let response = execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
+        let response = execute_trigger_handler(deps.as_mut(), env.clone(), vault.id, None).unwrap();
 
         assert!(response.messages.contains(&SubMsg::new(WasmMsg::Execute {
             contract_addr: env.contract.address.to_string(),
@@ -1018,7 +1024,7 @@ mod execute_trigger_tests {
             },
         );
 
-        let response = execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap();
+        let response = execute_trigger_handler(deps.as_mut(), env, vault.id, None).unwrap();
 
         assert!(response.messages.is_empty());
     }
@@ -1033,7 +1039,7 @@ mod execute_trigger_tests {
 
         let vault = setup_vault(deps.as_mut(), env.clone(), Vault::default());
 
-        execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
+        execute_trigger_handler(deps.as_mut(), env.clone(), vault.id, None).unwrap();
 
         let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
 
@@ -1071,7 +1077,7 @@ mod execute_trigger_tests {
             },
         );
 
-        execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
+        execute_trigger_handler(deps.as_mut(), env.clone(), vault.id, None).unwrap();
 
         let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
 
@@ -1109,7 +1115,7 @@ mod execute_trigger_tests {
             },
         );
 
-        execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap();
+        execute_trigger_handler(deps.as_mut(), env, vault.id, None).unwrap();
 
         let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
 
@@ -1118,7 +1124,7 @@ mod execute_trigger_tests {
     }
 
     #[test]
-    fn for_inactive_vault_with_active_performance_asssessment_should_create_a_new_trigger() {
+    fn for_inactive_vault_with_active_performance_assessment_should_create_a_new_trigger() {
         let mut deps = calc_mock_dependencies();
         let env = mock_env();
         let info = mock_info(ADMIN, &[]);
@@ -1144,7 +1150,7 @@ mod execute_trigger_tests {
             },
         );
 
-        execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
+        execute_trigger_handler(deps.as_mut(), env.clone(), vault.id, None).unwrap();
 
         let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
 
@@ -1192,7 +1198,7 @@ mod execute_trigger_tests {
             },
         );
 
-        execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap();
+        execute_trigger_handler(deps.as_mut(), env, vault.id, None).unwrap();
 
         let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
 
@@ -1210,7 +1216,7 @@ mod execute_trigger_tests {
 
         let vault = setup_vault(deps.as_mut(), env.clone(), Vault::default());
 
-        let response = execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap();
+        let response = execute_trigger_handler(deps.as_mut(), env, vault.id, None).unwrap();
 
         let config = get_config(deps.as_ref().storage).unwrap();
 
@@ -1224,6 +1230,7 @@ mod execute_trigger_tests {
                             amount: vault.minimum_receive_amount.unwrap_or(Uint128::zero()),
                             denom: vault.target_denom.clone(),
                         },
+                        route: vault.route.clone()
                     })
                     .unwrap(),
                     funds: vec![Coin::new(vault.swap_amount.into(), vault.get_swap_denom())]
@@ -1251,7 +1258,7 @@ mod execute_trigger_tests {
             },
         );
 
-        let response = execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap();
+        let response = execute_trigger_handler(deps.as_mut(), env, vault.id, None).unwrap();
 
         let config = get_config(deps.as_ref().storage).unwrap();
 
@@ -1265,6 +1272,7 @@ mod execute_trigger_tests {
                             amount: vault.minimum_receive_amount.unwrap_or(Uint128::zero()),
                             denom: vault.target_denom.clone(),
                         },
+                        route: vault.route
                     })
                     .unwrap(),
                     funds: vec![vault.balance]
@@ -1291,7 +1299,7 @@ mod execute_trigger_tests {
             },
         );
 
-        let response = execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
+        let response = execute_trigger_handler(deps.as_mut(), env.clone(), vault.id, None).unwrap();
 
         let config = get_config(deps.as_ref().storage).unwrap();
 
@@ -1305,6 +1313,7 @@ mod execute_trigger_tests {
                             amount: vault.minimum_receive_amount.unwrap_or(Uint128::zero()),
                             denom: vault.target_denom.clone(),
                         },
+                        route: vault.route.clone()
                     })
                     .unwrap(),
                     funds: vec![get_swap_amount(&deps.as_ref(), &env, &vault).unwrap()]
@@ -1332,7 +1341,7 @@ mod execute_trigger_tests {
             },
         );
 
-        execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
+        execute_trigger_handler(deps.as_mut(), env.clone(), vault.id, None).unwrap();
 
         let events = get_events_by_resource_id_handler(deps.as_ref(), vault.id, None, None, None)
             .unwrap()
@@ -1372,7 +1381,7 @@ mod execute_trigger_tests {
             },
         );
 
-        execute_trigger_handler(deps.as_mut(), env.clone(), vault.id).unwrap();
+        execute_trigger_handler(deps.as_mut(), env.clone(), vault.id, None).unwrap();
 
         let updated_vault = get_vault(deps.as_ref().storage, vault.id).unwrap();
 
@@ -1411,7 +1420,7 @@ mod execute_trigger_tests {
             },
         );
 
-        let response = execute_trigger_handler(deps.as_mut(), env, vault.id).unwrap();
+        let response = execute_trigger_handler(deps.as_mut(), env, vault.id, None).unwrap();
 
         let config = get_config(deps.as_ref().storage).unwrap();
 
@@ -1425,6 +1434,7 @@ mod execute_trigger_tests {
                             amount: vault.minimum_receive_amount.unwrap_or(Uint128::zero()),
                             denom: vault.target_denom.clone(),
                         },
+                        route: vault.route.clone()
                     })
                     .unwrap(),
                     funds: vec![Coin::new(vault.swap_amount.into(), vault.get_swap_denom())]

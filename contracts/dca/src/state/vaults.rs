@@ -10,7 +10,7 @@ use crate::{
     },
 };
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Coin, Decimal, Order, StdResult, Storage, Timestamp, Uint128};
+use cosmwasm_std::{Addr, Binary, Coin, Decimal, Order, StdResult, Storage, Timestamp, Uint128};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, UniqueIndex};
 
 const VAULT_COUNTER: Item<u64> = Item::new("vault_counter_v8");
@@ -119,6 +119,7 @@ struct VaultData {
     balance: Coin,
     target_denom: String,
     swap_amount: Uint128,
+    route: Option<Binary>,
     slippage_tolerance: Decimal,
     minimum_receive_amount: Option<Uint128>,
     time_interval: TimeInterval,
@@ -141,7 +142,8 @@ impl From<Vault> for VaultData {
             label: vault.label,
             status: vault.status,
             balance: vault.balance,
-            target_denom: vault.target_denom.clone(),
+            target_denom: vault.target_denom,
+            route: vault.route,
             destinations: vault.destinations,
             swap_amount: vault.swap_amount,
             slippage_tolerance: vault.slippage_tolerance,
@@ -171,6 +173,7 @@ fn vault_from(store: &dyn Storage, data: &VaultData) -> StdResult<Vault> {
         balance: data.balance.clone(),
         swap_amount: data.swap_amount,
         target_denom: data.target_denom.clone(),
+        route: data.route.clone(),
         destinations: data.destinations.clone(),
         slippage_tolerance: data.slippage_tolerance,
         minimum_receive_amount: data.minimum_receive_amount,

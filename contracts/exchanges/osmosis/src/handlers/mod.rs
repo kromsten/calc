@@ -1,4 +1,5 @@
 pub mod create_pairs;
+pub mod delete_pair;
 pub mod get_expected_receive_amount;
 pub mod get_order;
 pub mod get_pairs;

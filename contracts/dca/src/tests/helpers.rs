@@ -129,6 +129,7 @@ impl Default for Vault {
             balance: Coin::new(TEN.into(), DENOM_UKUJI),
             target_denom: DENOM_UUSK.to_string(),
             swap_amount: ONE,
+            route: Some(to_json_binary::<Vec<u64>>(&vec![1, 2]).unwrap()),
             slippage_tolerance: Decimal::percent(10),
             minimum_receive_amount: None,
             time_interval: TimeInterval::Daily,

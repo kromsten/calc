@@ -6,9 +6,9 @@ use crate::helpers::validation::{
     assert_contract_is_not_paused, assert_destination_allocations_add_up_to_one,
     assert_destination_callback_addresses_are_valid, assert_destinations_limit_is_not_breached,
     assert_exactly_one_asset, assert_label_is_no_longer_than_100_characters,
-    assert_no_destination_allocations_are_zero, assert_pair_exists_for_denoms,
+    assert_no_destination_allocations_are_zero, assert_route_exists_for_denoms,
     assert_slippage_tolerance_is_less_than_or_equal_to_one,
-    assert_swap_adjusment_and_performance_assessment_strategies_are_compatible,
+    assert_swap_adjustment_and_performance_assessment_strategies_are_compatible,
     assert_swap_adjustment_strategy_params_are_valid, assert_swap_amount_is_greater_than_50000,
     assert_target_start_time_is_not_in_the_past, assert_time_interval_is_valid,
     assert_weighted_scale_multiplier_is_no_more_than_10,
@@ -31,7 +31,7 @@ use crate::types::swap_adjustment_strategy::{
 use crate::types::time_interval::TimeInterval;
 use crate::types::trigger::{Trigger, TriggerConfiguration};
 use crate::types::vault::{Vault, VaultBuilder, VaultStatus};
-use cosmwasm_std::{to_json_binary, Addr, Coin, Decimal, Reply, SubMsg, WasmMsg};
+use cosmwasm_std::{to_json_binary, Addr, Binary, Coin, Decimal, Reply, SubMsg, WasmMsg};
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Timestamp, Uint128, Uint64};
 use exchange::msg::ExecuteMsg as ExchangeExecuteMsg;
 
@@ -43,6 +43,7 @@ pub fn create_vault_handler(
     label: Option<String>,
     mut destinations: Vec<Destination>,
     target_denom: String,
+    route: Option<Binary>,
     slippage_tolerance: Option<Decimal>,
     minimum_receive_amount: Option<Uint128>,
     swap_amount: Uint128,
@@ -58,12 +59,15 @@ pub fn create_vault_handler(
     assert_swap_amount_is_greater_than_50000(swap_amount)?;
     assert_destinations_limit_is_not_breached(&destinations)?;
     assert_time_interval_is_valid(&time_interval)?;
-    assert_pair_exists_for_denoms(
+
+    assert_route_exists_for_denoms(
         deps.as_ref(),
         info.funds[0].denom.clone(),
         target_denom.clone(),
+        route.clone(),
     )?;
-    assert_swap_adjusment_and_performance_assessment_strategies_are_compatible(
+
+    assert_swap_adjustment_and_performance_assessment_strategies_are_compatible(
         &swap_adjustment_strategy_params,
         &performance_assessment_strategy_params,
     )?;
@@ -104,8 +108,8 @@ pub fn create_vault_handler(
 
     let swap_denom = info.funds[0].denom.clone();
 
-    let swap_adjustment_strategy = if let Some(params) = swap_adjustment_strategy_params {
-        Some(match params {
+    let swap_adjustment_strategy = match swap_adjustment_strategy_params {
+        Some(params) => Some(match params {
             SwapAdjustmentStrategyParams::RiskWeightedAverage {
                 base_denom,
                 position_type,
@@ -131,9 +135,8 @@ pub fn create_vault_handler(
                     increase_only,
                 }
             }
-        })
-    } else {
-        None
+        }),
+        None => None,
     };
 
     let performance_assessment_strategy = match performance_assessment_strategy_params {
@@ -160,6 +163,7 @@ pub fn create_vault_handler(
         status: VaultStatus::Scheduled,
         target_denom: target_denom.clone(),
         swap_amount,
+        route,
         slippage_tolerance: slippage_tolerance.unwrap_or(config.default_slippage_tolerance),
         minimum_receive_amount,
         balance: info.funds[0].clone(),
@@ -224,6 +228,7 @@ pub fn create_vault_handler(
                     contract_addr: env.contract.address.to_string(),
                     msg: to_json_binary(&ExecuteMsg::ExecuteTrigger {
                         trigger_id: vault.id,
+                        route: vault.route,
                     })
                     .unwrap(),
                     funds: vec![],
@@ -250,20 +255,18 @@ pub fn create_vault_handler(
 
             let target_price = Decimal::from_ratio(swap_amount, target_receive_amount);
 
-            Ok(response
-                .add_attribute("tp", target_price.to_string())
-                .add_submessage(SubMsg::reply_on_success(
-                    WasmMsg::Execute {
-                        contract_addr: config.exchange_contract_address.to_string(),
-                        msg: to_json_binary(&ExchangeExecuteMsg::SubmitOrder {
-                            target_price: target_price.into(),
-                            target_denom: vault.target_denom.clone(),
-                        })
-                        .unwrap(),
-                        funds: vec![Coin::new(TWO_MICRONS.into(), vault.get_swap_denom())],
-                    },
-                    AFTER_LIMIT_ORDER_PLACED_REPLY_ID,
-                )))
+            Ok(response.add_submessage(SubMsg::reply_on_success(
+                WasmMsg::Execute {
+                    contract_addr: config.exchange_contract_address.to_string(),
+                    msg: to_json_binary(&ExchangeExecuteMsg::SubmitOrder {
+                        target_price: target_price.into(),
+                        target_denom: vault.target_denom.clone(),
+                    })
+                    .unwrap(),
+                    funds: vec![Coin::new(TWO_MICRONS.into(), vault.get_swap_denom())],
+                },
+                AFTER_LIMIT_ORDER_PLACED_REPLY_ID,
+            )))
         }
         (Some(_), Some(_)) => Err(ContractError::CustomError {
             val: String::from(
@@ -347,6 +350,7 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
+            None,
             Uint128::new(10000),
             TimeInterval::Daily,
             None,
@@ -381,6 +385,7 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
+            None,
             None,
             None,
             Uint128::new(10000),
@@ -420,6 +425,7 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
+            None,
             None,
             None,
             Uint128::new(100000),
@@ -462,6 +468,7 @@ mod create_vault_tests {
                 msg: None,
             }],
             DENOM_UKUJI.to_string(),
+            None,
             None,
             None,
             Uint128::new(100000),
@@ -510,6 +517,7 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
+            None,
             Uint128::new(100000),
             TimeInterval::Daily,
             None,
@@ -549,6 +557,7 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
+            None,
             Uint128::new(100000),
             TimeInterval::Daily,
             None,
@@ -580,6 +589,7 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
+            None,
             None,
             None,
             Uint128::new(10000),
@@ -615,6 +625,7 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
+            None,
             None,
             None,
             Uint128::new(100000),
@@ -665,6 +676,7 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
+            None,
             Uint128::new(100000),
             TimeInterval::Daily,
             None,
@@ -695,6 +707,7 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
+            None,
             None,
             None,
             Uint128::new(100000),
@@ -730,6 +743,7 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
+            None,
             Uint128::new(100000),
             TimeInterval::Custom { seconds: 23 },
             None,
@@ -763,6 +777,7 @@ mod create_vault_tests {
             None,
             vec![],
             pair.denoms[1].clone(),
+            None,
             None,
             None,
             Uint128::new(100000),
@@ -801,6 +816,7 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
+            None,
             swap_amount,
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
@@ -837,6 +853,7 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
+            None,
             swap_amount,
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
@@ -871,6 +888,7 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
+            None,
             None,
             None,
             swap_amount,
@@ -911,6 +929,7 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
+            None,
             Some(Decimal::percent(150)),
             None,
             swap_amount,
@@ -949,6 +968,7 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
+            None,
             swap_amount,
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
@@ -977,6 +997,7 @@ mod create_vault_tests {
                 time_interval: TimeInterval::Daily,
                 balance: info.funds[0].clone(),
                 slippage_tolerance: config.default_slippage_tolerance,
+                route: None,
                 swap_amount,
                 target_denom: DENOM_UKUJI.to_string(),
                 started_at: None,
@@ -1015,6 +1036,7 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
+            None,
             swap_amount,
             TimeInterval::Daily,
             None,
@@ -1048,6 +1070,7 @@ mod create_vault_tests {
                 slippage_tolerance: config.default_slippage_tolerance,
                 swap_amount,
                 target_denom: DENOM_UKUJI.to_string(),
+                route: None,
                 started_at: None,
                 deposited_amount: Coin::new(
                     (info.funds[0].amount - TWO_MICRONS).into(),
@@ -1082,6 +1105,7 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
+            None,
             None,
             None,
             Uint128::new(100000),
@@ -1129,6 +1153,7 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
+            None,
             None,
             None,
             Uint128::new(100000),
@@ -1192,6 +1217,7 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
+            None,
             Uint128::new(100000),
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
@@ -1226,6 +1252,7 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
+            None,
             None,
             None,
             Uint128::new(100000),
@@ -1265,6 +1292,7 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
+            None,
             None,
             None,
             Uint128::new(100000),
@@ -1307,6 +1335,7 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
+            None,
             Uint128::new(100000),
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
@@ -1347,6 +1376,7 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
+            None,
             None,
             None,
             Uint128::new(100000),
@@ -1393,6 +1423,7 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
+            None,
             Uint128::new(100000),
             TimeInterval::Daily,
             None,
@@ -1408,7 +1439,8 @@ mod create_vault_tests {
                 contract_addr: env.contract.address.to_string(),
                 funds: vec![],
                 msg: to_json_binary(&ExecuteMsg::ExecuteTrigger {
-                    trigger_id: Uint128::one()
+                    trigger_id: Uint128::one(),
+                    route: None,
                 })
                 .unwrap()
             })
@@ -1436,6 +1468,7 @@ mod create_vault_tests {
             None,
             vec![],
             pair.denoms[0].to_string(),
+            None,
             None,
             None,
             swap_amount,
@@ -1486,6 +1519,7 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
+            None,
             Uint128::new(100000),
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
@@ -1525,6 +1559,7 @@ mod create_vault_tests {
             None,
             vec![],
             DENOM_UKUJI.to_string(),
+            None,
             None,
             None,
             Uint128::new(100000),
@@ -1572,6 +1607,7 @@ mod create_vault_tests {
             DENOM_UKUJI.to_string(),
             None,
             None,
+            None,
             Uint128::new(100000),
             TimeInterval::Daily,
             Some(env.block.time.plus_seconds(10).seconds().into()),
@@ -1615,6 +1651,7 @@ mod create_vault_tests {
                 ),
             }],
             DENOM_UKUJI.to_string(),
+            None,
             None,
             None,
             Uint128::new(100000),

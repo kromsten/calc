@@ -9,7 +9,7 @@ use crate::types::swap_adjustment_strategy::{
 use crate::types::time_interval::TimeInterval;
 use crate::types::vault::{Vault, VaultStatus};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Coin, Decimal, Uint128, Uint64};
+use cosmwasm_std::{Addr, Binary, Coin, Decimal, Uint128, Uint64};
 use exchange::msg::Pair;
 
 #[cw_serde]
@@ -38,6 +38,7 @@ pub enum ExecuteMsg {
         label: Option<String>,
         destinations: Option<Vec<Destination>>,
         target_denom: String,
+        route: Option<Binary>,
         slippage_tolerance: Option<Decimal>,
         minimum_receive_amount: Option<Uint128>,
         swap_amount: Uint128,
@@ -66,6 +67,7 @@ pub enum ExecuteMsg {
     },
     ExecuteTrigger {
         trigger_id: Uint128,
+        route: Option<Binary>,
     },
     UpdateConfig {
         executors: Option<Vec<Addr>>,

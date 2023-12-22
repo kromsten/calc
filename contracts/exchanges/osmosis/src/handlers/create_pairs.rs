@@ -56,7 +56,7 @@ pub fn create_pairs_handler(
 mod create_pairs_tests {
     use cosmwasm_std::{
         testing::{mock_env, mock_info},
-        to_json_binary, Addr,
+        to_json_binary,
     };
     use exchange::msg::ExecuteMsg;
 
@@ -77,13 +77,7 @@ mod create_pairs_tests {
         let mut deps = calc_mock_dependencies();
         let env = mock_env();
 
-        update_config(
-            deps.as_mut().storage,
-            Config {
-                admin: Addr::unchecked(ADMIN),
-            },
-        )
-        .unwrap();
+        update_config(deps.as_mut().storage, Config::default()).unwrap();
 
         let info_with_unauthorised_sender = mock_info("not-admin", &[]);
 
@@ -113,13 +107,7 @@ mod create_pairs_tests {
         let env = mock_env();
         let info = mock_info(ADMIN, &[]);
 
-        update_config(
-            deps.as_mut().storage,
-            Config {
-                admin: Addr::unchecked(ADMIN),
-            },
-        )
-        .unwrap();
+        update_config(deps.as_mut().storage, Config::default()).unwrap();
 
         let err = execute(
             deps.as_mut(),
@@ -152,13 +140,7 @@ mod create_pairs_tests {
         let env = mock_env();
         let info = mock_info(ADMIN, &[]);
 
-        update_config(
-            deps.as_mut().storage,
-            Config {
-                admin: Addr::unchecked(ADMIN),
-            },
-        )
-        .unwrap();
+        update_config(deps.as_mut().storage, Config::default()).unwrap();
 
         let err = execute(
             deps.as_mut(),
@@ -191,13 +173,7 @@ mod create_pairs_tests {
         let env = mock_env();
         let info = mock_info(ADMIN, &[]);
 
-        update_config(
-            deps.as_mut().storage,
-            Config {
-                admin: Addr::unchecked(ADMIN),
-            },
-        )
-        .unwrap();
+        update_config(deps.as_mut().storage, Config::default()).unwrap();
 
         let create_pair_execute_message = ExecuteMsg::InternalMsg {
             msg: to_json_binary(&InternalExternalMsg::CreatePairs {
@@ -226,13 +202,7 @@ mod create_pairs_tests {
         let env = mock_env();
         let info = mock_info(ADMIN, &[]);
 
-        update_config(
-            deps.as_mut().storage,
-            Config {
-                admin: Addr::unchecked(ADMIN),
-            },
-        )
-        .unwrap();
+        update_config(deps.as_mut().storage, Config::default()).unwrap();
 
         let create_pair_execute_message = ExecuteMsg::InternalMsg {
             msg: to_json_binary(&InternalExternalMsg::CreatePairs {
@@ -264,13 +234,7 @@ mod create_pairs_tests {
         let env = mock_env();
         let info = mock_info(ADMIN, &[]);
 
-        update_config(
-            deps.as_mut().storage,
-            Config {
-                admin: Addr::unchecked(ADMIN),
-            },
-        )
-        .unwrap();
+        update_config(deps.as_mut().storage, Config::default()).unwrap();
 
         let original_message = ExecuteMsg::InternalMsg {
             msg: to_json_binary(&InternalExternalMsg::CreatePairs {
@@ -314,13 +278,7 @@ mod create_pairs_tests {
         let env = mock_env();
         let info = mock_info(ADMIN, &[]);
 
-        update_config(
-            deps.as_mut().storage,
-            Config {
-                admin: Addr::unchecked(ADMIN),
-            },
-        )
-        .unwrap();
+        update_config(deps.as_mut().storage, Config::default()).unwrap();
 
         let original_message = ExecuteMsg::InternalMsg {
             msg: to_json_binary(&InternalExternalMsg::CreatePairs {

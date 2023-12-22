@@ -66,6 +66,7 @@ pub fn disburse_escrow_handler(
         vault.get_swap_denom(),
         vault.target_denom.clone(),
         config.twap_period,
+        vault.route.clone(),
     )?;
 
     let performance_fee = get_performance_fee(&vault, current_price)?;

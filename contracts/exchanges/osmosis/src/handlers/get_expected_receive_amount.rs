@@ -1,5 +1,5 @@
-use cosmwasm_std::{Coin, Deps, StdError, StdResult, Uint128};
-use osmosis_std::types::osmosis::poolmanager::v1beta1::PoolmanagerQuerier;
+use cosmwasm_std::{from_json, Binary, Coin, Deps, StdError, StdResult, Uint128};
+use osmosis_std::types::osmosis::poolmanager::v1beta1::{PoolmanagerQuerier, SwapAmountInRoute};
 
 use crate::{helpers::routes::calculate_route, state::pairs::find_pair};
 
@@ -7,22 +7,28 @@ pub fn get_expected_receive_amount_handler(
     deps: Deps,
     swap_amount: Coin,
     target_denom: String,
+    injected_route: Option<Binary>,
 ) -> StdResult<Coin> {
-    let pair = find_pair(
-        deps.storage,
-        [swap_amount.denom.clone(), target_denom.clone()],
+    let route = injected_route.map_or_else(
+        || {
+            let pair = find_pair(
+                deps.storage,
+                [swap_amount.denom.clone(), target_denom.clone()],
+            )?;
+
+            calculate_route(&deps.querier, &pair, swap_amount.denom.clone())
+        },
+        |r| from_json::<Vec<SwapAmountInRoute>>(r.as_slice()),
     )?;
 
-    let routes = calculate_route(&deps.querier, &pair, swap_amount.denom.clone())?;
-
     let token_out_amount = PoolmanagerQuerier::new(&deps.querier)
-        .estimate_swap_exact_amount_in(0, swap_amount.to_string(), routes.clone())
+        .estimate_swap_exact_amount_in(0, swap_amount.to_string(), route.clone())
         .map_err(|_| {
             StdError::generic_err(format!(
                 "amount of {} received for swapping {} via {:#?}",
-                routes.last().unwrap().token_out_denom,
+                route.last().unwrap().token_out_denom,
                 swap_amount,
-                routes
+                route
             ))
         })?
         .token_out_amount
@@ -54,7 +60,8 @@ mod get_expected_receive_amount_handler_tests {
                     denom: DENOM_UOSMO.to_string(),
                     amount: Uint128::zero()
                 },
-                DENOM_UATOM.to_string()
+                DENOM_UATOM.to_string(),
+                None
             )
             .unwrap_err(),
             StdError::NotFound {
@@ -78,7 +85,8 @@ mod get_expected_receive_amount_handler_tests {
                     denom: pair.base_denom.to_string(),
                     amount: Uint128::zero()
                 },
-                pair.quote_denom.to_string()
+                pair.quote_denom.to_string(),
+                None
             )
             .unwrap(),
             Coin {

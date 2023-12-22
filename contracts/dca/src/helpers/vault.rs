@@ -38,6 +38,7 @@ pub fn get_swap_amount(deps: &Deps, env: &Env, vault: &Vault) -> StdResult<Coin>
                 vault.get_swap_denom(),
                 vault.target_denom.clone(),
                 config.twap_period,
+                vault.route.clone(),
             )?;
 
             let base_price = Decimal::from_ratio(vault.swap_amount, base_receive_amount);
@@ -157,6 +158,7 @@ pub fn simulate_standard_dca_execution(
                 config.exchange_contract_address.clone(),
                 Coin::new(swap_amount.into(), vault.get_swap_denom()),
                 vault.target_denom.clone(),
+                vault.route.clone(),
             )?;
 
             if vault.price_threshold_exceeded(belief_price)? {
@@ -185,6 +187,7 @@ pub fn simulate_standard_dca_execution(
                 Coin::new(swap_amount.into(), vault.get_swap_denom()),
                 vault.target_denom.clone(),
                 belief_price,
+                vault.route.clone(),
             )?;
 
             if slippage > vault.slippage_tolerance {

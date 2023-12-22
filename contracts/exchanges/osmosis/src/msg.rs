@@ -6,14 +6,20 @@ use crate::types::pair::Pair;
 #[cw_serde]
 pub struct InstantiateMsg {
     pub admin: Addr,
+    pub dc_contract_address: Addr,
+    pub limit_order_address: Addr,
 }
 
 #[cw_serde]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub dca_contract_address: Addr,
+    pub limit_order_address: Addr,
+}
 
 #[cw_serde]
 pub enum InternalExternalMsg {
     CreatePairs { pairs: Vec<Pair> },
+    DeletePairs { pairs: Vec<Pair> },
 }
 
 #[cw_serde]

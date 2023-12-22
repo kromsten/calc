@@ -67,6 +67,7 @@ pub fn execute(
             label,
             destinations,
             target_denom,
+            route,
             slippage_tolerance,
             minimum_receive_amount,
             swap_amount,
@@ -83,6 +84,7 @@ pub fn execute(
             label,
             destinations.unwrap_or_default(),
             target_denom,
+            route,
             slippage_tolerance,
             minimum_receive_amount,
             swap_amount,
@@ -115,7 +117,9 @@ pub fn execute(
             swap_amount,
         ),
         ExecuteMsg::CancelVault { vault_id } => cancel_vault_handler(deps, env, info, vault_id),
-        ExecuteMsg::ExecuteTrigger { trigger_id } => execute_trigger_handler(deps, env, trigger_id),
+        ExecuteMsg::ExecuteTrigger { trigger_id, route } => {
+            execute_trigger_handler(deps, env, trigger_id, route)
+        }
         ExecuteMsg::Deposit { address, vault_id } => {
             deposit_handler(deps, env, info, address, vault_id)
         }

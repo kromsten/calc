@@ -19,6 +19,7 @@ pub fn get_vault_performance_handler(
         vault.get_swap_denom(),
         vault.target_denom.clone(),
         config.twap_period,
+        vault.route.clone(),
     )?;
 
     vault.performance_assessment_strategy.clone().map_or(

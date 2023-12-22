@@ -19,8 +19,8 @@ export const fetchConfig = async (): Promise<Config> => {
   if (process.env.FEE_DENOM === undefined) {
     throw new Error('Missing FEE_DENOM environment variable');
   }
-  if (process.env.MNEMONIC === undefined) {
-    throw new Error('Missing MNEMONIC environment variable');
+  if (process.env.ADMIN_CONTRACT_MNEMONIC === undefined) {
+    throw new Error('Missing ADMIN_CONTRACT_MNEMONIC environment variable');
   }
 
   return {
@@ -28,6 +28,6 @@ export const fetchConfig = async (): Promise<Config> => {
     rpcUrl: process.env.NET_URL,
     feeDenom: process.env.FEE_DENOM,
     gasPrice: parseFloat(process.env.GAS_PRICE),
-    mnemonic: process.env.MNEMONIC,
+    mnemonic: process.env.ADMIN_CONTRACT_MNEMONIC,
   };
 };

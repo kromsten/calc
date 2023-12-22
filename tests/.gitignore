@@ -116,6 +116,3 @@ infrastructure/**/*.zip
 # osmosis repo
 osmosis/*
 !osmosis/denoms.ts
-
-# duality repo
-duality/*
