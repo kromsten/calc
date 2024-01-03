@@ -294,6 +294,16 @@ const LVN = {
   denom: 'factory/osmo1mlng7pz4pnyxtpq0akfwall37czyk9lukaucsrn30ameplhhshtqdvfm5c/ulvn',
   poolId: 1325,
 };
+const TORI = {
+  name: 'TORI',
+  denom: 'ibc/EB7FB9C8B425F289B63703413327C2051030E848CE4EAAEA2E51199D6D39D3EC',
+  poolId: 816,
+};
+const PICA = {
+  name: 'PICA',
+  denom: 'ibc/56D7C03B8F6A07AD322EEE1BEF3AE996E09D1C1E34C27CF37E0D4A0AC5972516',
+  poolId: 1057,
+};
 
 export const STABLECOINS = [IST, axlUSDC, axlDAI, axlUSDT, USDC, USDT];
 
@@ -364,4 +374,6 @@ export const DENOMS = [
   CRBRUS,
   NEWT,
   LVN,
+  TORI,
+  PICA,
 ];

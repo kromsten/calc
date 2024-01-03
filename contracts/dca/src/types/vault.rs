@@ -77,7 +77,7 @@ impl Vault {
             execution_duration
                 .num_seconds()
                 .try_into()
-                .expect("exected duration should be >= 0 seconds"),
+                .expect("executed duration should be >= 0 seconds"),
         )
     }
 
