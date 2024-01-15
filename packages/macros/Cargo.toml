@@ -1,0 +1,16 @@
+[package]
+name        = "exchange-macros"
+version     = "0.1.0"
+edition     = "2021"
+description = "Exchange interface macros"
+authors     = [ "Kromsten <s@megarock.labs>" ]
+
+[lib]
+doctest    = false
+proc-macro = true
+
+[dependencies]
+proc-macro2    = "1"
+quote          = "1"
+syn            = "1"
+exchange       = { path = "../exchange" }
