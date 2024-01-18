@@ -158,7 +158,7 @@ const stATOM = {
   name: 'stATOM',
   denom: 'ibc/C140AFD542AE77BD7DCC83F13FDD8C5E5BB8C4929785E6EC2F4C636F98F17901',
   poolId: -1,
-  route: [803, ATOM.poolId],
+  route: [1136, ATOM.poolId],
 };
 const stEVMOS = {
   name: 'stEVMOS',
@@ -169,7 +169,7 @@ const stEVMOS = {
 const stOSMO = {
   name: 'stOSMO',
   denom: 'ibc/D176154B0C63D1F9C6DCFB4F70349EBF2E2B5A87A05902F57A6AE92B863E9AEC',
-  poolId: 833,
+  poolId: 1252,
 };
 const STRD = {
   name: 'STRD',
@@ -200,7 +200,7 @@ const USDC = {
 const WHALE = {
   name: 'WHALE',
   denom: 'ibc/EDD6F0D66BCD49C1084FB2C35353B4ACD7B9191117CE63671B61320548F7C89D',
-  poolId: 960,
+  poolId: 1318,
 };
 const XPRT = {
   name: 'XPRT',
@@ -253,10 +253,61 @@ const TIA = {
   denom: 'ibc/D79E7D83AB399BFFF93433E54FAA480C191248FC556924A2A8351AE2638B3877',
   poolId: 1249,
 };
+const CDT = {
+  name: 'CDT',
+  denom: 'factory/osmo1s794h9rxggytja3a4pmwul53u98k06zy2qtrdvjnfuxruh7s8yjs6cyxgd/ucdt',
+  poolId: 1226,
+};
+const MBRN = {
+  name: 'MBRN',
+  denom: 'factory/osmo1s794h9rxggytja3a4pmwul53u98k06zy2qtrdvjnfuxruh7s8yjs6cyxgd/umbrn',
+  poolId: 1225,
+};
+const nBTC = {
+  name: 'nBTC',
+  denom: 'ibc/75345531D87BD90BF108BE7240BD721CB2CB0A1F16D4EBA71B09EC3C43E15C8F',
+  poolId: -1,
+  route: [1253, 1221],
+};
+const PUPPY = {
+  name: 'PUPPY',
+  denom: 'ibc/46AC07DBFF1352EC94AF5BD4D23740D92D9803A6B41F6E213E77F3A1143FB963',
+  poolId: 1332,
+};
+const RIO = {
+  name: 'RIO',
+  denom: 'ibc/1CDF9C7D073DD59ED06F15DB08CC0901F2A24759BE70463570E8896F9A444ADF',
+  poolId: 1179,
+};
+const CRBRUS = {
+  name: 'CRBRUS',
+  denom: 'ibc/41999DF04D9441DAC0DF5D8291DF4333FBCBA810FFD63FDCE34FDF41EF37B6F7',
+  poolId: 662,
+};
+const NEWT = {
+  name: 'NEWT',
+  denom: 'ibc/BF685448E564B5A4AC8F6E0493A0B979D0E0BF5EC11F7E15D25A0A2160C944DD',
+  poolId: 1334,
+};
+const LVN = {
+  name: 'LVN',
+  denom: 'factory/osmo1mlng7pz4pnyxtpq0akfwall37czyk9lukaucsrn30ameplhhshtqdvfm5c/ulvn',
+  poolId: 1325,
+};
+const TORI = {
+  name: 'TORI',
+  denom: 'ibc/EB7FB9C8B425F289B63703413327C2051030E848CE4EAAEA2E51199D6D39D3EC',
+  poolId: 816,
+};
+const PICA = {
+  name: 'PICA',
+  denom: 'ibc/56D7C03B8F6A07AD322EEE1BEF3AE996E09D1C1E34C27CF37E0D4A0AC5972516',
+  poolId: 1057,
+};
 
-const stablecoins = [IST, axlUSDC, axlDAI, axlUSDT, USDC, USDT];
+export const STABLECOINS = [IST, axlUSDC, axlDAI, axlUSDT, USDC, USDT];
 
-const DENOMS = [
+export const DENOMS = [
   AKT,
   ARCH,
   ATOM,
@@ -270,6 +321,7 @@ const DENOMS = [
   BLD,
   BTC,
   BTSG,
+  CDT,
   CRO,
   DOT,
   DVPN,
@@ -294,8 +346,10 @@ const DENOMS = [
   LUNA,
   LUNC,
   MARS,
+  MBRN,
   MED,
   MNTL,
+  nBTC,
   NCT,
   NGM,
   NTRN,
@@ -307,10 +361,19 @@ const DENOMS = [
   REGEN,
   SCRT,
   SOMM,
+  stATOM,
+  stOSMO,
   STARS,
   STRD,
   TIA,
   UMEE,
   WHALE,
   XPRT,
+  PUPPY,
+  RIO,
+  CRBRUS,
+  NEWT,
+  LVN,
+  TORI,
+  PICA,
 ];

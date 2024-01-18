@@ -8,15 +8,13 @@
     "localnet:kujira": "cd kujira && docker compose up -d & cd ..",
     "localnet:osmosis": "cd osmosis && make localnet-init && make localnet-startd-with-state && cd ..",
     "test:kujira": "env-cmd -e kujira,shared mocha --recursive '**/*.test.ts' --timeout 90000 --exit",
-    "test:osmosis": "env-cmd -e osmosis,shared mocha --recursive '**/*.test.ts' --timeout 90000 --exit",
-    "test:duality": "env-cmd -e duality,shared mocha --recursive '**/*.test.ts' --timeout 90000 --exit"
+    "test:osmosis": "env-cmd -e osmosis,shared mocha --recursive '**/*.test.ts' --timeout 90000 --exit"
   },
   "devDependencies": {
     "@cosmjs/cosmwasm-stargate": "^0.31.1",
     "@cosmjs/proto-signing": "^0.31.1",
     "@cosmjs/stargate": "^0.31.1",
     "@cosmjs/tendermint-rpc": "^0.31.1",
-    "@duality-labs/dualityjs": "^0.3.3-ibc",
     "@types/chai-as-promised": "^7.1.5",
     "@types/mocha": "^10.0.0",
     "@types/ramda": "^0.28.18",

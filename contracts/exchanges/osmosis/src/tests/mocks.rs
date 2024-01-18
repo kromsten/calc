@@ -7,6 +7,7 @@ use cosmwasm_std::{
 use osmosis_std::shim::Any;
 use osmosis_std::types::cosmos::base::v1beta1::Coin;
 use osmosis_std::types::osmosis::concentratedliquidity::v1beta1::Pool as ConcentratedLiquidityPool;
+use osmosis_std::types::osmosis::gamm::poolmodels::stableswap::v1beta1::Pool as StableSwapPool;
 use osmosis_std::types::osmosis::gamm::v1beta1::{
     Pool as GammPool, PoolAsset, PoolParams, QueryCalcJoinPoolSharesResponse,
 };
@@ -208,13 +209,87 @@ impl<C: DeserializeOwned> CalcMockQuerier<C> {
                         },
                     ];
 
+                    let ss_pools = vec![
+                        StableSwapPool {
+                            id: 10,
+                            pool_liquidity: vec![
+                                Coin {
+                                    denom: DENOM_UOSMO.to_string(),
+                                    amount: TEN.to_string(),
+                                },
+                                Coin {
+                                    denom: DENOM_UATOM.to_string(),
+                                    amount: TEN.to_string(),
+                                },
+                            ],
+                            ..StableSwapPool::default()
+                        },
+                        StableSwapPool {
+                            id: 11,
+                            pool_liquidity: vec![
+                                Coin {
+                                    denom: DENOM_UOSMO.to_string(),
+                                    amount: TEN.to_string(),
+                                },
+                                Coin {
+                                    denom: DENOM_UION.to_string(),
+                                    amount: TEN.to_string(),
+                                },
+                            ],
+                            ..StableSwapPool::default()
+                        },
+                        StableSwapPool {
+                            id: 12,
+                            pool_liquidity: vec![
+                                Coin {
+                                    denom: DENOM_UION.to_string(),
+                                    amount: TEN.to_string(),
+                                },
+                                Coin {
+                                    denom: DENOM_USDC.to_string(),
+                                    amount: TEN.to_string(),
+                                },
+                            ],
+                            ..StableSwapPool::default()
+                        },
+                        StableSwapPool {
+                            id: 13,
+                            pool_liquidity: vec![
+                                Coin {
+                                    denom: DENOM_STAKE.to_string(),
+                                    amount: TEN.to_string(),
+                                },
+                                Coin {
+                                    denom: DENOM_UOSMO.to_string(),
+                                    amount: TEN.to_string(),
+                                },
+                            ],
+                            ..StableSwapPool::default()
+                        },
+                        StableSwapPool {
+                            id: 14,
+                            pool_liquidity: vec![
+                                Coin {
+                                    denom: DENOM_STAKE.to_string(),
+                                    amount: TEN.to_string(),
+                                },
+                                Coin {
+                                    denom: DENOM_UION.to_string(),
+                                    amount: TEN.to_string(),
+                                },
+                            ],
+                            ..StableSwapPool::default()
+                        },
+                    ];
+
                     let pool_id = PoolRequest::decode(data.as_slice()).unwrap().pool_id;
 
                     to_json_binary(&PoolResponse {
                         pool: Some(Any {
                             type_url: match pool_id {
                                 0..=4 => GammPool::TYPE_URL.to_string(),
-                                5.. => ConcentratedLiquidityPool::TYPE_URL.to_string(),
+                                5..=9 => ConcentratedLiquidityPool::TYPE_URL.to_string(),
+                                10.. => StableSwapPool::TYPE_URL.to_string(),
                             },
                             value: match pool_id {
                                 0..=4 => gamm_pools
@@ -223,7 +298,13 @@ impl<C: DeserializeOwned> CalcMockQuerier<C> {
                                     .unwrap()
                                     .clone()
                                     .encode_to_vec(),
-                                5.. => cl_pools
+                                5..=9 => cl_pools
+                                    .iter()
+                                    .find(|pool| pool.id == pool_id)
+                                    .unwrap()
+                                    .clone()
+                                    .encode_to_vec(),
+                                10.. => ss_pools
                                     .iter()
                                     .find(|pool| pool.id == pool_id)
                                     .unwrap()

@@ -9,11 +9,12 @@ import {
 import { createCosmWasmClientForWallet, createWallet } from './helpers';
 import { SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate';
 import { cosmos, osmosis } from 'osmojs';
-import { find, map } from 'ramda';
+import { find, map, omit } from 'ramda';
 import { PositionType } from '../types/dca/execute';
 import { coin } from '@cosmjs/proto-signing';
 import { Pair } from '../types/exchanges/osmosis/pair';
-import { Pool } from 'osmojs/dist/codegen/osmosis/gamm/pool-models/balancer/balancerPool';
+import { Pool, PoolAsset } from 'osmojs/dist/codegen/osmosis/gamm/pool-models/balancer/balancerPool';
+import { Pool as ClPool } from 'osmojs/dist/codegen/osmosis/concentrated-liquidity/pool';
 
 const dexSwapFee = 0.0005;
 const automationFee = 0.0075;
@@ -27,6 +28,27 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
   const config = await fetchConfig();
 
   const queryClient = await osmosis.ClientFactory.createRPCQueryClient({ rpcEndpoint: config.rpcUrl });
+
+  const denoms = ['stake', 'uion'];
+
+  const allPools = await queryClient.osmosis.poolmanager.v1beta1.allPools();
+
+  const pool = find((pool: Pool | ClPool) => {
+    const assets = map(
+      (asset) => (typeof asset === 'string' ? asset : (asset as PoolAsset).token.denom),
+      pool['$typeUrl'] === '/osmosis.gamm.v1beta1.Pool'
+        ? (pool as Pool).poolAssets
+        : [(pool as ClPool).token0, (pool as ClPool).token1],
+    );
+    return assets.length == 2 && assets.includes(denoms[0]) && assets.includes(denoms[1]);
+  }, allPools.pools as Pool[] | ClPool[]);
+
+  const pair: Pair = {
+    base_denom: denoms[0],
+    quote_denom: denoms[1],
+    route: [Number(pool.id)],
+  };
+
   const cosmWasmClient = await createSigningCosmWasmClient(config);
 
   const adminWalletAddress = (await (await getWallet(config.mnemonic, config.bech32AddressPrefix)).getAccounts())[0]
@@ -46,29 +68,7 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
 
   const exchangeContractAddress = await instantiateExchangeContract(cosmWasmClient, adminWalletAddress);
 
-  await migrateDCAContract(cosmWasmClient, adminWalletAddress, dcaContractAddress, exchangeContractAddress);
-
-  const denoms = ['stake', 'uion'];
-
-  const pools = map(
-    (pool: any) => osmosis.gamm.v1beta1.Pool.decode(pool.value) as Pool,
-    (
-      await queryClient.osmosis.gamm.v1beta1.pools({
-        pagination: null,
-      })
-    ).pools,
-  );
-
-  const pool = find((pool: Pool) => {
-    const assets = map((asset) => asset.token.denom, pool.poolAssets);
-    return assets.length == 2 && assets.includes(denoms[0]) && assets.includes(denoms[1]);
-  }, pools);
-
-  const pair: Pair = {
-    base_denom: denoms[0],
-    quote_denom: denoms[1],
-    route: [Number(pool.id)],
-  };
+  await updateExchangeContractAddress(cosmWasmClient, adminWalletAddress, dcaContractAddress, exchangeContractAddress);
 
   await execute(cosmWasmClient, adminWalletAddress, exchangeContractAddress, {
     internal_msg: {
@@ -96,7 +96,13 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
   const validatorAddress = (
     await queryClient.cosmos.staking.v1beta1.validators({
       status: cosmos.staking.v1beta1.bondStatusToJSON(cosmos.staking.v1beta1.BondStatus.BOND_STATUS_BONDED),
-      pagination: null,
+      pagination: {
+        offset: 0n,
+        key: Uint8Array.from([]),
+        limit: 1000n,
+        countTotal: false,
+        reverse: false,
+      },
     })
   ).validators[0].operatorAddress;
 
@@ -186,7 +192,7 @@ const instantiateDCAContract = async (
   return dcaContractAddress;
 };
 
-export const migrateDCAContract = async (
+export const updateExchangeContractAddress = async (
   cosmWasmClient: SigningCosmWasmClient,
   adminWalletAddress: string,
   dcaContractAddress: string,
@@ -196,8 +202,10 @@ export const migrateDCAContract = async (
     get_config: {},
   });
 
-  await uploadAndMigrate('../artifacts/dca.wasm', cosmWasmClient, adminWalletAddress, dcaContractAddress, {
-    ...configResponse.config,
-    exchange_contract_address: exchangeContractAddress,
+  await execute(cosmWasmClient, adminWalletAddress, dcaContractAddress, {
+    update_config: {
+      ...omit(['admin', 'old_staking_router_address'], configResponse.config),
+      exchange_contract_address: exchangeContractAddress,
+    },
   });
 };

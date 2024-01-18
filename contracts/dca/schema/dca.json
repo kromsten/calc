@@ -159,6 +159,16 @@
                   }
                 ]
               },
+              "route": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Binary"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "slippage_tolerance": {
                 "anyOf": [
                   {
@@ -358,6 +368,16 @@
               "trigger_id"
             ],
             "properties": {
+              "route": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Binary"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "trigger_id": {
                 "$ref": "#/definitions/Uint128"
               }
@@ -4099,6 +4119,16 @@
             "received_amount": {
               "$ref": "#/definitions/Coin"
             },
+            "route": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Binary"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "slippage_tolerance": {
               "$ref": "#/definitions/Decimal"
             },
@@ -4563,6 +4593,16 @@
             "received_amount": {
               "$ref": "#/definitions/Coin"
             },
+            "route": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Binary"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "slippage_tolerance": {
               "$ref": "#/definitions/Decimal"
             },
@@ -4983,6 +5023,16 @@
             },
             "received_amount": {
               "$ref": "#/definitions/Coin"
+            },
+            "route": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Binary"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "slippage_tolerance": {
               "$ref": "#/definitions/Decimal"

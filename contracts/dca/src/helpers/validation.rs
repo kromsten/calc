@@ -9,7 +9,9 @@ use crate::types::swap_adjustment_strategy::{
 };
 use crate::types::time_interval::TimeInterval;
 use crate::types::vault::{Vault, VaultStatus};
-use cosmwasm_std::{from_json, Addr, Coin, Decimal, Deps, Env, Storage, Timestamp, Uint128};
+use cosmwasm_std::{
+    from_json, Addr, Binary, Coin, Decimal, Deps, Env, Storage, Timestamp, Uint128,
+};
 use exchange::msg::QueryMsg;
 
 pub fn assert_exactly_one_asset(funds: Vec<Coin>) -> Result<(), ContractError> {
@@ -330,10 +332,11 @@ pub fn assert_label_is_no_longer_than_100_characters(label: &str) -> Result<(), 
     Ok(())
 }
 
-pub fn assert_pair_exists_for_denoms(
+pub fn assert_route_exists_for_denoms(
     deps: Deps,
     swap_denom: String,
     target_denom: String,
+    route: Option<Binary>,
 ) -> Result<(), ContractError> {
     let config = get_config(deps.storage)?;
     let twap_request = deps.querier.query_wasm_smart::<Decimal>(
@@ -342,6 +345,7 @@ pub fn assert_pair_exists_for_denoms(
             swap_denom: swap_denom.clone(),
             target_denom: target_denom.clone(),
             period: config.twap_period,
+            route,
         },
     );
     if twap_request.is_err() {
@@ -352,7 +356,7 @@ pub fn assert_pair_exists_for_denoms(
     Ok(())
 }
 
-pub fn assert_swap_adjusment_and_performance_assessment_strategies_are_compatible(
+pub fn assert_swap_adjustment_and_performance_assessment_strategies_are_compatible(
     swap_adjustment_strategy_params: &Option<SwapAdjustmentStrategyParams>,
     performance_assessment_strategy_params: &Option<PerformanceAssessmentStrategyParams>,
 ) -> Result<(), ContractError> {
@@ -450,8 +454,8 @@ pub fn assert_destination_allocations_add_up_to_one(
 ) -> Result<(), ContractError> {
     if destinations
         .iter()
-        .fold(Decimal::zero(), |acc, destintation| {
-            acc.checked_add(destintation.allocation).unwrap()
+        .fold(Decimal::zero(), |acc, destination| {
+            acc.checked_add(destination.allocation).unwrap()
         })
         != Decimal::percent(100)
     {

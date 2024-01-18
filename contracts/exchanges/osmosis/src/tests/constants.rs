@@ -9,6 +9,8 @@ pub const SWAP_FEE_RATE: &str = "0.001";
 
 pub const USER: &str = "user";
 pub const ADMIN: &str = "admin";
+pub const DCA_CONTRACT_ADDRESS: &str = "dca_contract_address";
+pub const LIMIT_ORDER_ADDRESS: &str = "limit_order_address";
 
 pub const DENOM_UOSMO: &str = "uosmo";
 pub const DENOM_UATOM: &str = "uatom";

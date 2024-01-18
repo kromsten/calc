@@ -5,7 +5,9 @@ use super::{
 };
 use crate::helpers::time::get_total_execution_duration;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Coin, Decimal, Decimal256, StdResult, Timestamp, Uint128, Uint256};
+use cosmwasm_std::{
+    Addr, Binary, Coin, Decimal, Decimal256, StdResult, Timestamp, Uint128, Uint256,
+};
 use std::cmp::max;
 
 #[cw_serde]
@@ -28,6 +30,7 @@ pub struct Vault {
     pub balance: Coin,
     pub target_denom: String,
     pub swap_amount: Uint128,
+    pub route: Option<Binary>,
     pub slippage_tolerance: Decimal,
     pub minimum_receive_amount: Option<Uint128>,
     pub time_interval: TimeInterval,
@@ -74,7 +77,7 @@ impl Vault {
             execution_duration
                 .num_seconds()
                 .try_into()
-                .expect("exected duration should be >= 0 seconds"),
+                .expect("executed duration should be >= 0 seconds"),
         )
     }
 
@@ -131,6 +134,7 @@ pub struct VaultBuilder {
     pub balance: Coin,
     pub target_denom: String,
     pub swap_amount: Uint128,
+    pub route: Option<Binary>,
     pub slippage_tolerance: Decimal,
     pub minimum_receive_amount: Option<Uint128>,
     pub time_interval: TimeInterval,
@@ -154,6 +158,7 @@ impl VaultBuilder {
         balance: Coin,
         target_denom: String,
         swap_amount: Uint128,
+        route: Option<Binary>,
         slippage_tolerance: Decimal,
         minimum_receive_amount: Option<Uint128>,
         time_interval: TimeInterval,
@@ -175,6 +180,7 @@ impl VaultBuilder {
             balance,
             target_denom,
             swap_amount,
+            route,
             slippage_tolerance,
             minimum_receive_amount,
             time_interval,
@@ -201,6 +207,7 @@ impl VaultBuilder {
             balance: self.balance.clone(),
             target_denom: self.target_denom,
             swap_amount: self.swap_amount,
+            route: self.route,
             slippage_tolerance: self.slippage_tolerance,
             minimum_receive_amount: self.minimum_receive_amount,
             time_interval: self.time_interval,

@@ -8,6 +8,7 @@ pub struct InstantiateMsg {}
 pub enum ExecuteMsg {
     Swap {
         minimum_receive_amount: Coin,
+        route: Option<Binary>,
     },
     SubmitOrder {
         target_price: Decimal256,
@@ -44,11 +45,13 @@ pub enum QueryMsg {
         swap_denom: String,
         target_denom: String,
         period: u64,
+        route: Option<Binary>,
     },
     #[returns(Coin)]
     GetExpectedReceiveAmount {
         swap_amount: Coin,
         target_denom: String,
+        route: Option<Binary>,
     },
     #[returns(Binary)]
     InternalQuery { msg: Binary },

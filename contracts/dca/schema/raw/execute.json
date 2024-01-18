@@ -61,6 +61,16 @@
                 }
               ]
             },
+            "route": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Binary"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "slippage_tolerance": {
               "anyOf": [
                 {
@@ -260,6 +270,16 @@
             "trigger_id"
           ],
           "properties": {
+            "route": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Binary"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "trigger_id": {
               "$ref": "#/definitions/Uint128"
             }

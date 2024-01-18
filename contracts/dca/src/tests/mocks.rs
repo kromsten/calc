@@ -50,6 +50,7 @@ impl<C: DeserializeOwned> CalcMockQuerier<C> {
                     ExchangeQueryMsg::GetExpectedReceiveAmount {
                         swap_amount,
                         target_denom,
+                        route: _,
                     } => to_json_binary(&Coin {
                         amount: swap_amount.amount * Decimal::percent(95),
                         denom: target_denom,
@@ -132,6 +133,7 @@ impl<C: CustomQuery + DeserializeOwned> CalcMockQuerier<C> {
                     ExchangeQueryMsg::GetExpectedReceiveAmount {
                         swap_amount,
                         target_denom,
+                        route: _,
                     } => to_json_binary(&Coin {
                         amount: swap_amount.amount
                             * (Decimal::one() / price)

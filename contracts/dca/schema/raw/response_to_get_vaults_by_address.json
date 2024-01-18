@@ -357,6 +357,16 @@
         "received_amount": {
           "$ref": "#/definitions/Coin"
         },
+        "route": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Binary"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "slippage_tolerance": {
           "$ref": "#/definitions/Decimal"
         },
