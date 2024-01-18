@@ -1,8 +1,18 @@
 #![allow(unused_variables, unused_imports)]
 
 use crate::types::{pair::Pair, position_type::PositionType};
+use astrovault::assets::asset::AssetInfo;
 use cosmwasm_std::{from_json, QuerierWrapper, StdError, StdResult};
 
+
+pub fn valid_route(
+    querier: &QuerierWrapper,
+    pair: &Pair,
+) -> StdResult<()> {
+    let route = pair.route.as_ref().unwrap();
+
+    Ok(())
+}
 
 pub fn get_token_out_denom(
     querier: &QuerierWrapper,

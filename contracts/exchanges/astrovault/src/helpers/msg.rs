@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_json_binary, BankMsg, Binary, Coin, CosmosMsg, Event, QuerierWrapper, StdError, StdResult, Uint128, WasmMsg};
+use cosmwasm_std::{from_json, to_json_binary, BankMsg, Binary, Coin, CosmosMsg, Event, QuerierWrapper, StdError, StdResult, Uint128, WasmMsg};
 use cw20::Cw20ExecuteMsg;
 
 use astrovault::
@@ -87,7 +87,10 @@ pub fn get_swap_msg(
         }
 
     } else {
-        route.unwrap();
+        let _route =  match route {
+            Some(route) => from_json(&route)?,
+            None => pair.route.clone().unwrap()
+        };
         todo!()
     };
 

@@ -5,7 +5,15 @@ use cw_storage_plus::{Bound, Map};
 const PAIRS: Map<String, Pair> = Map::new("pairs_v1");
 
 pub fn save_pair(storage: &mut dyn Storage, pair: &Pair) -> StdResult<()> {
-    PAIRS.save(storage, key_from(pair.denoms()), pair)
+    let mut to_save = pair.clone();
+
+    if pair.route.is_some() {
+        let mut route = to_save.route.unwrap();
+        route.sort(); 
+        to_save.route = Some(route);
+    }
+
+    PAIRS.save(storage, key_from(pair.denoms()), &to_save)
 }
 
 fn key_from(mut denoms: [String; 2]) -> String {
