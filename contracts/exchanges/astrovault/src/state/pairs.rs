@@ -100,6 +100,7 @@ mod get_pairs_tests {
                 pool_type: Some(PoolType::Standard),
                 decimal_delta: 0,
                 price_precision: 3,
+                route: None
             };
 
             save_pair(deps.as_mut().storage, &pair).unwrap();

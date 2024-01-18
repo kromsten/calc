@@ -13,6 +13,7 @@ impl Default for Pair {
             pool_type: Some(PoolType::Standard),
             decimal_delta: 0,
             price_precision: 3,
+            route: None
         }
     }
 }

@@ -4,7 +4,7 @@ use crate::{types::pair::Pair, ContractError};
 
 pub fn pair_exists(
     pair: &Pair,
-    _deps: Deps
+    _deps: Deps,
 ) -> Result<(), ContractError> {
 
     if pair.base_asset.equal(&pair.quote_asset) {

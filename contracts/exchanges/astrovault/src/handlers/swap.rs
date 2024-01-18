@@ -1,5 +1,5 @@
 use astrovault::assets::asset::{Asset, AssetInfo};
-use cosmwasm_std::{Coin, Deps, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128, Addr};
+use cosmwasm_std::{Addr, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128};
 use cw_utils::one_coin;
 
 
@@ -20,13 +20,14 @@ pub fn swap_native_handler(
     env: Env,
     info: MessageInfo,
     minimum_receive_amount: Asset,
+    route: Option<Binary>,
 ) -> Result<Response, ContractError> {
     let coin = one_coin(&info)?;
     let asset = Asset {
         info: AssetInfo::NativeToken { denom: coin.denom },
         amount: coin.amount
     };
-    swap_handler(deps, env, info.sender, asset, minimum_receive_amount, info.funds)
+    swap_handler(deps, env, info.sender, asset, minimum_receive_amount, info.funds, route)
 }
 
 
@@ -38,6 +39,7 @@ pub fn swap_cw20_handler(
     amount: Uint128,
     sender: String,
     minimum_receive_amount: Asset,
+    route: Option<Binary>,
 ) -> Result<Response, ContractError> {
     let sender = deps.api.addr_validate(sender.as_str())?;
 
@@ -46,7 +48,7 @@ pub fn swap_cw20_handler(
         amount
     };
 
-    swap_handler(deps, env, sender, asset, minimum_receive_amount, vec![])
+    swap_handler(deps, env, sender, asset, minimum_receive_amount, vec![], route)
 }
 
 
@@ -57,7 +59,8 @@ fn swap_handler(
     sender: Addr,
     offer_asset: Asset,
     minimum_receive_amount: Asset,
-    funds: Vec<Coin>
+    funds: Vec<Coin>,
+    route: Option<Binary>
 ) -> Result<Response, ContractError> {
 
     let pair = find_pair(
@@ -89,7 +92,8 @@ fn swap_handler(
         &pair, 
         offer_asset.clone(), 
         minimum_receive_amount.clone(), 
-        funds
+        funds,
+        route
     )?;
 
     let sub_msg: SubMsg = SubMsg::reply_on_success(
@@ -169,7 +173,8 @@ mod swap_tests {
                 mock_dependencies().as_mut(),
                 mock_env(),
                 mock_info(ADMIN, &[]),
-                Asset { info: AssetInfo::NativeToken { denom: DENOM_AARCH.into() }, amount: 12313u128.into() } 
+                Asset { info: AssetInfo::NativeToken { denom: DENOM_AARCH.into() }, amount: 12313u128.into() },
+                None 
             )
             .unwrap_err(),
             ContractError::Payment(PaymentError::NoFunds {})
@@ -186,7 +191,8 @@ mod swap_tests {
                     ADMIN,
                     &[Coin::new(12312, DENOM_UUSDC), Coin::new(12312, DENOM_AARCH)]
                 ),
-                Asset { info: AssetInfo::NativeToken { denom: DENOM_AARCH.into() }, amount: 12312u128.into() } 
+                Asset { info: AssetInfo::NativeToken { denom: DENOM_AARCH.into() }, amount: 12312u128.into() },
+                None 
             )
             .unwrap_err(),
             ContractError::Payment(PaymentError::MultipleDenoms {}) 
@@ -200,7 +206,8 @@ mod swap_tests {
                 mock_dependencies().as_mut(),
                 mock_env(),
                 mock_info(ADMIN, &[Coin::new(0, DENOM_AARCH)]),
-                Asset { info: AssetInfo::NativeToken { denom: DENOM_AARCH.into() }, amount: 12312u128.into() } 
+                Asset { info: AssetInfo::NativeToken { denom: DENOM_AARCH.into() }, amount: 12312u128.into() } ,
+                None 
             )
             .unwrap_err(),
             ContractError::Payment(PaymentError::NoFunds {}) 
@@ -214,7 +221,8 @@ mod swap_tests {
             mock_dependencies().as_mut(),
             mock_env(),
             mock_info(ADMIN, &[Coin::new(12312, DENOM_AARCH)]),
-            Asset { info: AssetInfo::NativeToken { denom: DENOM_AARCH.into() }, amount: 12312u128.into() } 
+            Asset { info: AssetInfo::NativeToken { denom: DENOM_AARCH.into() }, amount: 12312u128.into() } ,
+            None 
         ).unwrap_err();
 
         match err {
@@ -239,6 +247,7 @@ mod swap_tests {
             mock_env(),
             info,
             coin_to_asset(minimum_receive_amount.clone()),
+            None 
         )
         .unwrap();
 
@@ -273,7 +282,8 @@ mod swap_tests {
             deps.as_mut(),
             mock_env(),
             info.clone(),
-            Asset { info: AssetInfo::NativeToken { denom: pair.base_denom() }, amount: 3873213u128.into() } 
+            Asset { info: AssetInfo::NativeToken { denom: pair.base_denom() }, amount: 3873213u128.into() },
+            None  
         )
         .unwrap();
 

@@ -24,6 +24,7 @@ pub struct Pair {
     pub decimal_delta: i8,
     pub address: Option<Addr>,
     pub pool_type: Option<PoolType>,
+    pub route: Option<Vec<AssetInfo>>
 }
 
 
@@ -63,6 +64,12 @@ impl Pair {
         if self.address.is_some() ^ self.pool_type.is_some() {
             return Err(ContractError::InvalidPair { 
                 msg: String::from("Both address and pool type must be provided for direct pairs") 
+            });
+        };
+
+        if self.is_pool_pair() ^ (self.route.is_some())  {
+            return Err(ContractError::InvalidPair { 
+                msg: String::from("Providing route for direct pairs is not supported") 
             });
         };
 

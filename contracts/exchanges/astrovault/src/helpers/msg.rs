@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_json_binary, BankMsg, Coin, CosmosMsg, Event, QuerierWrapper, StdError, StdResult, Uint128, WasmMsg};
+use cosmwasm_std::{to_json_binary, BankMsg, Binary, Coin, CosmosMsg, Event, QuerierWrapper, StdError, StdResult, Uint128, WasmMsg};
 use cw20::Cw20ExecuteMsg;
 
 use astrovault::
@@ -59,10 +59,10 @@ pub fn get_swap_msg(
     offer_asset: Asset,
     min_amount: Asset,
     funds: Vec<Coin>,
+    route: Option<Binary>
 ) -> StdResult<CosmosMsg> {
 
     let msg = if pair.is_pool_pair() {
-        
         let address = pair.address.clone().unwrap();
         let pool_type = pair.pool_type.as_ref().unwrap();
 
@@ -87,6 +87,7 @@ pub fn get_swap_msg(
         }
 
     } else {
+        route.unwrap();
         todo!()
     };
 

@@ -121,24 +121,28 @@ pub fn execute(
 
         ExecuteMsg::Swap {
             minimum_receive_amount,
+            route
         } => swap_native_handler(
             deps, 
             env, 
             info, 
-            coin_to_asset(minimum_receive_amount)),
-
+            coin_to_asset(minimum_receive_amount),
+            route
+        ),
         ExecuteMsg::Receive(receive_msg) => {
             let msg : ExecuteMsg = from_json(&receive_msg.msg)?;
             match msg {
                 ExecuteMsg::Swap { 
-                    minimum_receive_amount
+                    minimum_receive_amount,
+                    route
                 } => swap_cw20_handler(
                     deps, 
                     env, 
                     info.sender, 
                     receive_msg.amount, 
                     receive_msg.sender, 
-                    coin_to_asset(minimum_receive_amount)
+                    coin_to_asset(minimum_receive_amount),
+                    route
                 ),
 
                 _ => Err(ContractError::Unauthorized {})
