@@ -8,13 +8,18 @@ use crate::types::pair::Pair;
 pub struct InstantiateMsg {
     pub admin: Addr,
     pub dca_contract_address: Addr,
+    pub router_address: Addr,
 }
 
 #[cw_serde]
-pub struct MigrateMsg {
-    pub admin: Addr,
-    pub dca_contract_address: Addr,
+pub struct InstantiateOptionalMsg {
+    pub admin:                Option<Addr>,
+    pub dca_contract_address: Option<Addr>,
+    pub router_address:       Option<Addr>,
 }
+
+
+pub type MigrateMsg = InstantiateOptionalMsg;
 
 #[cw_serde]
 pub enum InternalExecuteMsg {

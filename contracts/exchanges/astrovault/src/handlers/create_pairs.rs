@@ -1,3 +1,5 @@
+#![allow(unused_variables, unused_imports)]
+
 use cosmwasm_std::{DepsMut, MessageInfo, Response};
 
 use crate::{
@@ -6,12 +8,17 @@ use crate::{
     ContractError,
 };
 
+use astrovault::router::handle_msg;
+use astrovault::router::query_msg;
+
+
 pub fn create_pairs_handler(
     deps: DepsMut,
     info: MessageInfo,
     pairs: Vec<Pair>,
 ) -> Result<Response, ContractError> {
     let config = get_config(deps.storage)?;
+
 
     if info.sender != config.admin {
         return Err(ContractError::Unauthorized {});
@@ -55,6 +62,7 @@ mod create_pairs_tests {
             InstantiateMsg {
                 admin: Addr::unchecked(ADMIN),
                 dca_contract_address: Addr::unchecked("dca-contract-address"),
+                router_address: Addr::unchecked("router-address"),
             },
         )
         .unwrap();
@@ -76,6 +84,7 @@ mod create_pairs_tests {
             InstantiateMsg {
                 admin: Addr::unchecked(ADMIN),
                 dca_contract_address: Addr::unchecked("dca-contract-address"),
+                router_address: Addr::unchecked("router-address"),
             },
         )
         .unwrap();

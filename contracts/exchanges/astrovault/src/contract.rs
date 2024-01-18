@@ -1,9 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, from_json, to_json_binary,
+    from_json, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult
 };
-// use cw2::set_contract_version;
 
 use crate::helpers::balance::coin_to_asset;
 use crate::msg::{ExecuteMsg, QueryMsg};
@@ -15,7 +14,7 @@ use crate::handlers::get_pairs_internal::get_pairs_internal_handler;
 use crate::handlers::get_twap_to_now::get_twap_to_now_handler;
 use crate::handlers::swap::{return_swapped_funds, swap_native_handler, swap_cw20_handler};
 use crate::msg::{InstantiateMsg, InternalExecuteMsg, InternalQueryMsg, MigrateMsg};
-use crate::state::config::update_config;
+use crate::state::config::{get_config, update_config, update_router_config};
 use crate::types::config::Config;
 
 /*
@@ -34,14 +33,18 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     deps.api.addr_validate(msg.admin.as_ref())?;
     deps.api.addr_validate(msg.dca_contract_address.as_ref())?;
+    deps.api.addr_validate(msg.router_address.as_ref())?;
 
     update_config(
         deps.storage,
         Config {
             admin: msg.admin.clone(),
             dca_contract_address: msg.dca_contract_address.clone(),
+            router_address: msg.router_address.clone(),
         },
     )?;
+
+    update_router_config(&deps.querier, deps.storage, msg.router_address.as_ref())?;
 
     Ok(Response::new()
         .add_attribute("instantiate", "true")
@@ -49,23 +52,47 @@ pub fn instantiate(
         .add_attribute("dca_contract_address", msg.dca_contract_address))
 }
 
+
 #[entry_point]
 pub fn migrate(deps: DepsMut, _: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
-    deps.api.addr_validate(msg.dca_contract_address.as_ref())?;
 
-    update_config(
-        deps.storage,
-        Config {
-            admin: msg.admin.clone(),
-            dca_contract_address: msg.dca_contract_address.clone(),
-        },
-    )?;
+    let mut attributes : Vec<(&str, String)> = Vec::with_capacity(4);
+    attributes.push(("migrate", String::from("true")));
 
-    Ok(Response::new()
-        .add_attribute("migrate", "true")
-        .add_attribute("admin", msg.admin)
-        .add_attribute("dca_contract_address", msg.dca_contract_address))
+    let config = get_config(deps.storage)?;
+
+    let dca_contract_address = if msg.dca_contract_address.is_some() {
+        let dca = msg.dca_contract_address.unwrap().clone();
+        deps.api.addr_validate(dca.as_ref())?;
+        attributes.push(("dca_contract_address", dca.to_string()));
+        dca
+    } else {
+        config.dca_contract_address
+    };
+
+    let admin = if msg.admin.is_some() {
+        let admin = msg.admin.unwrap();
+        deps.api.addr_validate(admin.as_ref())?;
+        attributes.push(("admin", admin.to_string()));
+        admin
+    } else {
+        config.admin
+    };
+
+    let router_address = if msg.router_address.is_some() {
+        let router_address = msg.router_address.unwrap();
+        deps.api.addr_validate(router_address.as_ref())?;
+        attributes.push(("router_address", router_address.to_string()));
+        update_router_config(&deps.querier, deps.storage, router_address.as_ref())?;
+        router_address
+    } else {
+        config.router_address
+    };
+
+    update_config(deps.storage, Config { admin, dca_contract_address, router_address })?;
+    Ok(Response::new().add_attributes(attributes))
 }
+
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
