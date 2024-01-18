@@ -1,6 +1,6 @@
 use cosmwasm_std::{Coin, Deps, StdResult};
 use crate::helpers::balance::{coin_to_asset, to_asset_info};
-use crate::helpers::message::pool_swap_simulate;
+use crate::helpers::pool::pool_swap_simulate;
 use crate::state::pairs::find_pair;
 
 pub fn get_expected_receive_amount_handler(
@@ -14,18 +14,23 @@ pub fn get_expected_receive_amount_handler(
         [swap_amount.denom.clone(), target_denom.clone()],
     )?;
 
-    let amount = pool_swap_simulate(
-        &deps.querier,
-        pair.address,
-        pair.pool_type,
-        coin_to_asset(swap_amount),
-        to_asset_info(target_denom.clone())
-    )?;
+    if pair.is_pool_pair() {
+        let amount = pool_swap_simulate(
+            &deps.querier,
+            pair.address.unwrap().as_ref(),
+            &pair.pool_type.unwrap(),
+            coin_to_asset(swap_amount),
+            to_asset_info(target_denom.clone())
+        )?;
+    
+        Ok(Coin {
+            denom: target_denom,
+            amount,
+        })
+    }  else {
+        todo!()
+    }
 
-    Ok(Coin {
-        denom: target_denom,
-        amount,
-    })
 }
 
 #[cfg(test)]

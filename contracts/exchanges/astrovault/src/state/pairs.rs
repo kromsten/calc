@@ -96,10 +96,10 @@ mod get_pairs_tests {
             let pair = Pair {
                 base_asset: AssetInfo::NativeToken { denom: format!("base_denom_{}", i) },
                 quote_asset: AssetInfo::NativeToken { denom: format!("quote_denom_{}", i) },
-                address: Addr::unchecked(format!("address_{}", i)),
+                address: Some(Addr::unchecked(format!("address_{}", i))),
+                pool_type: Some(PoolType::Standard),
                 decimal_delta: 0,
                 price_precision: 3,
-                pool_type: PoolType::Standard
             };
 
             save_pair(deps.as_mut().storage, &pair).unwrap();

@@ -19,13 +19,12 @@ pub fn create_pairs_handler(
 ) -> Result<Response, ContractError> {
     let config = get_config(deps.storage)?;
 
-
     if info.sender != config.admin {
         return Err(ContractError::Unauthorized {});
     }
 
     for pair in pairs.clone() {
-        deps.api.addr_validate(pair.address.as_ref())?;
+        pair.validate(deps.as_ref())?;
         save_pair(deps.storage, &pair)?;
     }
 
@@ -90,7 +89,6 @@ mod create_pairs_tests {
         .unwrap();
 
         let pair = Pair::default();
-
         save_pair(deps.as_mut().storage, &pair).unwrap();
 
         let new_address = Addr::unchecked("new-pair-address");
@@ -99,7 +97,7 @@ mod create_pairs_tests {
             deps.as_mut(),
             mock_info(ADMIN, &[]),
             vec![Pair {
-                address: new_address.clone(),
+                address: Some(new_address.clone()),
                 ..pair.clone()
             }],
         )
@@ -108,6 +106,6 @@ mod create_pairs_tests {
         let updated_pair = find_pair(deps.as_ref().storage, pair.denoms()).unwrap();
 
         assert_ne!(pair.address, updated_pair.address);
-        assert_eq!(updated_pair.address, new_address);
+        assert_eq!(updated_pair.address, Some(new_address));
     }
 }

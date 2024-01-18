@@ -19,6 +19,12 @@ pub enum ContractError {
     #[error("Empty fin pool")]
     EmptyPool {},
 
+    #[error("Invalid pair info: {msg:?}")]
+    InvalidPair { msg: String },
+
+    #[error("Assets cannot be the same")]
+    SameAsset {},
+
     #[error("{0}")]
     Payment(#[from] PaymentError),
 

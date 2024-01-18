@@ -21,10 +21,12 @@ pub struct InstantiateOptionalMsg {
 
 pub type MigrateMsg = InstantiateOptionalMsg;
 
+
 #[cw_serde]
 pub enum InternalExecuteMsg {
     CreatePairs { pairs: Vec<Pair> },
 }
+
 
 #[cw_serde]
 #[derive(QueryResponses)]

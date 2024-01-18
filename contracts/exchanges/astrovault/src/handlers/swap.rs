@@ -1,5 +1,5 @@
 use astrovault::assets::asset::{Asset, AssetInfo};
-use cosmwasm_std::{Coin, Deps, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128, Addr, WasmMsg, to_json_binary};
+use cosmwasm_std::{Coin, Deps, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128, Addr};
 use cw_utils::one_coin;
 
 
@@ -9,8 +9,7 @@ use crate::{
         cache::{SwapCache, SWAP_CACHE},
         pairs::find_pair,
     },
-    types::{pair_contract::PairContract, pair},
-    helpers::{balance::get_asset_balance, message::{send_asset_msg, pool_swap_binary_msg, query_assets}},
+    helpers::{balance::get_asset_balance, msg::{get_swap_msg, send_asset_msg}},
     ContractError, 
 };
 
@@ -85,50 +84,13 @@ fn swap_handler(
         },
     )?;
 
-    let swap_to_asset_index = match pair.pool_type {
-        pair::PoolType::Ratio => None,
-        _ => {
-            let assets = query_assets(
-                    &deps.querier, 
-                    pair.address.clone(),
-                    pair.pool_type.clone()
-            )?;
-
-            Some(
-                assets
-                .iter()
-                .position(|a| a.info.equal(&minimum_receive_amount.info))
-                .unwrap_or(1) as u32
-            )
-        }
-        
-    };
-
-    let swap_msg = pool_swap_binary_msg(
-        pair.pool_type,
-        offer_asset.clone(),
-        None,
-        None,
-        None,
-        swap_to_asset_index,
-        None
+    let msg = get_swap_msg(
+        &deps.querier, 
+        &pair, 
+        offer_asset.clone(), 
+        minimum_receive_amount.clone(), 
+        funds
     )?;
-
-
-    let msg = if offer_asset.is_native_token() {
-        PairContract(pair.address).call_binary(swap_msg,funds,)?
-    } else {
-
-        WasmMsg::Execute { 
-            contract_addr: offer_asset.info.to_string(), 
-            msg: to_json_binary(&cw20::Cw20ExecuteMsg::Send { 
-                contract: pair.address.to_string(),
-                amount: offer_asset.amount, 
-                msg: swap_msg 
-            })?, 
-            funds
-        }.into()
-    };
 
     let sub_msg: SubMsg = SubMsg::reply_on_success(
         msg,
@@ -184,8 +146,7 @@ pub fn return_swapped_funds(deps: Deps, env: Env) -> Result<Response, ContractEr
 #[cfg(test)]
 mod swap_tests {
     use cosmwasm_std::{
-        testing::{mock_dependencies, mock_dependencies_with_balance, mock_env, mock_info},
-        Coin, StdError, SubMsg,
+        testing::{mock_dependencies, mock_dependencies_with_balance, mock_env, mock_info}, to_json_binary, Coin, StdError, SubMsg
     };
 
     use astrovault::{standard_pool::handle_msg::ExecuteMsg, assets::asset::{Asset, AssetInfo}};
@@ -197,7 +158,7 @@ mod swap_tests {
         handlers::swap::swap_native_handler,
         state::{cache::SWAP_CACHE, pairs::save_pair},
         tests::constants::{ADMIN, DENOM_AARCH, DENOM_UUSDC},
-        types::{pair::Pair, pair_contract::PairContract},
+        types::{pair::Pair, wrapper::ContractWrapper},
         ContractError, helpers::balance::{coin_to_asset, asset_to_coin},
     };
 
@@ -319,21 +280,20 @@ mod swap_tests {
         assert_eq!(
             response.messages.first().unwrap(),
             &SubMsg::reply_on_success(
-                PairContract(pair.address.clone())
-                    .call(
-                        ExecuteMsg::Swap {
-                            expected_return: None,
-                            belief_price: None,
-                            max_spread: None,
-                            to :None, 
-                            offer_asset: Asset { 
-                                info: AssetInfo::NativeToken { denom: pair.quote_denom() }, 
-                                amount: 2347631u128.into() 
-                            }, 
-                        },
-                        info.funds
-                    )
-                    .unwrap(),
+                ContractWrapper(pair.address.clone().unwrap())
+                .execute(
+                    to_json_binary(&ExecuteMsg::Swap {
+                        expected_return: None,
+                        belief_price: None,
+                        max_spread: None,
+                        to :None, 
+                        offer_asset: Asset { 
+                            info: AssetInfo::NativeToken { denom: pair.quote_denom() }, 
+                            amount: 2347631u128.into() 
+                        }, 
+                    }).unwrap(),
+                    info.funds
+                ).unwrap(),
                 AFTER_SWAP
             )
         )

@@ -19,7 +19,7 @@ use crate::types::config::Config;
 
 /*
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:astrovault";
+const CONTRACT_NAME: &str = "crates.io:astrovault_calc";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 */
 
@@ -103,13 +103,6 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Swap {
-            minimum_receive_amount,
-        } => swap_native_handler(
-            deps, 
-            env, 
-            info, 
-            coin_to_asset(minimum_receive_amount)),
         ExecuteMsg::SubmitOrder {
             target_price: _,
             target_denom: _,
@@ -125,6 +118,14 @@ pub fn execute(
         ExecuteMsg::InternalMsg { msg } => match from_json(&msg).unwrap() {
             InternalExecuteMsg::CreatePairs { pairs } => create_pairs_handler(deps, info, pairs),
         },
+
+        ExecuteMsg::Swap {
+            minimum_receive_amount,
+        } => swap_native_handler(
+            deps, 
+            env, 
+            info, 
+            coin_to_asset(minimum_receive_amount)),
 
         ExecuteMsg::Receive(receive_msg) => {
             let msg : ExecuteMsg = from_json(&receive_msg.msg)?;
