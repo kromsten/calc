@@ -16,14 +16,19 @@ pub enum ContractError {
     #[error("Missing reply id")]
     MissingReplyId {},
 
-    #[error("Empty fin pool")]
-    EmptyPool {},
 
     #[error("Invalid pair info: {msg:?}")]
     InvalidPair { msg: String },
 
+
+    #[error("Invalid route. Can't get from: {base:?} to {quote:?}")]
+    InvalidRoute { base: String, quote: String },
+
     #[error("Assets cannot be the same")]
     SameAsset {},
+
+    #[error("Assets cannot be empty")]
+    EmptyAsset {},
 
     #[error("Pair already exists")]
     PairExist {},

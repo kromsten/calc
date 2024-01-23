@@ -37,7 +37,7 @@ use astrovault::{
     standard_pool_factory::query_msg::QueryMsg as StandardFactoryQueryMsg,
 };
 
-use crate::{state::config::get_router_config, types::{config::RouterConfig, pair::{Pair, PoolInfo, PoolType}}};
+use crate::{state::config::get_router_config, types::{config::RouterConfig, pair::{Pair, PoolInfo, PoolType}}, ContractError};
 
 
 
@@ -186,19 +186,30 @@ pub fn pool_exist_in_registry(
 
 impl PoolInfo {
 
-    pub fn validate(&self, deps: Deps) -> StdResult<()> {
+    pub fn populate(&mut self, querier: &QuerierWrapper) -> Result<(), ContractError> {
+        let assets = self.get_pool_assets(querier)?;
+
+        let from_pos = assets.iter().position(|a| a.info == self.base_asset);
+        ensure!(from_pos.is_some(), StdError::generic_err("Couldn't get asset info from the pool"));
+        self.base_pool_index = Some(from_pos.unwrap() as u32);
+
+        let to_pos = assets.iter().position(|a| a.info == self.quote_asset);
+        ensure!(to_pos.is_some(), StdError::generic_err("Couldn't get asset info from the pool"));
+        self.quote_pool_index = Some(to_pos.unwrap() as u32);
+        Ok(())
+    }
+
+
+    pub fn validate(&self, deps: Deps) -> Result<(), ContractError> {
         deps.api.addr_validate(self.address.as_ref())?;
+        ensure!(!self.base_asset.equal(&self.quote_asset), ContractError::SameAsset {});
+        ensure!(self.base_asset.to_string().len() > 0, ContractError::EmptyAsset {});
+        ensure!(self.quote_asset.to_string().len() > 0, ContractError::EmptyAsset {});
 
         let base_index = self.base_pool_index;
         let quote_index = self.quote_pool_index;
 
         match self.pool_type {
-            PoolType::Standard => {
-                let pool = standard_pool_response(&deps.querier, &self.address)?;
-                ensure!(pool.assets.len() == 2, StdError::GenericErr {
-                    msg: format!("Standard pool must have 2 assets, found: {}", pool.assets.len())
-                });
-            },
             PoolType::Stable => {
                 ensure!(base_index.is_some() && quote_index.is_some(), 
                     StdError::generic_err("Stable pools must have both from and to asset indeces")
@@ -208,6 +219,7 @@ impl PoolInfo {
             PoolType::Ratio => {
                 ensure!(base_index.is_some(), StdError::generic_err("Ratio pools must have from asset index"));
             },
+            _ => {}
         }
 
         Ok(())
@@ -302,20 +314,6 @@ impl PoolInfo {
         query_assets(querier, &self.address, &self.pool_type)
     }
 
-
-    pub fn get_pool_asset_index(
-        &self,
-        querier: &QuerierWrapper,
-        asset_info: &AssetInfo,
-    ) -> StdResult<u32> {
-        let assets = self.get_pool_assets(querier)?;
-        
-        Ok(assets
-            .iter()
-            .position(|a| a.info == *asset_info)
-            .unwrap() as u32
-        )
-    }
 
 
     pub fn pool_swap_binary_msg(

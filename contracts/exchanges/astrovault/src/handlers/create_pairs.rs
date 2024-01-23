@@ -24,14 +24,17 @@ pub fn create_pairs_handler(
         return Err(ContractError::Unauthorized {});
     }
 
-    for pair in pairs.clone() {
-        pair.validate(deps.as_ref())?;
-        save_pair(deps.storage, &pair)?;
+    let len = pairs.len();
+
+    for pair in pairs {
+        for validated in pair.validated_to_save(deps.as_ref(), false)? {
+            save_pair(deps.storage, &validated)?;
+        }
     }
 
     Ok(Response::new()
         .add_attribute("create_pairs", "true")
-        .add_attribute("pairs_created", pairs.len().to_string()))
+        .add_attribute("pairs_created", len.to_string()))
 }
 
 #[cfg(test)]
@@ -47,7 +50,7 @@ mod create_pairs_tests {
         msg::InstantiateMsg,
         state::pairs::{find_pair, save_pair},
         tests::constants::ADMIN,
-        types::pair::Pair,
+        types::pair::{Pair, PairType},
         ContractError,
     };
 
@@ -90,6 +93,8 @@ mod create_pairs_tests {
         .unwrap();
 
         let pair = Pair::default();
+        let pool = pair.pool_info();
+
         save_pair(deps.as_mut().storage, &pair).unwrap();
 
         let new_address = String::from("new-pair-address");
@@ -98,6 +103,12 @@ mod create_pairs_tests {
             deps.as_mut(),
             mock_info(ADMIN, &[]),
             vec![Pair {
+                pair_type: PairType::Direct { 
+                    address: new_address.clone(), 
+                    base_index: None,
+                    quote_index: None,
+                    pool_type: pool.pool_type
+                },
                 ..pair.clone()
             }],
         )
@@ -105,7 +116,6 @@ mod create_pairs_tests {
 
         let updated_pair = find_pair(deps.as_ref().storage, pair.denoms()).unwrap();
 
-        let pool = pair.pool_info();
         let updated_pool = updated_pair.pool_info();
 
         assert_ne!(pool.address, updated_pool.address);

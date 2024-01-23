@@ -1,31 +1,66 @@
 #![allow(unused_variables, unused_imports)]
 
-use crate::types::{pair::Pair, position_type::PositionType};
+use crate::{state::pairs::pair_is_stored, types::{pair::{Pair, PoolInfo}, position_type::PositionType}, ContractError};
 use astrovault::assets::asset::AssetInfo;
 use cosmwasm_std::{from_json, Deps, QuerierWrapper, StdError, StdResult};
+use super::{pair, pool};
 
 
-
-pub fn query_route_exist(
-    deps: Deps,
-    pair: &Pair
-) -> StdResult<bool> {
-    let pools = pair.route_pools();
-    
-
-    Ok(true)
+fn validated_route_pool(
+    deps:               Deps,
+    pool:               &PoolInfo,
+) -> Result<PoolInfo, ContractError> {
+    let mut pool = pool.clone();
+    pool.populate(&deps.querier)?;
+    pool.validate(deps)?;
+    Ok(pool)
 }
 
 
+fn validated_route_pair(
+    deps:               Deps,
+    pair:               &Pair,
+    allow_missing:      bool,
+) -> Result<Pair, ContractError> {
 
-pub fn valid_route(
-    querier: &QuerierWrapper,
-    pair: &Pair,
-) -> StdResult<()> {
-    let _route = pair.route();
+    if !allow_missing && !pair_is_stored(deps.storage, &pair) {
+        return Err(ContractError::InvalidRoute {
+            base: pair.base_denom(),
+            quote: pair.quote_denom(),
+        });
+    };
+    let pool = validated_route_pool(deps, &pair.pool_info())?;
+    Ok(pool.into())
+}
 
+/// simple check that the route is valid without returning anything
+pub fn validate_routed_pair(
+    deps:                   Deps,
+    pair:                   &Pair,
+) -> Result<(), ContractError> {
+    pair
+    .route_pools()
+    .iter()
+    .map(|pool| validated_route_pool(deps, pool))
+    .collect::<Result<Vec<PoolInfo>, ContractError>>()?;
     Ok(())
 }
+
+
+/// check that the route is valid, populate indexes and return a list of (pool) pairs to be saved
+pub fn validated_route_pairs(
+    deps:                   Deps,
+    pair:                   &Pair,
+    allow_missing:          bool,
+) -> Result<Vec<Pair>, ContractError> {
+    pair
+    .route_pairs()
+    .iter()
+    .map(|pair| validated_route_pair(deps, pair, allow_missing))
+    .collect::<Result<Vec<Pair>, ContractError>>()
+}
+
+
 
 pub fn get_token_out_denom(
     querier: &QuerierWrapper,

@@ -292,7 +292,7 @@ mod swap_tests {
                 ContractWrapper(pair.pool_info().address)
                 .execute(
                     to_json_binary(&ExecuteMsg::Swap {
-                        expected_return: None,
+                        expected_return: Some(3873213u128.into()),
                         belief_price: None,
                         max_spread: None,
                         to :None, 

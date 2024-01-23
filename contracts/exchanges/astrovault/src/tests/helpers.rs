@@ -10,7 +10,7 @@ impl Default for Pair {
             quote_asset: AssetInfo::NativeToken { denom: DENOM_UUSDC.to_string() },
             pair_type: PairType::Direct {
                 address: String::from("pair-address"),
-                pool_type: PoolType::Stable,
+                pool_type: PoolType::Standard,
                 base_index: None,
                 quote_index: None,
             },

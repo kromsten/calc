@@ -1,12 +1,7 @@
 use cosmwasm_std::{to_json_binary, BankMsg, Coin, CosmosMsg, Event, StdError, StdResult, Uint128, WasmMsg};
 use cw20::Cw20ExecuteMsg;
 
-use astrovault::
-    assets::asset::AssetInfo
-;
-
-
-
+use astrovault::assets::asset::AssetInfo;
 
 pub fn get_attribute_in_event(
     events: &[Event],
