@@ -10,6 +10,7 @@ use crate::{
 
 use astrovault::router::handle_msg;
 use astrovault::router::query_msg;
+use astrovault::router::state::Hop;
 
 
 pub fn create_pairs_handler(

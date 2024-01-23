@@ -9,7 +9,7 @@ pub fn save_pair(storage: &mut dyn Storage, pair: &Pair) -> StdResult<()> {
 
     if pair.route.is_some() {
         let mut route = to_save.route.unwrap();
-        route.sort(); 
+        route.sort_by(|a, b| a.denom.cmp(&b.denom)); 
         to_save.route = Some(route);
     }
 
@@ -19,6 +19,10 @@ pub fn save_pair(storage: &mut dyn Storage, pair: &Pair) -> StdResult<()> {
 fn key_from(mut denoms: [String; 2]) -> String {
     denoms.sort();
     format!("{}-{}", denoms[0], denoms[1])
+}
+
+pub fn pair_is_stored(storage: &dyn Storage, pair: &Pair) -> bool {
+    PAIRS.has(storage, key_from(pair.denoms()))
 }
 
 pub fn find_pair(storage: &dyn Storage, denoms: [String; 2]) -> StdResult<Pair> {
@@ -106,8 +110,6 @@ mod get_pairs_tests {
                 quote_asset: AssetInfo::NativeToken { denom: format!("quote_denom_{}", i) },
                 address: Some(Addr::unchecked(format!("address_{}", i))),
                 pool_type: Some(PoolType::Standard),
-                decimal_delta: 0,
-                price_precision: 3,
                 route: None
             };
 

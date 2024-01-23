@@ -2,7 +2,19 @@
 
 use crate::types::{pair::Pair, position_type::PositionType};
 use astrovault::assets::asset::AssetInfo;
-use cosmwasm_std::{from_json, QuerierWrapper, StdError, StdResult};
+use cosmwasm_std::{from_json, Deps, QuerierWrapper, StdError, StdResult};
+
+
+
+pub fn query_route_exist(
+    deps: Deps,
+    pair: &Pair
+) -> StdResult<bool> {
+    let route = pair.route.as_ref().unwrap();
+    
+
+    Ok(true)
+}
 
 
 pub fn valid_route(
@@ -34,8 +46,9 @@ pub fn calculate_route(
     swap_denom: String,
 ) -> StdResult<Vec<()>> {
     todo!()
-
 }
+
+
 /* 
 #[cfg(test)]
 mod get_token_out_denom_tests {

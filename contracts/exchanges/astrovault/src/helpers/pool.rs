@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_json_binary, Binary, Decimal, QuerierWrapper, StdResult, Storage, Uint128};
+use cosmwasm_std::{ensure, to_json_binary, Binary, Decimal, Deps, QuerierWrapper, StdError, StdResult, Storage, Uint128};
 
 use astrovault::{
     standard_pool::{
@@ -24,11 +24,17 @@ use astrovault::{
             StablePoolQuerySwapSimulation, 
         }
     },
-    assets::asset::{Asset, AssetInfo}, 
-    ratio_pool_factory::query_msg::SwapCalcResponse
+    assets::{asset::{Asset, AssetInfo}, 
+        ratio_pools::RatioPoolInfo, 
+        pools::PoolInfo as StablePoolInfo, 
+        pairs::PairInfo as StandardPoolInfo
+    }, 
+    ratio_pool_factory::query_msg::{SwapCalcResponse, QueryMsg as RatioFactoryQueryMsg},
+    stable_pool_factory::query_msg::QueryMsg as StableFactoryQueryMsg,
+    standard_pool_factory::query_msg::QueryMsg as StandardFactoryQueryMsg,
 };
 
-use crate::types::pair::PoolType;
+use crate::{state::config::get_router_config, types::{config::RouterConfig, pair::{Pair, PoolType}}};
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn swap_msg(
@@ -307,6 +313,86 @@ pub fn query_assets(
         PoolType::Standard => standard_pool_response(querier, contract_addr)?.assets.into(),
     };
     Ok(assets)
+}
+
+
+
+pub fn query_ratio_pool_info(
+    querier: &QuerierWrapper,
+    contract_addr: &str,
+    asset_infos: [AssetInfo; 2]
+) -> StdResult<RatioPoolInfo> {
+    querier.query_wasm_smart(
+        contract_addr, 
+        &RatioFactoryQueryMsg::Pool { asset_infos }
+    )
+}
+
+pub fn query_standard_pool_info(
+    querier: &QuerierWrapper,
+    contract_addr: &str,
+    asset_infos: [AssetInfo; 2]
+) -> StdResult<StandardPoolInfo> {
+    querier.query_wasm_smart(
+        contract_addr, 
+        &StandardFactoryQueryMsg::Pair { asset_infos }
+    )
+}
+
+pub fn query_stable_pool_info(
+    querier: &QuerierWrapper,
+    contract_addr: &str,
+    asset_infos: Vec<AssetInfo>
+) -> StdResult<StablePoolInfo> {
+    querier.query_wasm_smart(
+        contract_addr, 
+        &StableFactoryQueryMsg::Pool { asset_infos }
+    )
+}
+
+
+
+pub fn query_pool_exist(
+    deps: Deps,
+    pair: &Pair
+) -> StdResult<bool> {
+
+    let cfg : RouterConfig = get_router_config(deps.storage)?;
+    
+    let pool_type = pair.pool_type.clone().unwrap();
+
+    let factory_address  = match pool_type {
+        PoolType::Ratio => cfg.ratio_pool_factory,
+        PoolType::Standard => cfg.standard_pool_factory,
+        PoolType::Stable => cfg.stable_pool_factory,
+    };
+
+    ensure!(factory_address.is_some(), StdError::GenericErr {
+        msg: format!("Factory address not set for pool type: {:?}", pool_type)
+    });
+
+    let factory_address = factory_address.as_ref().unwrap();
+
+
+    let pool_exists = match pool_type {
+        PoolType::Ratio => query_ratio_pool_info(
+            &deps.querier, 
+            factory_address, 
+            pair.assets()
+        ).is_ok(),
+        PoolType::Standard => query_standard_pool_info(
+            &deps.querier, 
+            factory_address, 
+            pair.assets()
+        ).is_ok(),
+        PoolType::Stable => query_stable_pool_info(
+            &deps.querier, 
+            factory_address, 
+            pair.assets().into()
+        ).is_ok(),
+    };
+
+    Ok(pool_exists)
 }
 
 

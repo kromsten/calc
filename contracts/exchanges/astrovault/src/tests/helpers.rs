@@ -11,9 +11,7 @@ impl Default for Pair {
             quote_asset: AssetInfo::NativeToken { denom: DENOM_UUSDC.to_string() },
             address: Some(Addr::unchecked("pair-address")),
             pool_type: Some(PoolType::Standard),
-            decimal_delta: 0,
-            price_precision: 3,
-            route: None
+            route: None,
         }
     }
 }

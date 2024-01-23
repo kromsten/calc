@@ -1,21 +1,24 @@
-use cosmwasm_std::Deps;
+use cosmwasm_std::{ensure, Deps};
 use crate::{types::pair::Pair, ContractError};
+use crate::state::pairs::pair_is_stored;
+
+#[cfg(not(test))]
+use crate::helpers::pool::query_pool_exist;
 
 
-pub fn pair_exists(
+pub fn pair_creatable(
+    deps: Deps,
     pair: &Pair,
-    _deps: Deps,
 ) -> Result<(), ContractError> {
+    ensure!(!pair_is_stored(deps.storage, pair), ContractError::PairExist {});
 
-    if pair.base_asset.equal(&pair.quote_asset) {
-        return Err(ContractError::SameAsset {});
+    if pair.is_pool_pair() {
+        #[cfg(not(test))]
+        query_pool_exist(deps, &pair)?;
+    } else {
+
     }
 
-    if !(pair.address.is_some() ^ pair.pool_type.is_some()) {
-        return Err(ContractError::InvalidPair { 
-            msg: String::from("Both address and pool type must be provided for direct pairs") 
-        });
-    }
 
     Ok(())
 }

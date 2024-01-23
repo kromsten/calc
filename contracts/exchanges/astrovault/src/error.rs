@@ -25,6 +25,9 @@ pub enum ContractError {
     #[error("Assets cannot be the same")]
     SameAsset {},
 
+    #[error("Pair already exists")]
+    PairExist {},
+
     #[error("{0}")]
     Payment(#[from] PaymentError),
 
