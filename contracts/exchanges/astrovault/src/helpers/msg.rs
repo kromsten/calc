@@ -1,13 +1,11 @@
-use cosmwasm_std::{from_json, to_json_binary, BankMsg, Binary, Coin, CosmosMsg, Event, QuerierWrapper, StdError, StdResult, Uint128, WasmMsg};
+use cosmwasm_std::{to_json_binary, BankMsg, Coin, CosmosMsg, Event, StdError, StdResult, Uint128, WasmMsg};
 use cw20::Cw20ExecuteMsg;
 
 use astrovault::
-    assets::asset::{Asset, AssetInfo}
+    assets::asset::AssetInfo
 ;
 
-use crate::types::{wrapper::ContractWrapper, pair::Pair};
 
-use super::pool;
 
 
 pub fn get_attribute_in_event(
@@ -51,48 +49,4 @@ pub fn send_asset_msg(
             amount: vec![Coin { denom, amount }],
         })),
     }
-}
-
-pub fn get_swap_msg(
-    querier: &QuerierWrapper,
-    pair: &Pair,
-    offer_asset: Asset,
-    min_amount: Asset,
-    funds: Vec<Coin>,
-    route: Option<Binary>
-) -> StdResult<CosmosMsg> {
-
-    let msg = if pair.is_pool_pair() {
-        let address = pair.address.clone().unwrap();
-        let pool_type = pair.pool_type.as_ref().unwrap();
-
-        let pool_msg = pool::swap_msg(
-            querier, 
-            address.as_ref(),
-            pool_type,
-            offer_asset.clone(), 
-            min_amount
-        )?;
-
-        let pool_contract  = ContractWrapper(address);
-
-        if offer_asset.is_native_token() {
-            pool_contract.execute(pool_msg, funds)?
-        } else {
-            pool_contract.execute_cw20(
-                offer_asset.info.to_string(), 
-                offer_asset.amount, 
-                pool_msg
-            )?
-        }
-
-    } else {
-        let _route =  match route {
-            Some(route) => from_json(&route)?,
-            None => pair.route.clone().unwrap()
-        };
-        todo!()
-    };
-
-    Ok(msg)
 }

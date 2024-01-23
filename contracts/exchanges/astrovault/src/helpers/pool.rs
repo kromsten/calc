@@ -1,4 +1,7 @@
-use cosmwasm_std::{ensure, to_json_binary, Binary, Decimal, Deps, QuerierWrapper, StdError, StdResult, Storage, Uint128};
+use cosmwasm_std::{
+    ensure, to_json_binary, Binary, Coin, CosmosMsg, Deps, QuerierWrapper, StdError, StdResult, Uint128, WasmMsg
+};
+
 
 use astrovault::{
     standard_pool::{
@@ -34,240 +37,10 @@ use astrovault::{
     standard_pool_factory::query_msg::QueryMsg as StandardFactoryQueryMsg,
 };
 
-use crate::{state::config::get_router_config, types::{config::RouterConfig, pair::{Pair, PoolType}}};
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn swap_msg(
-    _: &QuerierWrapper,
-    _: &str,
-    pool_type: &PoolType,
-    offer_asset: Asset,
-    _: Asset,
-) -> StdResult<Binary> {
-    pool_swap_binary_msg(
-        pool_type,
-        offer_asset,
-        None,
-        None,
-        None,
-        None,
-        None
-    )
-}
-
-
-#[cfg(target_arch = "wasm32")]
-pub fn swap_msg(
-    querier: &QuerierWrapper,
-    address: &str,
-    pool_type: &PoolType,
-    offer_asset: Asset,
-    min_amount: Asset,
-) -> StdResult<Binary> {
-
-    let swap_to_asset_index = match pool_type {
-        PoolType::Ratio => None,
-        _ => {
-            let assets = query_assets(
-                    querier, 
-                    address,
-                    pool_type
-            )?;
-            Some(
-                assets
-                .iter()
-                .position(|a| a.info.equal(&min_amount.info))
-                .unwrap_or(1) as u32
-            )
-        }
-    };
-
-    pool_swap_binary_msg(
-        pool_type,
-        offer_asset,
-        None,
-        None,
-        None,
-        swap_to_asset_index,
-        None
-    )
-}
-
-
-pub fn pool_exist(
-    querier: &QuerierWrapper,
-    _storage: &dyn Storage,
-    pool_address: &str,
-    pool_type: &PoolType,
-) -> StdResult<()> {
-    // let config = get_router_config(storage)?;
-
-    if query_assets(querier, pool_address, pool_type).is_err() {
-
-    };
-    
-
-    Ok(())
-}
+use crate::{state::config::get_router_config, types::{config::RouterConfig, pair::{Pair, PoolInfo, PoolType}}};
 
 
 
-
-fn swap_standard_msg(
-    offer_asset: Asset,
-    expected_return: Option<Uint128>,
-    belief_price: Option<Decimal>,
-    max_spread: Option<Decimal>,
-    to: Option<String>,
-) -> StdResult<Binary> {
-    let msg = StandardExecute::Swap {
-        offer_asset,
-        belief_price,
-        max_spread,
-        expected_return,
-        to,
-    };
-
-    to_json_binary(&msg)
-}
-
-
-fn swap_stable_msg(
-    expected_return: Option<Uint128>,
-    swap_to_asset_index: Option<u32>,
-    to: Option<String>,
-) -> StdResult<Binary> {    
-    let msg = StableExecute::Swap {
-        expected_return,
-        to,
-        swap_to_asset_index: swap_to_asset_index.unwrap_or(1),
-    };
-    to_json_binary(&msg)
-}
-
-
-pub fn swap_ratio_msg(
-    expected_return: Option<Uint128>,
-    to: Option<String>,
-) -> StdResult<Binary> {
-    let msg = RatioExecute::Swap {
-        expected_return,
-        to,
-    };
-    to_json_binary(&msg)
-}
-
-
-
-
-fn simulate_swap_standard(
-    querier: &QuerierWrapper,
-    contract_addr: &str,
-    offer_asset: Asset,
-) -> StdResult<Uint128> {
-    let res = querier.query_wasm_smart::<SimulationResponse>(
-        contract_addr, 
-        &StandardQuery::Simulation { offer_asset }
-    )?;
-    Ok(res.return_amount)
-}
-
-
-fn simulate_swap_stable(
-    querier: &QuerierWrapper,
-    contract_addr: &str,
-    offer_asset: Asset,
-    target_asset: &AssetInfo
-) -> StdResult<Uint128> {
-
-    let assets = query_assets(querier, contract_addr, &PoolType::Stable)?;
-
-    let from_index = assets
-        .iter()
-        .position(|a| a.info.equal(&offer_asset.info))
-        .unwrap_or(0) as u32;
-
-    let to_index = assets
-        .iter()
-        .position(|a| a.info.equal(&target_asset))
-        .unwrap_or(1);
-
-    let msg = StableQuery::SwapSimulation { 
-        amount: offer_asset.amount, 
-        swap_from_asset_index: from_index, 
-        swap_to_asset_index: to_index as u32
-    };
-
-    let res = querier.query_wasm_smart::<StablePoolQuerySwapSimulation>(
-        contract_addr, 
-        &msg
-    )?;
-
-    let swap_amount = res.swap_to_assets_amount.get(to_index).unwrap().clone();
-    let mint_amount = res.mint_to_assets_amount.get(to_index).unwrap().clone();
-
-    Ok(swap_amount.checked_add(mint_amount)?)
-}
-
-
-fn simulate_swap_ratio(
-    querier: &QuerierWrapper,
-    contract_addr: &str,
-    offer_asset: Asset,
-) -> StdResult<Uint128> {
-
-    let swap_from_asset_index = query_asset_index(
-        querier, 
-        contract_addr, 
-        &PoolType::Ratio, 
-        &offer_asset.info
-    )? as u8;
-
-    let msg = RatioQuery::SwapSimulation { 
-        amount: offer_asset.amount, 
-        swap_from_asset_index: swap_from_asset_index, 
-    };
-
-    let res = querier.query_wasm_smart::<SwapCalcResponse>(
-        contract_addr, 
-        &msg
-    )?;
-
-    Ok(res.to_amount_minus_fee)
-}
-
-
-
-pub fn pool_swap_simulate(
-    querier: &QuerierWrapper,
-    contract_addr: &str,
-    pool_type: &PoolType,
-    offer_asset: Asset,
-    target_asset: AssetInfo,
-) -> StdResult<Uint128> {
-    match pool_type {
-        PoolType::Standard => simulate_swap_standard(querier, contract_addr, offer_asset),
-        PoolType::Stable => simulate_swap_stable(querier, contract_addr, offer_asset, &target_asset),
-        PoolType::Ratio => simulate_swap_ratio(querier, contract_addr, offer_asset),
-    }
-}
-
-
-pub fn pool_swap_binary_msg(
-    pool_type: &PoolType,
-    offer_asset: Asset,
-    expected_return: Option<Uint128>,
-    belief_price: Option<Decimal>,
-    max_spread: Option<Decimal>,
-    swap_to_asset_index: Option<u32>,
-    to: Option<String>,
-) -> StdResult<Binary> {
-    match pool_type {
-        PoolType::Standard => swap_standard_msg(offer_asset, expected_return, belief_price, max_spread, to),
-        PoolType::Stable => swap_stable_msg(expected_return, swap_to_asset_index, to),
-        PoolType::Ratio => swap_ratio_msg(expected_return, to),
-    }
-}
 
 
 pub fn ratio_pool_response(
@@ -352,14 +125,15 @@ pub fn query_stable_pool_info(
 
 
 
-pub fn query_pool_exist(
+pub fn pool_exist_in_registry(
     deps: Deps,
     pair: &Pair
 ) -> StdResult<bool> {
 
     let cfg : RouterConfig = get_router_config(deps.storage)?;
-    
-    let pool_type = pair.pool_type.clone().unwrap();
+
+    let pool = pair.pool_info();
+    let pool_type = pool.pool_type;
 
     let factory_address  = match pool_type {
         PoolType::Ratio => cfg.ratio_pool_factory,
@@ -373,6 +147,18 @@ pub fn query_pool_exist(
 
     let factory_address = factory_address.as_ref().unwrap();
 
+    let stable_assets = match pool_type {
+        PoolType::Stable => query_assets(
+                            &deps.querier, 
+                            factory_address, 
+                            &PoolType::Stable
+                        )?
+                        .iter()
+                        .map(|a| a.info.clone())
+                        .collect::<Vec<AssetInfo>>(),
+
+        _ => vec![]
+    };
 
     let pool_exists = match pool_type {
         PoolType::Ratio => query_ratio_pool_info(
@@ -388,7 +174,7 @@ pub fn query_pool_exist(
         PoolType::Stable => query_stable_pool_info(
             &deps.querier, 
             factory_address, 
-            pair.assets().into()
+            stable_assets
         ).is_ok(),
     };
 
@@ -396,16 +182,191 @@ pub fn query_pool_exist(
 }
 
 
-pub fn query_asset_index(
-    querier: &QuerierWrapper,
-    contract_addr: &str,
-    pool_type: &PoolType,
-    asset_info: &AssetInfo,
-) -> StdResult<u32> {
-    let assets = query_assets(querier, contract_addr, pool_type)?;
-    
-    Ok(assets
-        .iter()
-        .position(|a| a.info == *asset_info)
-        .unwrap_or(0) as u32)
+
+
+impl PoolInfo {
+
+    pub fn validate(&self, deps: Deps) -> StdResult<()> {
+        deps.api.addr_validate(self.address.as_ref())?;
+
+        let base_index = self.base_pool_index;
+        let quote_index = self.quote_pool_index;
+
+        match self.pool_type {
+            PoolType::Standard => {
+                let pool = standard_pool_response(&deps.querier, &self.address)?;
+                ensure!(pool.assets.len() == 2, StdError::GenericErr {
+                    msg: format!("Standard pool must have 2 assets, found: {}", pool.assets.len())
+                });
+            },
+            PoolType::Stable => {
+                ensure!(base_index.is_some() && quote_index.is_some(), 
+                    StdError::generic_err("Stable pools must have both from and to asset indeces")
+                );
+                
+            },
+            PoolType::Ratio => {
+                ensure!(base_index.is_some(), StdError::generic_err("Ratio pools must have from asset index"));
+            },
+        }
+
+        Ok(())
+    }
+
+
+    pub fn get_swap_simulate(
+        &self,
+        querier:               &QuerierWrapper,
+        offer_asset:           Asset,
+    ) -> StdResult<Uint128> {
+
+        match self.pool_type {
+
+            PoolType::Standard => {
+                let res = querier.query_wasm_smart::<SimulationResponse>(
+                    self.address.clone(), 
+                    &StandardQuery::Simulation { offer_asset }
+                )?;
+                Ok(res.return_amount)
+            }
+            
+            PoolType::Stable => {
+
+                let (from_index, to_index) = self.from_to_indeces(&offer_asset.info);
+
+                let msg = StableQuery::SwapSimulation { 
+                    amount:                 offer_asset.amount, 
+                    swap_from_asset_index:  from_index, 
+                    swap_to_asset_index:    to_index.clone()
+                };
+
+                let to_index = to_index as usize;
+
+                let res = querier.query_wasm_smart::<StablePoolQuerySwapSimulation>(
+                    self.address.clone(), 
+                    &msg
+                )?;
+
+                let swap_amount = res.swap_to_assets_amount.get(to_index).unwrap().clone();
+                let mint_amount = res.mint_to_assets_amount.get(to_index).unwrap().clone();
+
+                Ok(swap_amount.checked_add(mint_amount)?)
+
+            },
+            
+            PoolType::Ratio => {
+
+                let swap_from_asset_index = self.asset_index(&offer_asset.info) as u8;
+            
+                let msg = RatioQuery::SwapSimulation { 
+                    amount: offer_asset.amount, 
+                    swap_from_asset_index
+                };
+            
+                let res = querier.query_wasm_smart::<SwapCalcResponse>(
+                    self.address.clone(), 
+                    &msg
+                )?;
+            
+                Ok(res.to_amount_minus_fee)
+            }
+        }
+    }
+
+
+    pub fn asset_index(
+        &self,
+        offer_asset: &AssetInfo
+    ) -> u32 {
+        match self.base_asset == *offer_asset {
+            true => self.base_pool_index.unwrap(),
+            false => self.quote_pool_index.unwrap(),
+        }
+    }
+
+    pub fn from_to_indeces(
+        &self,
+        offer_asset: &AssetInfo,
+    ) -> (u32, u32) {
+        match self.base_asset == *offer_asset {
+            true => (self.base_pool_index.unwrap(), self.quote_pool_index.unwrap()),
+            false => (self.quote_pool_index.unwrap(), self.base_pool_index.unwrap()),
+        }
+    }
+
+
+    pub fn get_pool_assets(
+        &self,
+        querier: &QuerierWrapper,
+    ) -> StdResult<Vec<Asset>> {
+        query_assets(querier, &self.address, &self.pool_type)
+    }
+
+
+    pub fn get_pool_asset_index(
+        &self,
+        querier: &QuerierWrapper,
+        asset_info: &AssetInfo,
+    ) -> StdResult<u32> {
+        let assets = self.get_pool_assets(querier)?;
+        
+        Ok(assets
+            .iter()
+            .position(|a| a.info == *asset_info)
+            .unwrap() as u32
+        )
+    }
+
+
+    pub fn pool_swap_binary_msg(
+        &self,
+        offer_asset:         Asset,
+        expected_return:     Option<Uint128>,
+    ) -> StdResult<Binary> {
+        
+        match self.pool_type {
+            PoolType::Standard => {
+                to_json_binary(&StandardExecute::Swap {
+                    offer_asset,
+                    expected_return,
+                    belief_price: None,
+                    max_spread: None,
+                    to: None,
+                })
+            },
+            PoolType::Stable => {
+            
+                to_json_binary(&StableExecute::Swap {
+                    expected_return,
+                    to: None,
+                    swap_to_asset_index: self.asset_index(&offer_asset.info),
+                })
+            } 
+            PoolType::Ratio => {
+                to_json_binary(&RatioExecute::Swap {
+                    expected_return,
+                    to: None,
+                })
+            } 
+        }
+    }
+
+
+    pub fn pool_swap_cosmos_msg(
+        &self,
+        offer_asset:         Asset,
+        expected_return:     Option<Uint128>,
+        funds:               Vec<Coin>,
+    ) -> StdResult<CosmosMsg> {
+        
+        Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: self.address.clone(),
+            msg: self.pool_swap_binary_msg(
+                offer_asset, 
+                expected_return, 
+            )?,
+            funds,
+        }))
+    }
+
 }

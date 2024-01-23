@@ -1,11 +1,11 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{to_json_binary, Addr, Binary, Coin, CosmosMsg, StdResult, Uint128, WasmMsg};
+use cosmwasm_std::{to_json_binary,  Binary, Coin, CosmosMsg, StdResult, Uint128, WasmMsg};
 
 #[cw_serde]
-pub struct ContractWrapper(pub Addr);
+pub struct ContractWrapper(pub String);
 
 impl ContractWrapper {
-    pub fn addr(&self) -> Addr {
+    pub fn addr(&self) -> String {
         self.0.clone()
     }
 

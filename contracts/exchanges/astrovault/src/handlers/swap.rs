@@ -9,7 +9,7 @@ use crate::{
         cache::{SwapCache, SWAP_CACHE},
         pairs::find_pair,
     },
-    helpers::{balance::get_asset_balance, msg::{get_swap_msg, send_asset_msg}},
+    helpers::{balance::get_asset_balance, msg::send_asset_msg},
     ContractError, 
 };
 
@@ -87,17 +87,15 @@ fn swap_handler(
         },
     )?;
 
-    let msg = get_swap_msg(
-        &deps.querier, 
-        &pair, 
+    let swap_msgs = pair.swap_msg(
         offer_asset.clone(), 
-        minimum_receive_amount.clone(), 
+        Some(minimum_receive_amount.amount), 
         funds,
         route
     )?;
 
     let sub_msg: SubMsg = SubMsg::reply_on_success(
-        msg,
+        swap_msgs,
         AFTER_SWAP,
     );
     
@@ -287,10 +285,11 @@ mod swap_tests {
         )
         .unwrap();
 
+
         assert_eq!(
             response.messages.first().unwrap(),
             &SubMsg::reply_on_success(
-                ContractWrapper(pair.address.clone().unwrap())
+                ContractWrapper(pair.pool_info().address)
                 .execute(
                     to_json_binary(&ExecuteMsg::Swap {
                         expected_return: None,

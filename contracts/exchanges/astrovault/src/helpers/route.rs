@@ -10,18 +10,19 @@ pub fn query_route_exist(
     deps: Deps,
     pair: &Pair
 ) -> StdResult<bool> {
-    let route = pair.route.as_ref().unwrap();
+    let pools = pair.route_pools();
     
 
     Ok(true)
 }
 
 
+
 pub fn valid_route(
     querier: &QuerierWrapper,
     pair: &Pair,
 ) -> StdResult<()> {
-    let route = pair.route.as_ref().unwrap();
+    let _route = pair.route();
 
     Ok(())
 }

@@ -5,15 +5,7 @@ use cw_storage_plus::{Bound, Map};
 const PAIRS: Map<String, Pair> = Map::new("pairs_v1");
 
 pub fn save_pair(storage: &mut dyn Storage, pair: &Pair) -> StdResult<()> {
-    let mut to_save = pair.clone();
-
-    if pair.route.is_some() {
-        let mut route = to_save.route.unwrap();
-        route.sort_by(|a, b| a.denom.cmp(&b.denom)); 
-        to_save.route = Some(route);
-    }
-
-    PAIRS.save(storage, key_from(pair.denoms()), &to_save)
+    PAIRS.save(storage, key_from(pair.denoms()), &pair)
 }
 
 fn key_from(mut denoms: [String; 2]) -> String {
@@ -94,9 +86,9 @@ mod find_pair_tests {
 #[cfg(test)]
 mod get_pairs_tests {
     use astrovault::assets::asset::AssetInfo;
-    use cosmwasm_std::{testing::mock_dependencies, Addr};
+    use cosmwasm_std::testing::mock_dependencies;
 
-    use crate::types::pair::{Pair, PoolType};
+    use crate::types::pair::Pair;
 
     use super::{get_pairs, save_pair};
 
@@ -105,19 +97,14 @@ mod get_pairs_tests {
         let mut deps = mock_dependencies();
 
         for i in 0..10 {
-            let pair = Pair {
-                base_asset: AssetInfo::NativeToken { denom: format!("base_denom_{}", i) },
-                quote_asset: AssetInfo::NativeToken { denom: format!("quote_denom_{}", i) },
-                address: Some(Addr::unchecked(format!("address_{}", i))),
-                pool_type: Some(PoolType::Standard),
-                route: None
-            };
-
+            let pair = Pair::from_assets(
+                AssetInfo::NativeToken { denom: format!("base_denom_{}", i) },
+                AssetInfo::NativeToken { denom: format!("quote_denom_{}", i) }
+            );
             save_pair(deps.as_mut().storage, &pair).unwrap();
         }
 
         let pairs = get_pairs(deps.as_ref().storage, None, None);
-
         assert_eq!(pairs.len(), 10);
     }
 

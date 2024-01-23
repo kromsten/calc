@@ -32,6 +32,7 @@ pub fn update_router_config(
     storage: &mut dyn Storage,
     router: &str,
 ) -> StdResult<()> {
+    use cosmwasm_std::from_json;
 
     #[cfg(target_arch = "wasm32")]
     let res = querier.query_wasm_smart::<RouterQuery::ConfigResponse>(
@@ -45,6 +46,7 @@ pub fn update_router_config(
     ROUTER_CONFIG.save(storage, &res)?;
     Ok(())
 }
+
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn update_router_config(

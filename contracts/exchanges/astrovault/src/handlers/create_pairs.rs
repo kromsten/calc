@@ -92,13 +92,12 @@ mod create_pairs_tests {
         let pair = Pair::default();
         save_pair(deps.as_mut().storage, &pair).unwrap();
 
-        let new_address = Addr::unchecked("new-pair-address");
+        let new_address = String::from("new-pair-address");
 
         create_pairs_handler(
             deps.as_mut(),
             mock_info(ADMIN, &[]),
             vec![Pair {
-                address: Some(new_address.clone()),
                 ..pair.clone()
             }],
         )
@@ -106,7 +105,10 @@ mod create_pairs_tests {
 
         let updated_pair = find_pair(deps.as_ref().storage, pair.denoms()).unwrap();
 
-        assert_ne!(pair.address, updated_pair.address);
-        assert_eq!(updated_pair.address, Some(new_address));
+        let pool = pair.pool_info();
+        let updated_pool = updated_pair.pool_info();
+
+        assert_ne!(pool.address, updated_pool.address);
+        assert_eq!(updated_pool.address, new_address);
     }
 }
