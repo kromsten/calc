@@ -9,11 +9,18 @@ pub enum PoolType {
     Ratio
 }
 
+
+#[cw_serde]
+pub struct HopSide {
+    pub address:   String,
+    pub pool_type: PoolType,
+}
+
 #[cw_serde]
 pub struct HopInfo {
     pub denom:     String,
-    pub address:   String,
-    pub pool_type: PoolType,
+    pub prev:      HopSide,
+    pub next:      HopSide,
 }
 
 

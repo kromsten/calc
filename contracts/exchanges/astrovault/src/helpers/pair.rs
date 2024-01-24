@@ -127,8 +127,8 @@ impl Pair {
         pools.push(PoolInfo {
             base_asset: self.base_asset.clone(),
             quote_asset: to_asset_info(first.denom.clone()),
-            address: first.address.clone(),
-            pool_type: first.pool_type.clone(),
+            address: first.prev.address.clone(),
+            pool_type: first.prev.pool_type.clone(),
             base_pool_index: None,
             quote_pool_index: None,
         });
@@ -140,8 +140,8 @@ impl Pair {
             pools.push(PoolInfo {
                 base_asset: to_asset_info(prev_hop.denom.clone()),
                 quote_asset: to_asset_info(hop.denom.clone()),
-                address: hop.address.clone(),
-                pool_type: hop.pool_type.clone(),
+                address: hop.prev.address.clone(),
+                pool_type: hop.prev.pool_type.clone(),
                 base_pool_index: None,
                 quote_pool_index: None,
             });
@@ -152,8 +152,8 @@ impl Pair {
         pools.push(PoolInfo {
             base_asset: to_asset_info(last.denom.clone()),
             quote_asset: self.quote_asset.clone(),
-            address: last.address.clone(),
-            pool_type: last.pool_type.clone(),
+            address: last.next.address.clone(),
+            pool_type: last.next.pool_type.clone(),
             base_pool_index: None,
             quote_pool_index: None,
         });
@@ -170,8 +170,8 @@ impl Pair {
         pairs.push(Pair::new_direct(
             self.base_asset.clone(), 
             to_asset_info(first.denom.clone()), 
-            first.address, 
-            first.pool_type, 
+            first.prev.address.clone(), 
+            first.prev.pool_type.clone(), 
             None, 
             None
         ));
@@ -181,8 +181,8 @@ impl Pair {
             pairs.push(Pair::new_direct(
                 to_asset_info(prev_hop.denom.clone()),
                 to_asset_info(hop.denom.clone()),
-                hop.address.clone(),
-                hop.pool_type.clone(),
+                hop.prev.address.clone(),
+                hop.prev.pool_type.clone(),
                 None,
                 None
             ));
@@ -192,8 +192,8 @@ impl Pair {
         pairs.push(Pair::new_direct(
             to_asset_info(last.denom.clone()),
             self.quote_asset.clone(),
-            last.address,
-            last.pool_type,
+            last.next.address.clone(),
+            last.next.pool_type.clone(),
             None,
             None
         ));
