@@ -51,8 +51,14 @@ pub fn update_router_config(
 #[cfg(not(target_arch = "wasm32"))]
 pub fn update_router_config(
     _: &QuerierWrapper,
-    _: &mut dyn Storage,
-    _: &str,
+    storage: &mut dyn Storage,
+    owner: &str,
 ) -> StdResult<()> {
-    Ok(())
+    ROUTER_CONFIG.save(storage, &RouterConfig {
+        owner: owner.to_string(),
+        cashback: None,
+        standard_pool_factory: None,
+        stable_pool_factory: None,
+        ratio_pool_factory: None,
+    })
 }

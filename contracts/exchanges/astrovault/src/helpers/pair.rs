@@ -1,6 +1,6 @@
 use astrovault::assets::asset::{Asset, AssetInfo};
 use astrovault::router::state::Hop as AstroHop;
-use cosmwasm_std::{Binary, Coin, CosmosMsg, Deps, Env, QuerierWrapper, StdResult};
+use cosmwasm_std::{Binary, Coin, CosmosMsg, Deps, Env, QuerierWrapper, StdError, StdResult};
 use crate::helpers::route::route_swap_cosmos_msg;
 use crate::types::pair::{PairRoute, PairType, PoolInfo, PoolType};
 use crate::types::pair::Pair;
@@ -201,6 +201,32 @@ impl Pair {
         pairs
     }
 
+
+    pub fn route_denoms(&self) -> Vec<String> {
+        let route = self.route();
+        let mut denoms = Vec::with_capacity(route.len() + 1);
+        denoms.push(self.base_denom());
+        for hop in route.iter() {
+            denoms.push(hop.denom.clone());
+        }
+        denoms.push(self.quote_denom());
+        denoms
+    }
+
+    pub fn valid_route_hops(&self) -> StdResult<()> {
+        let denoms = self.route_denoms();
+
+        let mut denoms_set = denoms.clone();
+        denoms_set.sort();
+        denoms_set.dedup();
+
+        if denoms_set.len() != denoms.len() {
+            return Err(StdError::generic_err("Route denoms are not unique"));
+        }
+        Ok(())
+    }
+
+
     pub fn to_astro_hop(
         &self,
         querier:     &QuerierWrapper,
@@ -247,17 +273,6 @@ impl Pair {
     }
 
 
-    pub fn new(
-        base_asset: AssetInfo, 
-        quote_asset: AssetInfo,
-        pair_type: PairType
-    ) -> Self {
-        Pair {
-            base_asset,
-            quote_asset,
-            pair_type,
-        }
-    }
 
     pub fn new_direct(
         base_asset: AssetInfo, 

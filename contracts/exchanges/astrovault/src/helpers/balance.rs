@@ -39,7 +39,8 @@ pub fn get_asset_balance(
 }
 
 
-pub fn to_asset_info(denom: String) -> AssetInfo {
+pub fn to_asset_info(denom: impl Into<String>) -> AssetInfo {
+    let denom = denom.into();
     if denom.starts_with("archway")  ||
         // or length is bigger than 10 characters and it isn't ibc denom'
         (denom.len() > 10 && !denom.starts_with("ibc/")
