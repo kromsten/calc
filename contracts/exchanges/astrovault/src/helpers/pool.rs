@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    ensure, to_json_binary, Binary, Coin, CosmosMsg, Deps, QuerierWrapper, StdError, StdResult, Uint128, WasmMsg
+    ensure, to_json_binary, Binary, Coin, CosmosMsg, Deps, QuerierWrapper, StdError, StdResult, Uint128
 };
 
 
@@ -35,12 +35,14 @@ use astrovault::{
     ratio_pool_factory::query_msg::{SwapCalcResponse, QueryMsg as RatioFactoryQueryMsg},
     stable_pool_factory::query_msg::QueryMsg as StableFactoryQueryMsg,
     standard_pool_factory::query_msg::QueryMsg as StandardFactoryQueryMsg,
+    router::state::{Hop as AstroHop, RatioHopInfo, StableHopInfo, StandardHopInfo}
 };
 
-use crate::{state::config::get_router_config, types::{config::RouterConfig, pair::{Pair, PoolInfo, PoolType}}, ContractError};
-
-
-
+use crate::{
+    state::config::get_router_config, 
+    types::{config::RouterConfig, pair::{Pair, PoolInfo, PoolType}, wrapper::ContractWrapper}, 
+    ContractError
+};
 
 
 pub fn ratio_pool_response(
@@ -182,21 +184,62 @@ pub fn pool_exist_in_registry(
 }
 
 
+#[cfg(test)]
+pub fn validated_direct_pair(
+    _: Deps,
+    pair: &Pair,
+) -> Result<Pair, ContractError> {
+    Ok(pair.clone())
+}
+
+
+#[cfg(not(test))]
+pub fn validated_direct_pair(
+    deps: Deps,
+    pair: &Pair,
+) -> Result<Pair, ContractError> {
+    let pool = pair.pool_info();
+    let populated = pool.populated(&deps.querier)?;
+    populated.validate(deps)?;
+    Ok(populated.into())
+}
 
 
 impl PoolInfo {
 
+    pub fn assets(&self) -> [AssetInfo; 2] {
+        [self.base_asset.clone(), self.quote_asset.clone()]
+    }
+
+    pub fn other_asset(&self, swap_asset: &AssetInfo) -> AssetInfo {
+        if self.quote_asset.equal(swap_asset) {
+            self.base_asset.clone()
+        } else {
+            self.quote_asset.clone()
+        }
+    }
+
     pub fn populate(&mut self, querier: &QuerierWrapper) -> Result<(), ContractError> {
         let assets = self.get_pool_assets(querier)?;
-
         let from_pos = assets.iter().position(|a| a.info == self.base_asset);
         ensure!(from_pos.is_some(), StdError::generic_err("Couldn't get asset info from the pool"));
         self.base_pool_index = Some(from_pos.unwrap() as u32);
-
         let to_pos = assets.iter().position(|a| a.info == self.quote_asset);
         ensure!(to_pos.is_some(), StdError::generic_err("Couldn't get asset info from the pool"));
         self.quote_pool_index = Some(to_pos.unwrap() as u32);
         Ok(())
+    }
+
+    pub fn populated(&self, querier: &QuerierWrapper) -> Result<PoolInfo, ContractError> {
+        let mut pool = self.clone();
+        let assets = self.get_pool_assets(querier)?;
+        let from_pos = assets.iter().position(|a| a.info == self.base_asset);
+        ensure!(from_pos.is_some(), StdError::generic_err("Couldn't get asset info from the pool"));
+        pool.base_pool_index = Some(from_pos.unwrap() as u32);
+        let to_pos = assets.iter().position(|a| a.info == self.quote_asset);
+        ensure!(to_pos.is_some(), StdError::generic_err("Couldn't get asset info from the pool"));
+        pool.quote_pool_index = Some(to_pos.unwrap() as u32);
+        Ok(pool)
     }
 
 
@@ -205,10 +248,8 @@ impl PoolInfo {
         ensure!(!self.base_asset.equal(&self.quote_asset), ContractError::SameAsset {});
         ensure!(self.base_asset.to_string().len() > 0, ContractError::EmptyAsset {});
         ensure!(self.quote_asset.to_string().len() > 0, ContractError::EmptyAsset {});
-
         let base_index = self.base_pool_index;
         let quote_index = self.quote_pool_index;
-
         match self.pool_type {
             PoolType::Stable => {
                 ensure!(base_index.is_some() && quote_index.is_some(), 
@@ -221,7 +262,6 @@ impl PoolInfo {
             },
             _ => {}
         }
-
         Ok(())
     }
 
@@ -356,15 +396,83 @@ impl PoolInfo {
         expected_return:     Option<Uint128>,
         funds:               Vec<Coin>,
     ) -> StdResult<CosmosMsg> {
+
+        let pair_contact = ContractWrapper(self.address.clone());
         
-        Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: self.address.clone(),
-            msg: self.pool_swap_binary_msg(
-                offer_asset, 
-                expected_return, 
-            )?,
-            funds,
-        }))
+        let swap_msg = self.pool_swap_binary_msg(
+            offer_asset.clone(), 
+            expected_return, 
+        )?;
+
+        if offer_asset.info.is_native_token() {
+            pair_contact.execute(
+                swap_msg, 
+                funds
+            )
+        } else {
+            pair_contact.execute_cw20(
+                offer_asset.to_string(), 
+                offer_asset.amount, 
+                swap_msg
+            )
+        }
+
+    }
+
+    pub fn to_astro_hop(
+        &self,
+        querier:     &QuerierWrapper,
+        offer_asset: &AssetInfo,
+    ) -> StdResult<AstroHop> {
+
+        let defaul_hop = AstroHop {
+            mint_staking_derivative: None,
+            ratio_hop_info: None,
+            standard_hop_info: None,
+            stable_hop_info: None,
+        };
+
+        let asset_infos = self.assets();
+
+        let hop = match self.pool_type {
+            PoolType::Ratio => AstroHop {
+                    ratio_hop_info: Some(RatioHopInfo {
+                        asset_infos,
+                        from_asset_index: self.asset_index(offer_asset),
+                    }),
+                    ..defaul_hop
+            },
+            PoolType::Standard => AstroHop {
+                    standard_hop_info: Some(StandardHopInfo {
+                        offer_asset_info: offer_asset.clone(),
+                        ask_asset_info: self.other_asset(offer_asset),
+                    }),
+                    ..defaul_hop
+            },
+            PoolType::Stable => {
+                
+                let (
+                    from_asset_index, 
+                    to_asset_index
+                ) = self.from_to_indeces(offer_asset);
+
+                let asset_infos = self.get_pool_assets(querier)?
+                    .iter()
+                    .map(|a| a.info.clone()).collect::<Vec<AssetInfo>>();
+                
+                AstroHop {
+                    stable_hop_info: Some(StableHopInfo {
+                        from_asset_index,
+                        to_asset_index,
+                        asset_infos,
+                    }),
+                    ..defaul_hop
+                }
+            },
+        };
+
+        Ok(hop)
+        
     }
 
 }

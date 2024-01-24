@@ -1,12 +1,13 @@
 use astrovault::assets::asset::{Asset, AssetInfo};
-use cosmwasm_std::{Binary, Coin, CosmosMsg, Deps, StdResult, Uint128};
+use astrovault::router::state::Hop as AstroHop;
+use cosmwasm_std::{Binary, Coin, CosmosMsg, Deps, Env, QuerierWrapper, StdResult};
+use crate::helpers::route::route_swap_cosmos_msg;
 use crate::types::pair::{PairRoute, PairType, PoolInfo, PoolType};
-use crate::{types::pair::Pair, ContractError};
+use crate::types::pair::Pair;
+use crate::ContractError;
 use exchange::msg::Pair as ExchangePair;
 
 use crate::helpers::balance::to_asset_info;
-
-use super::route::validated_route_pairs;
 
 
 /* #[cfg(not(test))]
@@ -76,7 +77,6 @@ impl From<Pair> for ExchangePair {
 
 
 
-
 impl Pair {
 
     pub fn is_pool_pair(&self) -> bool {
@@ -103,13 +103,14 @@ impl Pair {
         self.quote_asset.to_string()
     }
 
-
     pub fn assets(&self) -> [AssetInfo; 2] {
         [self.base_asset.clone(), self.quote_asset.clone()]
     }
+
     pub fn denoms(&self) -> [String; 2] {
         [self.base_asset.to_string(), self.quote_asset.to_string()]
     }
+    
     pub fn other_asset(&self, swap_asset: &AssetInfo) -> AssetInfo {
         if self.quote_asset.equal(swap_asset) {
             self.base_asset.clone()
@@ -200,89 +201,46 @@ impl Pair {
         pairs
     }
 
-
-    
-
-    pub fn route_assets(&self) -> Vec<[AssetInfo; 2]> {
-        let route = self.route();
-        let mut assets = Vec::with_capacity(route.len() + 1);
-
-        let first = to_asset_info(route.first().unwrap().denom.clone());
-        assets.push([self.base_asset.clone(), first.clone()]);
-
-        for (index, hop) in route.iter().enumerate().skip(1) {
-            let prev_hop = route.get(index - 1).unwrap();
-            assets.push([to_asset_info(prev_hop.denom.clone()), to_asset_info(hop.denom.clone())]);
-        }
-
-        let last = to_asset_info(route.last().unwrap().denom.clone());
-        assets.push([last.clone(), self.quote_asset.clone()]);
-
-        assets
+    pub fn to_astro_hop(
+        &self,
+        querier:     &QuerierWrapper,
+        offer_asset: &AssetInfo,
+    ) -> StdResult<AstroHop> {
+        self.pool_info().to_astro_hop(querier, offer_asset)   
     }
-
-
-    pub fn route_denoms(&self) -> Vec<[String; 2]> {
-        let route = self.route();
-        let mut denoms = Vec::with_capacity(route.len() + 1);
-
-        let first = route.first().unwrap();
-        denoms.push([self.base_asset.to_string(), first.denom.clone()]);
-
-        for (index, hop) in route.iter().enumerate().skip(1) {
-            let prev_hop = route.get(index - 1).unwrap();
-            denoms.push([prev_hop.denom.clone(), hop.denom.clone()]);
-        }
-
-        let last = route.last().unwrap();
-        denoms.push([last.denom.clone(), self.quote_asset.to_string()]);
-
-        denoms
-    }
-
-    #[cfg(test)]
-    pub fn validated_to_save(&self, deps: Deps, _: bool) -> Result<Vec<Pair>, ContractError> {
-        if self.is_pool_pair() {
-            Ok(vec![self.clone()])
-        } else {
-            Ok(vec![self.clone()])
-        }
-    }
-    
-    #[cfg(not(test))]
-    pub fn validated_to_save(&self, deps: Deps, allow_missing: bool) -> Result<Vec<Pair>, ContractError> {
-        if self.is_pool_pair() {
-            let mut pool = self.pool_info();
-            pool.populate(&deps.querier)?;
-            pool.validate(deps)?;
-            Ok(vec![pool.into()])
-        } else {
-            validated_route_pairs(deps, self, allow_missing)
-        }
-    }
-
 
     pub fn swap_msg(
         &self,
+        deps:                Deps,
+        env:                 Env,
         offer_asset:         Asset,
-        expected_return:     Option<Uint128>,
+        target_asset:        Asset,
+        route:               Option<Binary>,
         funds:               Vec<Coin>,
-        route:               Option<Binary>
-
-    ) -> StdResult<CosmosMsg> {
+    ) -> Result<CosmosMsg, ContractError> {
 
         let msg = if self.is_pool_pair() {
             let pool = self.pool_info();
             let swap_msg = pool.pool_swap_cosmos_msg(
                 offer_asset,
-                expected_return,
+                Some(target_asset.amount),
                 funds
             )?;
             swap_msg
         } else {
-            route.unwrap();
-            todo!()
+            let msg = route_swap_cosmos_msg(
+                deps,
+                env,
+                &self,
+                offer_asset,
+                target_asset,
+                route,
+                funds
+            )?;
+
+            msg
         };
+
 
         Ok(msg)
  

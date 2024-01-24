@@ -5,8 +5,8 @@ use cw_storage_plus::Item;
 #[cfg(target_arch = "wasm32")]
 use astrovault::router::query_msg as RouterQuery;
 
-const CONFIG: Item<Config> = Item::new("config_v2");
-const ROUTER_CONFIG: Item<RouterConfig> = Item::new("rc_v2");
+const CONFIG            : Item<Config>          = Item::new("config_v2");
+const ROUTER_CONFIG     : Item<RouterConfig>    = Item::new("rc_v2");
 
 
 pub fn get_config(store: &dyn Storage) -> StdResult<Config> {

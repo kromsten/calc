@@ -3,9 +3,11 @@
 use cosmwasm_std::{DepsMut, MessageInfo, Response};
 
 use crate::{
-    state::{config::get_config, pairs::save_pair},
-    types::pair::Pair,
-    ContractError,
+    helpers::{
+        pool::validated_direct_pair, 
+        route::{validated_route_pairs, validated_route_pairs_to_save}}, 
+        state::{config::get_config, pairs::{save_pair, save_route_pair}}, 
+        types::pair::Pair, ContractError
 };
 
 use astrovault::router::handle_msg;
@@ -24,17 +26,24 @@ pub fn create_pairs_handler(
         return Err(ContractError::Unauthorized {});
     }
 
-    let len = pairs.len();
+    let pairs_len = pairs.len();
 
     for pair in pairs {
-        for validated in pair.validated_to_save(deps.as_ref(), false)? {
-            save_pair(deps.storage, &validated)?;
+        if pair.is_pool_pair() {
+            let pair = validated_direct_pair(deps.as_ref(), &pair)?;
+            save_pair(deps.storage, &pair)?;
+        } else {
+            let route_pairs = validated_route_pairs_to_save(deps.as_ref(), &pair)?;
+            for route_pair in route_pairs {
+                save_pair(deps.storage, &route_pair)?;
+            }
+            save_route_pair(deps.storage, &pair)?;
         }
     }
 
     Ok(Response::new()
         .add_attribute("create_pairs", "true")
-        .add_attribute("pairs_created", len.to_string()))
+        .add_attribute("pairs_created", pairs_len.to_string()))
 }
 
 #[cfg(test)]

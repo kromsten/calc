@@ -1,25 +1,55 @@
 use crate::types::pair::Pair;
-use cosmwasm_std::{Order, StdResult, Storage};
+use cosmwasm_std::{Order, StdError, StdResult, Storage};
 use cw_storage_plus::{Bound, Map};
 
-const PAIRS: Map<String, Pair> = Map::new("pairs_v1");
+const PAIRS         : Map<String, Pair> = Map::new("pairs_v1");
+const ROUTE_PAIRS   : Map<String, Pair> = Map::new("rpairs_v1");
 
-pub fn save_pair(storage: &mut dyn Storage, pair: &Pair) -> StdResult<()> {
-    PAIRS.save(storage, key_from(pair.denoms()), &pair)
-}
 
 fn key_from(mut denoms: [String; 2]) -> String {
     denoms.sort();
     format!("{}-{}", denoms[0], denoms[1])
 }
 
-pub fn pair_is_stored(storage: &dyn Storage, pair: &Pair) -> bool {
+
+pub fn save_route_pair(storage: &mut dyn Storage, pair: &Pair) -> StdResult<()> {
+    ROUTE_PAIRS.save(storage, key_from(pair.denoms()), &pair)
+}
+
+
+pub fn find_route_pair(storage: &dyn Storage, denoms: [String; 2]) -> StdResult<Pair> {
+    let key = key_from(denoms);
+    if let Ok(pair) =  ROUTE_PAIRS.load(storage, key.clone()) {
+        return Ok(pair);
+    } else if let Ok(pair) = PAIRS.load(storage, key) {
+        return Ok(pair);
+    } else {
+        return Err(StdError::generic_err("Pair not found"));
+    }
+}
+
+pub fn route_pair_exists(storage: &dyn Storage, denoms: [String; 2]) -> bool {
+    let key = key_from(denoms);
+    if ROUTE_PAIRS.has(storage, key.clone()) {
+        true
+    } else {
+        PAIRS.has(storage, key)
+    }
+}
+
+
+pub fn pair_exists(storage: &dyn Storage, pair: &Pair) -> bool {
     PAIRS.has(storage, key_from(pair.denoms()))
+}
+
+pub fn save_pair(storage: &mut dyn Storage, pair: &Pair) -> StdResult<()> {
+    PAIRS.save(storage, key_from(pair.denoms()), &pair)
 }
 
 pub fn find_pair(storage: &dyn Storage, denoms: [String; 2]) -> StdResult<Pair> {
     PAIRS.load(storage, key_from(denoms))
 }
+
 
 pub fn get_pairs(
     storage: &dyn Storage,
@@ -37,6 +67,7 @@ pub fn get_pairs(
         .flat_map(|result| result.map(|(_, pair)| pair))
         .collect::<Vec<Pair>>()
 }
+
 
 pub fn delete_pair(storage: &mut dyn Storage, pair: &Pair) {
     PAIRS.remove(storage, key_from(pair.denoms()))

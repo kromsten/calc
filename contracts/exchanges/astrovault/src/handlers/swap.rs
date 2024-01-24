@@ -71,6 +71,7 @@ fn swap_handler(
         ],
     )?;
 
+
     SWAP_CACHE.save(
         deps.storage,
         &SwapCache {
@@ -81,17 +82,19 @@ fn swap_handler(
                 amount: get_asset_balance(
                     &deps.querier,
                     minimum_receive_amount.info.clone(),
-                    env.contract.address
+                    env.contract.address.clone()
                 )? 
             }
         },
     )?;
 
     let swap_msgs = pair.swap_msg(
+        deps.as_ref(),
+        env,
         offer_asset.clone(), 
-        Some(minimum_receive_amount.amount), 
+        minimum_receive_amount.clone(),
+        route,
         funds,
-        route
     )?;
 
     let sub_msg: SubMsg = SubMsg::reply_on_success(

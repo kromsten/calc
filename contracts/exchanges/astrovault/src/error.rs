@@ -16,10 +16,15 @@ pub enum ContractError {
     #[error("Missing reply id")]
     MissingReplyId {},
 
-
     #[error("Invalid pair info: {msg:?}")]
     InvalidPair { msg: String },
 
+    #[error("There is no route for the give pair")]
+    NoRoutedPair {},
+
+
+    #[error("Invalid route. Something went wrong")]
+    RouteRuntimeError {},
 
     #[error("Invalid route. Can't get from: {base:?} to {quote:?}")]
     InvalidRoute { base: String, quote: String },
