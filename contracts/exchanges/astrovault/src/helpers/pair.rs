@@ -18,13 +18,19 @@ use crate::helpers::pool::query_pool_exist; */
 impl Into<PoolInfo> for &Pair {
     fn into(self) -> PoolInfo {
         match self.pair_type.clone() {
-            PairType::Direct { address, pool_type, .. } => PoolInfo {
+            PairType::Direct { 
+                address, 
+                pool_type,
+                base_index,
+                quote_index,
+            
+            } => PoolInfo {
                 address: address.clone(),
                 pool_type: pool_type.clone(),
                 base_asset: self.base_asset.clone(),
                 quote_asset: self.quote_asset.clone(),
-                base_pool_index: None,
-                quote_pool_index: None,
+                base_index,
+                quote_index,
             },
             _ => panic!("Pair is not a direct pool")
         }
@@ -40,8 +46,8 @@ impl From<PoolInfo> for Pair {
             pair_type: PairType::Direct {
                 address: info.address,
                 pool_type: info.pool_type,
-                base_index: info.base_pool_index,
-                quote_index: info.quote_pool_index,
+                base_index: info.base_index,
+                quote_index: info.quote_index,
             },
         }
     }
@@ -124,13 +130,14 @@ impl Pair {
         let mut pools = Vec::with_capacity(route.len() + 1);
         
         let first = route.first().unwrap().clone();
+
         pools.push(PoolInfo {
             base_asset: self.base_asset.clone(),
             quote_asset: to_asset_info(first.denom.clone()),
             address: first.prev.address.clone(),
             pool_type: first.prev.pool_type.clone(),
-            base_pool_index: None,
-            quote_pool_index: None,
+            base_index: None,
+            quote_index: None,
         });
 
 
@@ -138,24 +145,25 @@ impl Pair {
             let prev_hop = route.get(index - 1).unwrap();
 
             pools.push(PoolInfo {
-                base_asset: to_asset_info(prev_hop.denom.clone()),
+                base_asset: to_asset_info(hop.denom.clone()),
                 quote_asset: to_asset_info(hop.denom.clone()),
-                address: hop.prev.address.clone(),
-                pool_type: hop.prev.pool_type.clone(),
-                base_pool_index: None,
-                quote_pool_index: None,
+                address: prev_hop.prev.address.clone(),
+                pool_type: prev_hop.prev.pool_type.clone(),
+                base_index: None,
+                quote_index: None,
             });
         }
 
         let last = route.last().unwrap().clone();
+        let next_hop = first.next.unwrap();
 
         pools.push(PoolInfo {
             base_asset: to_asset_info(last.denom.clone()),
             quote_asset: self.quote_asset.clone(),
-            address: last.next.address.clone(),
-            pool_type: last.next.pool_type.clone(),
-            base_pool_index: None,
-            quote_pool_index: None,
+            address: next_hop.address.clone(),
+            pool_type: next_hop.pool_type.clone(),
+            base_index: None,
+            quote_index: None,
         });
 
         pools
@@ -167,6 +175,7 @@ impl Pair {
         let mut pairs = Vec::with_capacity(route.len() + 1);
         
         let first = route.first().unwrap().clone();
+
         pairs.push(Pair::new_direct(
             self.base_asset.clone(), 
             to_asset_info(first.denom.clone()), 
@@ -178,22 +187,25 @@ impl Pair {
 
         for (index, hop) in route.iter().enumerate().skip(1) {
             let prev_hop = route.get(index - 1).unwrap();
+
             pairs.push(Pair::new_direct(
                 to_asset_info(prev_hop.denom.clone()),
                 to_asset_info(hop.denom.clone()),
-                hop.prev.address.clone(),
-                hop.prev.pool_type.clone(),
+                prev_hop.prev.address.clone(),
+                prev_hop.prev.pool_type.clone(),
                 None,
                 None
             ));
         }
 
         let last = route.last().unwrap().clone();
+        let next_hop = first.next.unwrap();
+
         pairs.push(Pair::new_direct(
             to_asset_info(last.denom.clone()),
             self.quote_asset.clone(),
-            last.next.address.clone(),
-            last.next.pool_type.clone(),
+            next_hop.address.clone(),
+            next_hop.pool_type.clone(),
             None,
             None
         ));

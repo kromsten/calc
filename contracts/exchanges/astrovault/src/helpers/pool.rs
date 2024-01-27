@@ -199,7 +199,7 @@ pub fn validated_direct_pair(
     pair: &Pair,
 ) -> Result<Pair, ContractError> {
     let pool = pair.pool_info();
-    let populated = pool.populated(&deps.querier)?;
+    let populated = pool.populated(deps)?;
     populated.validate(deps)?;
     Ok(populated.into())
 }
@@ -219,26 +219,26 @@ impl PoolInfo {
         }
     }
 
-    pub fn populate(&mut self, querier: &QuerierWrapper) -> Result<(), ContractError> {
-        let assets = self.get_pool_assets(querier)?;
+    pub fn populate(&mut self, deps: Deps) -> Result<(), ContractError> {
+        let assets = self.get_pool_assets(&deps.querier)?;
         let from_pos = assets.iter().position(|a| a.info == self.base_asset);
         ensure!(from_pos.is_some(), StdError::generic_err("Couldn't get asset info from the pool"));
-        self.base_pool_index = Some(from_pos.unwrap() as u32);
+        self.base_index = Some(from_pos.unwrap() as u32);
         let to_pos = assets.iter().position(|a| a.info == self.quote_asset);
         ensure!(to_pos.is_some(), StdError::generic_err("Couldn't get asset info from the pool"));
-        self.quote_pool_index = Some(to_pos.unwrap() as u32);
+        self.quote_index = Some(to_pos.unwrap() as u32);
         Ok(())
     }
 
-    pub fn populated(&self, querier: &QuerierWrapper) -> Result<PoolInfo, ContractError> {
+    pub fn populated(&self, deps: Deps) -> Result<PoolInfo, ContractError> {
         let mut pool = self.clone();
-        let assets = self.get_pool_assets(querier)?;
+        let assets = self.get_pool_assets(&deps.querier)?;
         let from_pos = assets.iter().position(|a| a.info == self.base_asset);
         ensure!(from_pos.is_some(), StdError::generic_err("Couldn't get asset info from the pool"));
-        pool.base_pool_index = Some(from_pos.unwrap() as u32);
+        pool.base_index = Some(from_pos.unwrap() as u32);
         let to_pos = assets.iter().position(|a| a.info == self.quote_asset);
         ensure!(to_pos.is_some(), StdError::generic_err("Couldn't get asset info from the pool"));
-        pool.quote_pool_index = Some(to_pos.unwrap() as u32);
+        pool.quote_index = Some(to_pos.unwrap() as u32);
         Ok(pool)
     }
 
@@ -248,20 +248,11 @@ impl PoolInfo {
         ensure!(!self.base_asset.equal(&self.quote_asset), ContractError::SameAsset {});
         ensure!(self.base_asset.to_string().len() > 0, ContractError::EmptyAsset {});
         ensure!(self.quote_asset.to_string().len() > 0, ContractError::EmptyAsset {});
-        let base_index = self.base_pool_index;
-        let quote_index = self.quote_pool_index;
-        match self.pool_type {
-            PoolType::Stable => {
-                ensure!(base_index.is_some() && quote_index.is_some(), 
-                    StdError::generic_err("Stable pools must have both from and to asset indeces")
-                );
-                
-            },
-            PoolType::Ratio => {
-                ensure!(base_index.is_some(), StdError::generic_err("Ratio pools must have from asset index"));
-            },
-            _ => {}
-        }
+        let base_index = self.base_index;
+        let quote_index = self.quote_index;
+        ensure!(base_index.is_some() && quote_index.is_some(), 
+            StdError::generic_err("Pools must have both from and to asset indeces")
+        );
         Ok(())
     }
 
@@ -331,8 +322,8 @@ impl PoolInfo {
         offer_asset: &AssetInfo
     ) -> u32 {
         match self.base_asset == *offer_asset {
-            true => self.base_pool_index.unwrap(),
-            false => self.quote_pool_index.unwrap(),
+            true => self.base_index.unwrap(),
+            false => self.quote_index.unwrap(),
         }
     }
 
@@ -341,8 +332,8 @@ impl PoolInfo {
         offer_asset: &AssetInfo,
     ) -> (u32, u32) {
         match self.base_asset == *offer_asset {
-            true => (self.base_pool_index.unwrap(), self.quote_pool_index.unwrap()),
-            false => (self.quote_pool_index.unwrap(), self.base_pool_index.unwrap()),
+            true => (self.base_index.unwrap(), self.quote_index.unwrap()),
+            false => (self.quote_index.unwrap(), self.base_index.unwrap()),
         }
     }
 

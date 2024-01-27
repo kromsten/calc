@@ -235,10 +235,40 @@ pub fn get_route_swap_simulate(
 #[cfg(test)]
 mod creating_routed_pairs_tests {
     use std::{env, vec};
-    use astrovault::{assets::asset::{Asset, AssetInfo}, standard_pool::query_msg::{QueryMsg as StandardQuery, SimulationResponse}};
-    use cosmwasm_std::{from_json, testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier}, to_json_binary, Addr, Coin, ContractResult, CosmosMsg, DepsMut, Empty, Env, MemoryStorage, MessageInfo, OwnedDeps, StdError, SystemError, SystemResult, Uint128, WasmMsg, WasmQuery};
+    use astrovault::{
+        assets::asset::{Asset, AssetInfo}, 
+        standard_pool::query_msg::{QueryMsg as StandardQuery, SimulationResponse}
+    };
+    use cosmwasm_std::{
+        from_json, to_json_binary,
+        testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier}, 
+        Addr, Coin, ContractResult, CosmosMsg, DepsMut, Empty, Env, MemoryStorage, 
+        MessageInfo, OwnedDeps, StdError, SystemError, SystemResult, Uint128, WasmMsg, WasmQuery
+    };
     use cw20::Cw20ReceiveMsg;
-    use crate::{handlers::{create_pairs::create_pairs_handler, get_expected_receive_amount::get_expected_receive_amount_handler}, helpers::{balance::{asset_to_coin, to_asset_info}, route::validated_route_pairs}, state::{config::{get_config, update_config, update_router_config}, pairs::{find_pair, get_pairs, pair_exists, route_pair_exists}}, tests::constants::{DCA_CONTRACT, DENOM_AARCH, DENOM_UATOM, DENOM_UNTRN, DENOM_UOSMO, DENOM_USCRT, DENOM_UUSDC, ROUTER_CONTRACT}, types::{config::Config, pair::{HopInfo, HopSide, Pair, PairRoute, PairType, PoolType}}, ContractError};
+    use crate::{
+        handlers::{
+            create_pairs::create_pairs_handler, 
+            get_expected_receive_amount::get_expected_receive_amount_handler
+        }, 
+        helpers::{
+            balance::{asset_to_coin, to_asset_info}, 
+            route::validated_route_pairs
+        }, 
+        state::{
+            config::{get_config, update_config, update_router_config}, 
+            pairs::{find_pair, get_pairs, pair_exists, route_pair_exists}
+        }, 
+        tests::constants::{
+            DCA_CONTRACT, DENOM_AARCH, DENOM_UATOM, DENOM_UNTRN, 
+            DENOM_UOSMO, DENOM_USCRT, DENOM_UUSDC, ROUTER_CONTRACT
+        }, 
+        types::{
+            config::Config, 
+            pair::{HopInfo, HopSide, Pair, PairRoute, PairType, PoolType}
+        }, 
+        ContractError
+    };
     use super::{route_pairs_to_astro_hops, route_swap_cosmos_msg};
     use astrovault::router::{
         state::{
@@ -323,10 +353,10 @@ mod creating_routed_pairs_tests {
                 address: "address".to_string(),
                 pool_type: PoolType::Standard,
             },
-            next: HopSide {
+            next: Some(HopSide {
                 address: "address".to_string(),
                 pool_type: PoolType::Standard,
-            },
+            }),
             denom: DENOM_UOSMO.to_string(),
         }]);
 
@@ -366,10 +396,10 @@ mod creating_routed_pairs_tests {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
                 },
-                next: HopSide {
+                next: Some(HopSide {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
-                },
+                }),
                 denom: DENOM_UOSMO.to_string(),
             },
             HopInfo {
@@ -377,10 +407,10 @@ mod creating_routed_pairs_tests {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
                 },
-                next: HopSide {
+                next: Some(HopSide {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
-                },
+                }),
                 denom: DENOM_USCRT.to_string(),
             },
             HopInfo {
@@ -388,10 +418,10 @@ mod creating_routed_pairs_tests {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
                 },
-                next: HopSide {
+                next: Some(HopSide {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
-                },
+                }),
                 denom: DENOM_UNTRN.to_string(),
             }
         ]);
@@ -472,10 +502,10 @@ mod creating_routed_pairs_tests {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
                 },
-                next: HopSide {
+                next: Some(HopSide {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
-                },
+                }),
                 denom: DENOM_UOSMO.to_string(),
             },
             HopInfo {
@@ -483,10 +513,10 @@ mod creating_routed_pairs_tests {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
                 },
-                next: HopSide {
+                next: Some(HopSide {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
-                },
+                }),
                 denom: DENOM_UNTRN.to_string(),
             }
         ]);
@@ -560,10 +590,10 @@ mod creating_routed_pairs_tests {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
                 },
-                next: HopSide {
+                next: Some(HopSide {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
-                },
+                }),
                 denom: DENOM_UOSMO.to_string(),
             },
             HopInfo {
@@ -571,10 +601,10 @@ mod creating_routed_pairs_tests {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
                 },
-                next: HopSide {
+                next: Some(HopSide {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
-                },
+                }),
                 denom: DENOM_UNTRN.to_string(),
             },
             HopInfo {
@@ -582,10 +612,10 @@ mod creating_routed_pairs_tests {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
                 },
-                next: HopSide {
+                next: Some(HopSide {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
-                },
+                }),
                 denom: DENOM_USCRT.to_string(),
             },
         ]);
@@ -604,10 +634,10 @@ mod creating_routed_pairs_tests {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
                     },
-                    next: HopSide {
+                    next: Some(HopSide {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
-                    },
+                    }),
                     denom: DENOM_UOSMO.to_string(),
                 },
                 HopInfo {
@@ -615,10 +645,10 @@ mod creating_routed_pairs_tests {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
                     },
-                    next: HopSide {
+                    next: Some(HopSide {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
-                    },
+                    }),
                     denom: DENOM_UNTRN.to_string(),
                 },
             ]
@@ -641,10 +671,10 @@ mod creating_routed_pairs_tests {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
                     },
-                    next: HopSide {
+                    next: Some(HopSide {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
-                    },
+                    }),
                     denom: DENOM_UOSMO.to_string(),
                 },
             ]
@@ -670,10 +700,10 @@ mod creating_routed_pairs_tests {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
                     },
-                    next: HopSide {
+                    next: Some(HopSide {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
-                    },
+                    }),
                     denom: DENOM_UNTRN.to_string(),
                 },
             ]
@@ -696,10 +726,10 @@ mod creating_routed_pairs_tests {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
                     },
-                    next: HopSide {
+                    next: Some(HopSide {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
-                    },
+                    }),
                     denom: DENOM_UNTRN.to_string(),
                 },
                 HopInfo {
@@ -707,10 +737,10 @@ mod creating_routed_pairs_tests {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
                     },
-                    next: HopSide {
+                    next: Some(HopSide {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
-                    },
+                    }),
                     denom: DENOM_USCRT.to_string(),
                 },
             ]
@@ -734,10 +764,10 @@ mod creating_routed_pairs_tests {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
                     },
-                    next: HopSide {
+                    next: Some(HopSide {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
-                    },
+                    }),
                     denom: DENOM_USCRT.to_string(),
                 },
                 HopInfo {
@@ -745,10 +775,10 @@ mod creating_routed_pairs_tests {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
                     },
-                    next: HopSide {
+                    next: Some(HopSide {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
-                    },
+                    }),
                     denom: DENOM_UNTRN.to_string(),
                 }
             ]
@@ -756,6 +786,7 @@ mod creating_routed_pairs_tests {
 
     }
 
+  
 
     #[test]
     fn routed_simulation_works() {
@@ -765,10 +796,10 @@ mod creating_routed_pairs_tests {
                     address: "arch_scrt_pair".to_string(),
                     pool_type: PoolType::Standard,
                 },
-                next: HopSide {
+                next: Some(HopSide {
                     address: "scrt_usdc_pair".to_string(),
                     pool_type: PoolType::Standard,
-                },
+                }),
                 denom: DENOM_USCRT.to_string(),
             },
         ]);
@@ -839,6 +870,235 @@ mod creating_routed_pairs_tests {
             }
         )
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+    #[test]
+    fn pairs_overriding_and_counts() {
+
+        let data = init_with_route(vec![
+            HopInfo {
+                prev: HopSide {
+                    address: "address".to_string(),
+                    pool_type: PoolType::Standard,
+                },
+                next: Some(HopSide {
+                    address: "address".to_string(),
+                    pool_type: PoolType::Standard,
+                }),
+                denom: DENOM_UOSMO.to_string(),
+            },
+            HopInfo {
+                prev: HopSide {
+                    address: "address".to_string(),
+                    pool_type: PoolType::Standard,
+                },
+                next: Some(HopSide {
+                    address: "address".to_string(),
+                    pool_type: PoolType::Standard,
+                }),
+                denom: DENOM_UNTRN.to_string(),
+            },
+            HopInfo {
+                prev: HopSide {
+                    address: "address".to_string(),
+                    pool_type: PoolType::Standard,
+                },
+                next: Some(HopSide {
+                    address: "address".to_string(),
+                    pool_type: PoolType::Standard,
+                }),
+                denom: DENOM_USCRT.to_string(),
+            },
+        ]);
+
+        let deps = data.deps.as_ref();
+
+        // not saving any following pairs
+
+        // UNTRN repeating
+        let pair = Pair::new_routed(
+            to_asset_info(DENOM_AARCH), 
+            to_asset_info(DENOM_UNTRN),
+            vec![
+                HopInfo {
+                    prev: HopSide {
+                        address: "address".to_string(),
+                        pool_type: PoolType::Standard,
+                    },
+                    next: Some(HopSide {
+                        address: "address".to_string(),
+                        pool_type: PoolType::Standard,
+                    }),
+                    denom: DENOM_UOSMO.to_string(),
+                },
+                HopInfo {
+                    prev: HopSide {
+                        address: "address".to_string(),
+                        pool_type: PoolType::Standard,
+                    },
+                    next: Some(HopSide {
+                        address: "address".to_string(),
+                        pool_type: PoolType::Standard,
+                    }),
+                    denom: DENOM_UNTRN.to_string(),
+                },
+            ]
+        );
+
+        assert_eq!(validated_route_pairs(
+            deps, 
+            &pair, 
+            false
+        ).unwrap_err(), StdError::generic_err("Route denoms are not unique").into());
+
+
+        // Okay
+        let pair = Pair::new_routed(
+            to_asset_info(DENOM_AARCH), 
+            to_asset_info(DENOM_UNTRN),
+            vec![
+                HopInfo {
+                    prev: HopSide {
+                        address: "address".to_string(),
+                        pool_type: PoolType::Standard,
+                    },
+                    next: Some(HopSide {
+                        address: "address".to_string(),
+                        pool_type: PoolType::Standard,
+                    }),
+                    denom: DENOM_UOSMO.to_string(),
+                },
+            ]
+        );
+
+        assert_eq!(validated_route_pairs(
+            deps, 
+            &pair, 
+            false
+        ).unwrap().len(), 2);
+
+
+
+        // Reverse
+
+        // Skipping SCRT
+        let pair = Pair::new_routed(
+            to_asset_info(DENOM_UUSDC),
+            to_asset_info(DENOM_UOSMO), 
+            vec![
+                HopInfo {
+                    prev: HopSide {
+                        address: "address".to_string(),
+                        pool_type: PoolType::Standard,
+                    },
+                    next: Some(HopSide {
+                        address: "address".to_string(),
+                        pool_type: PoolType::Standard,
+                    }),
+                    denom: DENOM_UNTRN.to_string(),
+                },
+            ]
+        );
+
+        assert_eq!(validated_route_pairs(
+            deps, 
+            &pair, 
+            false
+        ).unwrap_err(), ContractError::NoRoutedPair {});
+
+
+        // Wring order
+        let pair = Pair::new_routed(
+            to_asset_info(DENOM_UUSDC),
+            to_asset_info(DENOM_UOSMO), 
+            vec![
+                HopInfo {
+                    prev: HopSide {
+                        address: "address".to_string(),
+                        pool_type: PoolType::Standard,
+                    },
+                    next: Some(HopSide {
+                        address: "address".to_string(),
+                        pool_type: PoolType::Standard,
+                    }),
+                    denom: DENOM_UNTRN.to_string(),
+                },
+                HopInfo {
+                    prev: HopSide {
+                        address: "address".to_string(),
+                        pool_type: PoolType::Standard,
+                    },
+                    next: Some(HopSide {
+                        address: "address".to_string(),
+                        pool_type: PoolType::Standard,
+                    }),
+                    denom: DENOM_USCRT.to_string(),
+                },
+            ]
+        );
+
+
+        assert_eq!(validated_route_pairs(
+            deps, 
+            &pair, 
+            false
+        ).unwrap_err(), ContractError::NoRoutedPair {});
+
+
+        // Ok
+        let pair = Pair::new_routed(
+            to_asset_info(DENOM_UUSDC),
+            to_asset_info(DENOM_UOSMO), 
+            vec![
+                HopInfo {
+                    prev: HopSide {
+                        address: "address".to_string(),
+                        pool_type: PoolType::Standard,
+                    },
+                    next: Some(HopSide {
+                        address: "address".to_string(),
+                        pool_type: PoolType::Standard,
+                    }),
+                    denom: DENOM_USCRT.to_string(),
+                },
+                HopInfo {
+                    prev: HopSide {
+                        address: "address".to_string(),
+                        pool_type: PoolType::Standard,
+                    },
+                    next: Some(HopSide {
+                        address: "address".to_string(),
+                        pool_type: PoolType::Standard,
+                    }),
+                    denom: DENOM_UNTRN.to_string(),
+                }
+            ]
+        );
+
+    }
+
+
+
+
+
+
+
+
 
 
 }

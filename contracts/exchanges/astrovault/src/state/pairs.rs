@@ -43,6 +43,10 @@ pub fn pair_exists(storage: &dyn Storage, pair: &Pair) -> bool {
 }
 
 pub fn save_pair(storage: &mut dyn Storage, pair: &Pair) -> StdResult<()> {
+    let key = key_from(pair.denoms());
+    if ROUTE_PAIRS.has(storage, key.clone()) {
+        ROUTE_PAIRS.remove(storage, key.clone());
+    }
     PAIRS.save(storage, key_from(pair.denoms()), &pair)
 }
 
@@ -50,6 +54,9 @@ pub fn find_pair(storage: &dyn Storage, denoms: [String; 2]) -> StdResult<Pair> 
     PAIRS.load(storage, key_from(denoms))
 }
 
+pub fn delete_pair(storage: &mut dyn Storage, pair: &Pair) {
+    PAIRS.remove(storage, key_from(pair.denoms()))
+}
 
 pub fn get_pairs(
     storage: &dyn Storage,
@@ -66,11 +73,6 @@ pub fn get_pairs(
         .take(limit.unwrap_or(30) as usize)
         .flat_map(|result| result.map(|(_, pair)| pair))
         .collect::<Vec<Pair>>()
-}
-
-
-pub fn delete_pair(storage: &mut dyn Storage, pair: &Pair) {
-    PAIRS.remove(storage, key_from(pair.denoms()))
 }
 
 

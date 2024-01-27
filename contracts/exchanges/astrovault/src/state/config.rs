@@ -34,14 +34,10 @@ pub fn update_router_config(
 ) -> StdResult<()> {
     use cosmwasm_std::from_json;
 
-    #[cfg(target_arch = "wasm32")]
     let res = querier.query_wasm_smart::<RouterQuery::ConfigResponse>(
         router, 
         &RouterQuery::QueryMsg::Config {}
     )?;
-
-    let res = from_json(String::from(""))?;
-
 
     ROUTER_CONFIG.save(storage, &res)?;
     Ok(())

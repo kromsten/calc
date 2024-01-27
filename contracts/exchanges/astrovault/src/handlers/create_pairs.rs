@@ -1,18 +1,12 @@
-#![allow(unused_variables, unused_imports)]
-
 use cosmwasm_std::{DepsMut, MessageInfo, Response};
 
 use crate::{
     helpers::{
         pool::validated_direct_pair, 
-        route::{validated_route_pairs, validated_route_pairs_to_save}}, 
+        route::validated_route_pairs_to_save}, 
         state::{config::get_config, pairs::{save_pair, save_route_pair}}, 
         types::pair::Pair, ContractError
 };
-
-use astrovault::router::handle_msg;
-use astrovault::router::query_msg;
-use astrovault::router::state::Hop;
 
 
 pub fn create_pairs_handler(
