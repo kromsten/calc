@@ -1,47 +1,35 @@
 use cosmwasm_std::{
-    ensure, to_json_binary, Binary, Coin, CosmosMsg, Deps, QuerierWrapper, StdError, StdResult, Uint128
+    to_json_binary, Binary, Coin, CosmosMsg, QuerierWrapper, StdResult, Uint128
 };
 
 
 use astrovault::{
-    standard_pool::{
-        handle_msg::ExecuteMsg as StandardExecute,
-        query_msg::{
-            QueryMsg as StandardQuery,
-            PoolResponse as StandardPoolResponse,
-            SimulationResponse
-        }
-    },
-    ratio_pool::{
+    assets::asset::{Asset, AssetInfo}, ratio_pool::{
         handle_msg::ExecuteMsg as RatioExecute,
         query_msg::{
             QueryMsg as RatioQuery,
             PoolResponse as RatioPoolResponse,
         },
-    },
-    stable_pool::{
+    }, ratio_pool_factory::query_msg::SwapCalcResponse, router::state::{Hop as AstroHop, RatioHopInfo, StableHopInfo, StandardHopInfo}, stable_pool::{
         handle_msg::ExecuteMsg as StableExecute, 
         query_msg::{
             QueryMsg as StableQuery, 
             PoolResponse as StablePoolResponse,
             StablePoolQuerySwapSimulation, 
         }
-    },
-    assets::{asset::{Asset, AssetInfo}, 
-        ratio_pools::RatioPoolInfo, 
-        pools::PoolInfo as StablePoolInfo, 
-        pairs::PairInfo as StandardPoolInfo
-    }, 
-    ratio_pool_factory::query_msg::{SwapCalcResponse, QueryMsg as RatioFactoryQueryMsg},
-    stable_pool_factory::query_msg::QueryMsg as StableFactoryQueryMsg,
-    standard_pool_factory::query_msg::QueryMsg as StandardFactoryQueryMsg,
-    router::state::{Hop as AstroHop, RatioHopInfo, StableHopInfo, StandardHopInfo}
+    }, standard_pool::{
+        handle_msg::ExecuteMsg as StandardExecute,
+        query_msg::{
+            QueryMsg as StandardQuery,
+            PoolResponse as StandardPoolResponse,
+            SimulationResponse
+        }
+    }
 };
 
+
 use crate::{
-    state::config::get_router_config, 
-    types::{config::RouterConfig, pair::{Pair, PoolInfo, PoolType}, wrapper::ContractWrapper}, 
-    ContractError
+    types::{pool::{Pool, PoolType, PopulatedPool}, wrapper::ContractWrapper}, ContractError
 };
 
 
@@ -81,7 +69,7 @@ pub fn query_assets(
     querier: &QuerierWrapper,
     contract_addr: &str,
     pool_type: &PoolType,
-) -> StdResult<Vec<Asset>> {
+) -> Result<Vec<Asset>, ContractError> {
     let assets = match pool_type {
         PoolType::Stable => stable_pool_response(querier, contract_addr)?.assets,
         PoolType::Ratio => ratio_pool_response(querier, contract_addr)?.assets.into(),
@@ -92,123 +80,15 @@ pub fn query_assets(
 
 
 
-pub fn query_ratio_pool_info(
-    querier: &QuerierWrapper,
-    contract_addr: &str,
-    asset_infos: [AssetInfo; 2]
-) -> StdResult<RatioPoolInfo> {
-    querier.query_wasm_smart(
-        contract_addr, 
-        &RatioFactoryQueryMsg::Pool { asset_infos }
-    )
-}
 
-pub fn query_standard_pool_info(
-    querier: &QuerierWrapper,
-    contract_addr: &str,
-    asset_infos: [AssetInfo; 2]
-) -> StdResult<StandardPoolInfo> {
-    querier.query_wasm_smart(
-        contract_addr, 
-        &StandardFactoryQueryMsg::Pair { asset_infos }
-    )
-}
-
-pub fn query_stable_pool_info(
-    querier: &QuerierWrapper,
-    contract_addr: &str,
-    asset_infos: Vec<AssetInfo>
-) -> StdResult<StablePoolInfo> {
-    querier.query_wasm_smart(
-        contract_addr, 
-        &StableFactoryQueryMsg::Pool { asset_infos }
-    )
-}
-
-
-
-pub fn pool_exist_in_registry(
-    deps: Deps,
-    pair: &Pair
-) -> StdResult<bool> {
-
-    let cfg : RouterConfig = get_router_config(deps.storage)?;
-
-    let pool = pair.pool_info();
-    let pool_type = pool.pool_type;
-
-    let factory_address  = match pool_type {
-        PoolType::Ratio => cfg.ratio_pool_factory,
-        PoolType::Standard => cfg.standard_pool_factory,
-        PoolType::Stable => cfg.stable_pool_factory,
-    };
-
-    ensure!(factory_address.is_some(), StdError::GenericErr {
-        msg: format!("Factory address not set for pool type: {:?}", pool_type)
-    });
-
-    let factory_address = factory_address.as_ref().unwrap();
-
-    let stable_assets = match pool_type {
-        PoolType::Stable => query_assets(
-                            &deps.querier, 
-                            factory_address, 
-                            &PoolType::Stable
-                        )?
-                        .iter()
-                        .map(|a| a.info.clone())
-                        .collect::<Vec<AssetInfo>>(),
-
-        _ => vec![]
-    };
-
-    let pool_exists = match pool_type {
-        PoolType::Ratio => query_ratio_pool_info(
-            &deps.querier, 
-            factory_address, 
-            pair.assets()
-        ).is_ok(),
-        PoolType::Standard => query_standard_pool_info(
-            &deps.querier, 
-            factory_address, 
-            pair.assets()
-        ).is_ok(),
-        PoolType::Stable => query_stable_pool_info(
-            &deps.querier, 
-            factory_address, 
-            stable_assets
-        ).is_ok(),
-    };
-
-    Ok(pool_exists)
-}
-
-
-#[cfg(test)]
-pub fn validated_direct_pair(
-    _: Deps,
-    pair: &Pair,
-) -> Result<Pair, ContractError> {
-    Ok(pair.clone())
-}
-
-
-#[cfg(not(test))]
-pub fn validated_direct_pair(
-    deps: Deps,
-    pair: &Pair,
-) -> Result<Pair, ContractError> {
-    let pool = pair.pool_info();
-    let populated = pool.populated(deps)?;
-    populated.validate(deps)?;
-    Ok(populated.into())
-}
-
-
-impl PoolInfo {
+impl Pool {
 
     pub fn assets(&self) -> [AssetInfo; 2] {
         [self.base_asset.clone(), self.quote_asset.clone()]
+    }
+
+    pub fn denoms(&self) -> [String; 2] {
+        [self.base_asset.to_string(), self.quote_asset.to_string()]
     }
 
     pub fn other_asset(&self, swap_asset: &AssetInfo) -> AssetInfo {
@@ -219,45 +99,86 @@ impl PoolInfo {
         }
     }
 
-    pub fn populate(&mut self, deps: Deps) -> Result<(), ContractError> {
-        let assets = self.get_pool_assets(&deps.querier)?;
-        let from_pos = assets.iter().position(|a| a.info == self.base_asset);
-        ensure!(from_pos.is_some(), StdError::generic_err("Couldn't get asset info from the pool"));
-        self.base_index = Some(from_pos.unwrap() as u32);
-        let to_pos = assets.iter().position(|a| a.info == self.quote_asset);
-        ensure!(to_pos.is_some(), StdError::generic_err("Couldn't get asset info from the pool"));
-        self.quote_index = Some(to_pos.unwrap() as u32);
-        Ok(())
+}
+
+
+
+impl PopulatedPool {
+
+
+    pub fn assets(&self) -> [AssetInfo; 2] {
+        [self.base_asset.clone(), self.quote_asset.clone()]
     }
 
-    pub fn populated(&self, deps: Deps) -> Result<PoolInfo, ContractError> {
-        let mut pool = self.clone();
-        let assets = self.get_pool_assets(&deps.querier)?;
-        let from_pos = assets.iter().position(|a| a.info == self.base_asset);
-        ensure!(from_pos.is_some(), StdError::generic_err("Couldn't get asset info from the pool"));
-        pool.base_index = Some(from_pos.unwrap() as u32);
-        let to_pos = assets.iter().position(|a| a.info == self.quote_asset);
-        ensure!(to_pos.is_some(), StdError::generic_err("Couldn't get asset info from the pool"));
-        pool.quote_index = Some(to_pos.unwrap() as u32);
-        Ok(pool)
+    pub fn denoms(&self) -> [String; 2] {
+        [self.base_asset.to_string(), self.quote_asset.to_string()]
+    }
+
+    pub fn other_asset(&self, offer_asset: &AssetInfo) -> AssetInfo {
+        if self.quote_asset.equal(offer_asset) {
+            self.base_asset.clone()
+        } else {
+            self.quote_asset.clone()
+        }
+    }
+
+    pub fn other_denom(&self, offer_denom: &str) -> String {
+        if self.quote_denom() == offer_denom {
+            self.base_denom()
+        } else {
+            self.quote_denom()
+        }
+    }
+
+    pub fn base_denom(&self) -> String {
+        self.base_asset.to_string()
+    }
+
+    pub fn quote_denom(&self) -> String {
+        self.quote_asset.to_string()
+    }
+
+    pub fn has_asset(&self, asset: &AssetInfo) -> bool {
+        self.base_asset.equal(asset) || self.quote_asset.equal(asset)
+    }
+
+    pub fn has_denom(&self, denom: &str) -> bool {
+        self.base_denom() == denom || self.quote_denom() == denom
+    } 
+
+    pub fn combined_denoms(&self, other: &PopulatedPool) -> [String; 3] {
+        if other.has_denom(&self.quote_denom()) {
+            [self.base_denom(), self.quote_denom(), other.other_denom(&self.quote_denom())]
+        } else {
+            [self.quote_denom(), self.base_denom(), other.other_denom(&self.base_denom())]
+        }
+    }
+
+    pub fn asset_index(
+        &self,
+        offer_asset: &AssetInfo
+    ) -> u32 {
+        if self.quote_asset.equal(offer_asset) {
+            self.base_index
+        } else {
+            self.quote_index
+        }
+    }
+
+    pub fn from_to_indeces(
+        &self,
+        offer_asset: &AssetInfo,
+    ) -> (u32, u32) {
+        if self.quote_asset.equal(offer_asset) {
+            (self.quote_index, self.base_index)
+        } else {
+            (self.base_index, self.quote_index)
+        }
     }
 
 
-    pub fn validate(&self, deps: Deps) -> Result<(), ContractError> {
-        deps.api.addr_validate(self.address.as_ref())?;
-        ensure!(!self.base_asset.equal(&self.quote_asset), ContractError::SameAsset {});
-        ensure!(self.base_asset.to_string().len() > 0, ContractError::EmptyAsset {});
-        ensure!(self.quote_asset.to_string().len() > 0, ContractError::EmptyAsset {});
-        let base_index = self.base_index;
-        let quote_index = self.quote_index;
-        ensure!(base_index.is_some() && quote_index.is_some(), 
-            StdError::generic_err("Pools must have both from and to asset indeces")
-        );
-        Ok(())
-    }
 
-
-    pub fn get_swap_simulate(
+    pub fn swap_simulation(
         &self,
         querier:               &QuerierWrapper,
         offer_asset:           Asset,
@@ -317,37 +238,9 @@ impl PoolInfo {
     }
 
 
-    pub fn asset_index(
-        &self,
-        offer_asset: &AssetInfo
-    ) -> u32 {
-        match self.base_asset == *offer_asset {
-            true => self.base_index.unwrap(),
-            false => self.quote_index.unwrap(),
-        }
-    }
+    
 
-    pub fn from_to_indeces(
-        &self,
-        offer_asset: &AssetInfo,
-    ) -> (u32, u32) {
-        match self.base_asset == *offer_asset {
-            true => (self.base_index.unwrap(), self.quote_index.unwrap()),
-            false => (self.quote_index.unwrap(), self.base_index.unwrap()),
-        }
-    }
-
-
-    pub fn get_pool_assets(
-        &self,
-        querier: &QuerierWrapper,
-    ) -> StdResult<Vec<Asset>> {
-        query_assets(querier, &self.address, &self.pool_type)
-    }
-
-
-
-    pub fn pool_swap_binary_msg(
+    pub fn swap_msg_binary(
         &self,
         offer_asset:         Asset,
         expected_return:     Option<Uint128>,
@@ -381,7 +274,8 @@ impl PoolInfo {
     }
 
 
-    pub fn pool_swap_cosmos_msg(
+
+    pub fn swap_msg_cosmos(
         &self,
         offer_asset:         Asset,
         expected_return:     Option<Uint128>,
@@ -390,7 +284,7 @@ impl PoolInfo {
 
         let pair_contact = ContractWrapper(self.address.clone());
         
-        let swap_msg = self.pool_swap_binary_msg(
+        let swap_msg = self.swap_msg_binary(
             offer_asset.clone(), 
             expected_return, 
         )?;
@@ -407,14 +301,13 @@ impl PoolInfo {
                 swap_msg
             )
         }
-
     }
 
-    pub fn to_astro_hop(
+    pub fn astro_hop(
         &self,
-        querier:     &QuerierWrapper,
-        offer_asset: &AssetInfo,
-    ) -> StdResult<AstroHop> {
+        querier:            &QuerierWrapper,
+        offer_asset_info:   &AssetInfo,
+    ) -> Result<AstroHop, ContractError> {
 
         let defaul_hop = AstroHop {
             mint_staking_derivative: None,
@@ -429,14 +322,14 @@ impl PoolInfo {
             PoolType::Ratio => AstroHop {
                     ratio_hop_info: Some(RatioHopInfo {
                         asset_infos,
-                        from_asset_index: self.asset_index(offer_asset),
+                        from_asset_index: self.asset_index(offer_asset_info),
                     }),
                     ..defaul_hop
             },
             PoolType::Standard => AstroHop {
                     standard_hop_info: Some(StandardHopInfo {
-                        offer_asset_info: offer_asset.clone(),
-                        ask_asset_info: self.other_asset(offer_asset),
+                        offer_asset_info: offer_asset_info.clone(),
+                        ask_asset_info: self.other_asset(offer_asset_info),
                     }),
                     ..defaul_hop
             },
@@ -445,11 +338,17 @@ impl PoolInfo {
                 let (
                     from_asset_index, 
                     to_asset_index
-                ) = self.from_to_indeces(offer_asset);
+                ) = self.from_to_indeces(offer_asset_info);
 
-                let asset_infos = self.get_pool_assets(querier)?
+                // get all assets that exist in the pool
+                let asset_infos = query_assets(
+                        querier, 
+                        &self.address, 
+                        &self.pool_type
+                    )?
                     .iter()
                     .map(|a| a.info.clone()).collect::<Vec<AssetInfo>>();
+
                 
                 AstroHop {
                     stable_hop_info: Some(StableHopInfo {

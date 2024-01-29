@@ -163,7 +163,7 @@ mod swap_tests {
         handlers::swap::swap_native_handler,
         state::{cache::SWAP_CACHE, pairs::save_pair},
         tests::constants::{ADMIN, DENOM_AARCH, DENOM_UUSDC},
-        types::{pair::Pair, wrapper::ContractWrapper},
+        types::{pair::PopulatedPair, wrapper::ContractWrapper},
         ContractError, helpers::balance::{coin_to_asset, asset_to_coin},
     };
 
@@ -236,7 +236,7 @@ mod swap_tests {
     fn caches_details_correctly() {
         let mut deps = mock_dependencies_with_balance(&[Coin::new(0, DENOM_UUSDC)]);
 
-        let pair = Pair::default();
+        let pair = PopulatedPair::default();
 
         save_pair(deps.as_mut().storage, &pair).unwrap();
 
@@ -273,7 +273,7 @@ mod swap_tests {
     fn sends_swap_message() {
         let mut deps = mock_dependencies();
 
-        let pair = Pair::default();
+        let pair = PopulatedPair::default();
 
         save_pair(deps.as_mut().storage, &pair).unwrap();
 
@@ -292,7 +292,7 @@ mod swap_tests {
         assert_eq!(
             response.messages.first().unwrap(),
             &SubMsg::reply_on_success(
-                ContractWrapper(pair.pool_info().address)
+                ContractWrapper(pair.pool().address)
                 .execute(
                     to_json_binary(&ExecuteMsg::Swap {
                         expected_return: Some(3873213u128.into()),

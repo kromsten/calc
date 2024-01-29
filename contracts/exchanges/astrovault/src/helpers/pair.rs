@@ -1,76 +1,20 @@
-use astrovault::assets::asset::{Asset, AssetInfo};
-use astrovault::router::state::Hop as AstroHop;
-use cosmwasm_std::{Binary, Coin, CosmosMsg, Deps, Env, QuerierWrapper, StdError, StdResult};
-use crate::helpers::route::route_swap_cosmos_msg;
-use crate::types::pair::{PairRoute, PairType, PoolInfo, PoolType};
-use crate::types::pair::Pair;
-use crate::ContractError;
+use cosmwasm_std::{ from_json, Binary, Coin, CosmosMsg, Deps, Env, QuerierWrapper};
+use astrovault::{
+    assets::asset::{Asset, AssetInfo},
+    router::state::Hop as AstroHop
+};
+
 use exchange::msg::Pair as ExchangePair;
 
-use crate::helpers::balance::to_asset_info;
+use crate::types::{pair::{Pair, PairType, PopulatedPair, PopulatedPairType}, pool::PopulatedPool};
+use crate::types::pool::{Pool, PoolType};
+use crate::types::route::{PopulatedRoute, Route};
+use crate::ContractError;
 
 
-/* #[cfg(not(test))]
-use crate::helpers::pool::query_pool_exist; */
+use super::{route::route_swap_cosmos_msg, validated::validated_routed_pair};
 
 
-
-impl Into<PoolInfo> for &Pair {
-    fn into(self) -> PoolInfo {
-        match self.pair_type.clone() {
-            PairType::Direct { 
-                address, 
-                pool_type,
-                base_index,
-                quote_index,
-            
-            } => PoolInfo {
-                address: address.clone(),
-                pool_type: pool_type.clone(),
-                base_asset: self.base_asset.clone(),
-                quote_asset: self.quote_asset.clone(),
-                base_index,
-                quote_index,
-            },
-            _ => panic!("Pair is not a direct pool")
-        }
-    }
-}
-
-
-impl From<PoolInfo> for Pair {
-    fn from(info: PoolInfo) -> Pair {
-        Pair {
-            base_asset: info.base_asset,
-            quote_asset: info.quote_asset,
-            pair_type: PairType::Direct {
-                address: info.address,
-                pool_type: info.pool_type,
-                base_index: info.base_index,
-                quote_index: info.quote_index,
-            },
-        }
-    }
-}
-
-
-impl Into<PairRoute> for &Pair {
-    fn into(self) -> PairRoute {
-        match self.pair_type.clone() {
-            PairType::Routed { route } => route.clone(),
-            _ => panic!("Pair is not a routed pair")
-        }
-    }
-}
-
-impl Into<PairRoute> for Pair {
-    fn into(self) -> PairRoute {
-        match self.pair_type {
-            PairType::Routed { route } => route,
-            _ => panic!("Pair is not a routed pair")
-        }
-    }
-}
 
 
 impl From<Pair> for ExchangePair {
@@ -82,8 +26,73 @@ impl From<Pair> for ExchangePair {
 }
 
 
+impl From<PopulatedPair> for ExchangePair {
+    fn from(val: PopulatedPair) -> Self {
+        ExchangePair {
+            denoms: val.denoms(),
+        }
+    }
+}
+
+
+
+
+
 
 impl Pair {
+
+    pub fn base_denom(&self) -> String {
+        self.base_asset.to_string()
+    }
+
+    pub fn quote_denom(&self) -> String {
+        self.quote_asset.to_string()
+    }
+
+    pub fn assets(&self) -> [AssetInfo; 2] {
+        [self.base_asset.clone(), self.quote_asset.clone()]
+    }
+
+    pub fn denoms(&self) -> [String; 2] {
+        [self.base_asset.to_string(), self.quote_asset.to_string()]
+    }
+
+
+    pub fn other_asset(&self, swap_asset: &AssetInfo) -> AssetInfo {
+        if self.quote_asset.equal(swap_asset) {
+            self.base_asset.clone()
+        } else {
+            self.quote_asset.clone()
+        }
+    }
+
+    pub fn pool(&self) -> Pool {
+        match self.pair_type.clone() {
+            PairType::Direct { 
+                address, 
+                pool_type,
+            
+             } => {
+                Pool {
+                    address,
+                    pool_type,
+                    base_asset: self.base_asset.clone(),
+                    quote_asset: self.quote_asset.clone(),
+                }
+            },
+            _ => panic!("Cannot convert routed pair into direct pool")
+        }
+    }
+
+    pub fn route(&self) -> Route {
+        match &self.pair_type {
+            PairType::Routed { route } => {
+                route.clone()
+            },
+            _ => panic!("Cannot convert direct pair into route")
+        }
+    }
+
 
     pub fn is_pool_pair(&self) -> bool {
         match &self.pair_type {
@@ -93,13 +102,72 @@ impl Pair {
         }
     }
 
-    pub fn pool_info(&self) -> PoolInfo {
+    pub fn is_route_pair(&self) -> bool {
+        match &self.pair_type {
+            PairType::Routed { .. } => true,
+            _ => false
+        }
+    }
+
+
+    pub fn route_denoms(&self) -> Vec<String> {
+        let route = self.route();
+        let mut denoms : Vec<String> = Vec::with_capacity(route.len() + 2);
+        denoms.push(self.base_denom());
+        for hop in route {
+            denoms.push(hop.denom.clone());
+        }
+        denoms.push(self.quote_denom());
+
+        denoms
+    }
+
+    pub fn new_routed(
+        base_asset: AssetInfo, 
+        quote_asset: AssetInfo,
+        route: Route
+    ) -> Self {
+        Pair {
+            base_asset,
+            quote_asset,
+            pair_type: PairType::Routed { route }
+        }
+    }
+
+}
+
+
+
+
+
+
+
+
+impl PopulatedPair {
+
+    pub fn is_pool_pair(&self) -> bool {
+        match &self.pair_type {
+            PopulatedPairType::Direct { .. } => true,
+            _ => false
+            
+        }
+    }
+
+    pub fn is_route_pair(&self) -> bool {
+        match &self.pair_type {
+            PopulatedPairType::Routed { .. } => true,
+            _ => false
+        }
+    }
+
+    pub fn pool(&self) -> PopulatedPool {
         self.into()
     }
 
-    pub fn route(&self) -> PairRoute {
+    pub fn route(&self) -> PopulatedRoute {
        self.into()
     }
+
 
     pub fn base_denom(&self) -> String {
         self.base_asset.to_string()
@@ -117,6 +185,7 @@ impl Pair {
         [self.base_asset.to_string(), self.quote_asset.to_string()]
     }
     
+
     pub fn other_asset(&self, swap_asset: &AssetInfo) -> AssetInfo {
         if self.quote_asset.equal(swap_asset) {
             self.base_asset.clone()
@@ -125,117 +194,12 @@ impl Pair {
         }
     }
 
-    pub fn route_pools(&self) -> Vec<PoolInfo> {
-        let route = self.route();
-        let mut pools = Vec::with_capacity(route.len() + 1);
-        
-        let first = route.first().unwrap().clone();
-
-        pools.push(PoolInfo {
-            base_asset: self.base_asset.clone(),
-            quote_asset: to_asset_info(first.denom.clone()),
-            address: first.prev.address.clone(),
-            pool_type: first.prev.pool_type.clone(),
-            base_index: None,
-            quote_index: None,
-        });
-
-
-        for (index, hop) in route.iter().enumerate().skip(1) {
-            let prev_hop = route.get(index - 1).unwrap();
-
-            pools.push(PoolInfo {
-                base_asset: to_asset_info(hop.denom.clone()),
-                quote_asset: to_asset_info(hop.denom.clone()),
-                address: prev_hop.prev.address.clone(),
-                pool_type: prev_hop.prev.pool_type.clone(),
-                base_index: None,
-                quote_index: None,
-            });
-        }
-
-        let last = route.last().unwrap().clone();
-        let next_hop = first.next.unwrap();
-
-        pools.push(PoolInfo {
-            base_asset: to_asset_info(last.denom.clone()),
-            quote_asset: self.quote_asset.clone(),
-            address: next_hop.address.clone(),
-            pool_type: next_hop.pool_type.clone(),
-            base_index: None,
-            quote_index: None,
-        });
-
-        pools
+    pub fn has_asset(&self, asset: &AssetInfo) -> bool {
+        self.base_asset.equal(asset) || self.quote_asset.equal(asset)
     }
 
-
-    pub fn route_pairs(&self) -> Vec<Pair> {
-        let route = self.route();
-        let mut pairs = Vec::with_capacity(route.len() + 1);
-        
-        let first = route.first().unwrap().clone();
-
-        pairs.push(Pair::new_direct(
-            self.base_asset.clone(), 
-            to_asset_info(first.denom.clone()), 
-            first.prev.address.clone(), 
-            first.prev.pool_type.clone(), 
-            None, 
-            None
-        ));
-
-        for (index, hop) in route.iter().enumerate().skip(1) {
-            let prev_hop = route.get(index - 1).unwrap();
-
-            pairs.push(Pair::new_direct(
-                to_asset_info(prev_hop.denom.clone()),
-                to_asset_info(hop.denom.clone()),
-                prev_hop.prev.address.clone(),
-                prev_hop.prev.pool_type.clone(),
-                None,
-                None
-            ));
-        }
-
-        let last = route.last().unwrap().clone();
-        let next_hop = first.next.unwrap();
-
-        pairs.push(Pair::new_direct(
-            to_asset_info(last.denom.clone()),
-            self.quote_asset.clone(),
-            next_hop.address.clone(),
-            next_hop.pool_type.clone(),
-            None,
-            None
-        ));
-    
-        pairs
-    }
-
-
-    pub fn route_denoms(&self) -> Vec<String> {
-        let route = self.route();
-        let mut denoms = Vec::with_capacity(route.len() + 1);
-        denoms.push(self.base_denom());
-        for hop in route.iter() {
-            denoms.push(hop.denom.clone());
-        }
-        denoms.push(self.quote_denom());
-        denoms
-    }
-
-    pub fn valid_route_hops(&self) -> StdResult<()> {
-        let denoms = self.route_denoms();
-
-        let mut denoms_set = denoms.clone();
-        denoms_set.sort();
-        denoms_set.dedup();
-
-        if denoms_set.len() != denoms.len() {
-            return Err(StdError::generic_err("Route denoms are not unique"));
-        }
-        Ok(())
+    pub fn has_denom(&self, denom: &String) -> bool {
+        self.base_denom() == *denom || self.quote_denom() == *denom
     }
 
 
@@ -243,9 +207,10 @@ impl Pair {
         &self,
         querier:     &QuerierWrapper,
         offer_asset: &AssetInfo,
-    ) -> StdResult<AstroHop> {
-        self.pool_info().to_astro_hop(querier, offer_asset)   
+    ) -> Result<AstroHop, ContractError> {
+        self.pool().astro_hop(querier, offer_asset)   
     }
+
 
     pub fn swap_msg(
         &self,
@@ -258,21 +223,33 @@ impl Pair {
     ) -> Result<CosmosMsg, ContractError> {
 
         let msg = if self.is_pool_pair() {
-            let pool = self.pool_info();
-            let swap_msg = pool.pool_swap_cosmos_msg(
-                offer_asset,
+            let pool = self.pool();
+            let swap_msg = pool.swap_msg_cosmos(
+                offer_asset.clone(),
                 Some(target_asset.amount),
                 funds
             )?;
             swap_msg
         } else {
+
+            let routed_pair = if let Some(route) = route {
+                let route : Route = from_json(&route)?;
+                let pair = Pair::new_routed(
+                    self.base_asset.clone(),
+                    self.quote_asset.clone(),
+                    route
+                );
+                validated_routed_pair(deps, &pair, Some(offer_asset.info.clone()))?
+            } else {
+                self.clone()
+            };
+
             let msg = route_swap_cosmos_msg(
                 deps,
                 env,
-                &self,
+                routed_pair,
                 offer_asset,
                 target_asset,
-                route,
                 funds
             )?;
 
@@ -291,13 +268,13 @@ impl Pair {
         quote_asset: AssetInfo,
         address: String,
         pool_type: PoolType,
-        base_index: Option<u32>,
-        quote_index: Option<u32>,
+        base_index: u32,
+        quote_index: u32,
     ) -> Self {
-        Pair {
+        PopulatedPair {
             base_asset,
             quote_asset,
-            pair_type: PairType::Direct {
+            pair_type: PopulatedPairType::Direct {
                 pool_type,
                 address,
                 base_index,
@@ -307,14 +284,14 @@ impl Pair {
     }
 
     pub fn new_routed(
-        base_asset: AssetInfo, 
-        quote_asset: AssetInfo,
-        route: PairRoute
+        base_asset:     AssetInfo, 
+        quote_asset:    AssetInfo,
+        route:          PopulatedRoute
     ) -> Self {
-        Pair {
+        PopulatedPair {
             base_asset,
             quote_asset,
-            pair_type: PairType::Routed {
+            pair_type: PopulatedPairType::Routed {
                 route,
             },
         }
@@ -323,24 +300,3 @@ impl Pair {
 }
 
 
-
-/* 
-
-
-pub fn pair_creatable(
-    deps: Deps,
-    pair: &Pair,
-) -> Result<(), ContractError> {
-    ensure!(!pair_is_stored(deps.storage, pair), ContractError::PairExist {});
-
-    if pair.is_pool_pair() {
-        #[cfg(not(test))]
-        query_pool_exist(deps, &pair)?;
-    } else {
-
-    }
-
-
-    Ok(())
-}
-*/

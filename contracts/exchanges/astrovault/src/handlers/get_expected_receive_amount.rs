@@ -17,14 +17,14 @@ pub fn get_expected_receive_amount_handler(
     let offer_asset = coin_to_asset(swap_amount);
     
     let amount = if pair.is_pool_pair() {
-        pair.pool_info().get_swap_simulate(
+        pair.pool().swap_simulation(
             &deps.querier, 
             offer_asset,
         )?
     }  else {
         get_route_swap_simulate(
             deps,
-            &pair,
+            pair,
             offer_asset,
         )?
     };
@@ -49,7 +49,7 @@ mod get_expected_receive_amount_handler_tests {
         handlers::get_expected_receive_amount::get_expected_receive_amount_handler,
         state::pairs::save_pair,
         tests::constants::{DENOM_AARCH, DENOM_UUSDC},
-        types::pair::Pair,
+        types::pair::PopulatedPair,
     };
 
     #[test]
@@ -80,7 +80,7 @@ mod get_expected_receive_amount_handler_tests {
             SystemResult::Ok(ContractResult::Err("simulation failed".to_string()))
         });
 
-        let pair = Pair::default();
+        let pair = PopulatedPair::default();
 
         save_pair(deps.as_mut().storage, &pair).unwrap();
 
@@ -116,7 +116,7 @@ mod get_expected_receive_amount_handler_tests {
             ))
         });
 
-        let pair = Pair::default();
+        let pair = PopulatedPair::default();
 
         save_pair(deps.as_mut().storage, &pair).unwrap();
 

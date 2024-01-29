@@ -1,10 +1,9 @@
 #![allow(unused_variables, unused_imports)]
 
-use crate::{state::{config::{get_config, get_router_config}, pairs::{find_route_pair, pair_exists, route_pair_exists}}, types::{pair::{Pair, PairRoute, PoolInfo}, position_type::PositionType, wrapper::ContractWrapper}, ContractError};
-use astrovault::assets::asset::{Asset, AssetInfo};
+use crate::{state::{config::{get_config, get_router_config}, pairs::{find_pair, pair_exists}}, types::{pair::{Pair, PopulatedPair, StoredPair}, route::{self, PopulatedRoute, Route, RouteHop, StoredRoute}, wrapper::ContractWrapper}, ContractError};
+use astrovault::assets::{asset::{Asset, AssetInfo}, querier};
 use cosmwasm_std::{ensure, from_json, to_json_binary, Binary, Coin, CosmosMsg, Deps, Env, QuerierWrapper, StdError, StdResult, Uint128};
 use cw20::Cw20ReceiveMsg;
-use super::{pair, pool::{self, validated_direct_pair}};
 use astrovault::router::{
     state::{
         Hop as AstroHop, 
@@ -13,100 +12,53 @@ use astrovault::router::{
     handle_msg::ExecuteMsg as RouterExecute
 };
 
+use super::validated::validated_routed_pair;
 
 
-fn validated_route_pair(
-    deps:               Deps,
-    pair:               &Pair,
-    allow_missing:      bool,
-) -> Result<(Pair, bool), ContractError> {
-    let found =  find_route_pair(deps.storage, pair.denoms());
-    
-    match found {
-        Ok(pair) => Ok((pair, true)), 
-        Err(_) => {
-            if allow_missing {
-                return Ok((validated_direct_pair(deps, pair)?, false));
-            } else {
-                return Err(ContractError::NoRoutedPair {});
-            }
+
+pub fn populated_route_denoms(
+    route: &PopulatedRoute
+) -> Vec<String> {
+
+    let length = route.len();
+    let mut route_denoms : Vec<String> = Vec::with_capacity(length - 1);
+
+    // take all but last
+    for (index, pool) in route.iter().enumerate().take(length - 1) {
+        let next = route.get(index + 1).unwrap();
+
+        if index == 0 {
+            let combined = pool.combined_denoms(next);
+            route_denoms.extend(combined);
+        } else {
+            let last = route_denoms.last().unwrap();
+            route_denoms.push(next.other_denom(last));
         }
     }
+
+    route_denoms
 }
 
 
-/// check that the route is valid, populate indexes and return a list of (pool) pairs to be saved
-pub fn validated_route_pairs(
-    deps:                   Deps,
-    pair:                   &Pair,
-    allow_missing:          bool,
-) -> Result<Vec<Pair>, ContractError> {
-    pair.valid_route_hops()?;
-
-    pair
-    .route_pairs()
-    .iter()
-    .map(|pair| {
-        let val = validated_route_pair(deps, pair, allow_missing)?;
-        Ok(val.0)
-    })
-    .collect::<Result<Vec<Pair>, ContractError>>()
-}
-
-
-
-pub fn validated_route_pairs_to_save(
-    deps:                   Deps,
-    pair:                   &Pair,
-) -> Result<Vec<Pair>, ContractError> {
-    pair.valid_route_hops()?;
-
-    pair
-    .route_pairs()
-    .iter()
-    .map(|pair| validated_route_pair(deps, pair, true))
-    .filter_map(|res| {
-        match res {
-            Ok((pair, existed)) => {
-                if existed {
-                    None
-                } else {
-                    Some(Ok(pair))
-                }
-            },
-            Err(err) => Some(Err(err))
-        }
-    })
-    .collect::<Result<Vec<Pair>, ContractError>>()
-}
 
 
 pub fn route_pairs_to_astro_hops(
-    deps:           Deps,
-    pair_hops:      &Vec<Pair>,
-    offer_asset:    &Asset,
-    target_info:    &AssetInfo,
+    querier:        &QuerierWrapper,
+    route:          &PopulatedRoute,
+    offer_info:     &AssetInfo,
 ) -> Result<Vec<AstroHop>, ContractError> {
-    let mut astro_hops: Vec<AstroHop> = Vec::with_capacity(pair_hops.len());
+    
+    let mut astro_hops: Vec<AstroHop> = Vec::with_capacity(route.len());
 
-    let first = pair_hops.first().unwrap();
-    let last = pair_hops.last().unwrap();
+    let first = route.first().unwrap();
+    let last = route.last().unwrap();
 
-    let mut offer_asset = offer_asset.info.clone();
+    let mut offer_asset = offer_info.clone();
 
-    ensure!(first.base_asset == offer_asset || 
-            first.quote_asset == offer_asset, ContractError::RouteRuntimeError {});
-
-
-    for hop_pair in pair_hops {
-        let astro_hop = hop_pair.to_astro_hop(&deps.querier, &offer_asset)?;
+    for hop_pair in route {
+        let astro_hop = hop_pair.astro_hop(querier, &offer_asset)?;
         astro_hops.push(astro_hop);
-
         offer_asset = hop_pair.other_asset(&offer_asset);
-        
-        if hop_pair.eq(last) {
-            ensure!(offer_asset == *target_info, ContractError::RouteRuntimeError {});
-        }
     }
 
     Ok(astro_hops)
@@ -114,52 +66,23 @@ pub fn route_pairs_to_astro_hops(
 
 
 
-
 pub fn route_swap_cosmos_msg(
-    deps:                Deps,
-    env:                 Env,
-    pair:                &Pair,
-    offer_asset:         Asset,
-    target_asset:        Asset,
-    route:               Option<Binary>,
-    funds:               Vec<Coin>,
+    deps:           Deps,
+    env:            Env,
+    route_pair:     PopulatedPair,
+    offer_asset:    Asset,
+    target_asset:   Asset,
+    funds:          Vec<Coin>,
 ) -> Result<CosmosMsg, ContractError> {
 
-    let pair = match route {
-        Some(route_binary) => {
-            let parsed_route: PairRoute = from_json(&route_binary)?;
-            Pair::new_routed(
-                pair.base_asset.clone(), 
-                pair.quote_asset.clone(), 
-                parsed_route
-            )
-        },
-        None => pair.clone()
-    };
-
-
-    let mut hops_pairs = validated_route_pairs(
-        deps,
-        &pair,
-        false
+    let astro_hops = route_pairs_to_astro_hops(
+        &deps.querier,
+        &route_pair.route(),
+        &offer_asset.info,
     )?;
-    
-
-    if !offer_asset.info.equal(&pair.base_asset) {
-        hops_pairs.reverse();
-    }
-
-
-    let hops = route_pairs_to_astro_hops(
-        deps,
-        &hops_pairs,
-        &offer_asset,
-        &target_asset.info,
-    )?;
-
 
     let route = AstroRoute {
-        hops,
+        hops: astro_hops,
         minimum_receive: Some(target_asset.amount),
         to: None,
     };
@@ -195,31 +118,18 @@ pub fn route_swap_cosmos_msg(
 
 pub fn get_route_swap_simulate(
     deps:                  Deps,
-    pair:                  &Pair,
-    offer_asset:           Asset,
+    pair:                  PopulatedPair,
+    mut offer_asset:       Asset,
 ) -> StdResult<Uint128> {
 
-    let mut hops_pairs = validated_route_pairs(
-        deps,
-        pair,
-        false
-    ).map_err(|e| StdError::generic_err(e.to_string()))?;
-    
-
-    if !offer_asset.info.equal(&pair.base_asset) {
-        hops_pairs.reverse();
-    }
-
-    let mut offer_asset = offer_asset.clone();
-
-    for hop_pair in hops_pairs {
+    for pool in pair.route() {
         
-        let amount = hop_pair.pool_info().get_swap_simulate(
+        let amount = pool.swap_simulation(
             &deps.querier, 
             offer_asset.clone(),
         )?;
 
-        let info = hop_pair.other_asset(&offer_asset.info);
+        let info = pool.other_asset(&offer_asset.info);
 
         offer_asset = Asset {
             info,
@@ -251,21 +161,16 @@ mod creating_routed_pairs_tests {
             create_pairs::create_pairs_handler, 
             get_expected_receive_amount::get_expected_receive_amount_handler
         }, 
-        helpers::{
-            balance::{asset_to_coin, to_asset_info}, 
-            route::validated_route_pairs
-        }, 
+        helpers::{balance::{asset_to_coin, to_asset_info}, validated::{validated_route, validated_routed_pair}}, 
         state::{
-            config::{get_config, update_config, update_router_config}, 
-            pairs::{find_pair, get_pairs, pair_exists, route_pair_exists}
+            config::{get_config, update_config, update_router_config}, pairs::{find_pair, get_pairs, pair_exists}, pools::pool_exists, routes::route_exists
         }, 
         tests::constants::{
             DCA_CONTRACT, DENOM_AARCH, DENOM_UATOM, DENOM_UNTRN, 
             DENOM_UOSMO, DENOM_USCRT, DENOM_UUSDC, ROUTER_CONTRACT
         }, 
         types::{
-            config::Config, 
-            pair::{HopInfo, HopSide, Pair, PairRoute, PairType, PoolType}
+            config::Config, pair::{Pair, PopulatedPair, PopulatedPairType}, pool::PoolType, route::{HopInfo, PopulatedRoute, Route, RouteHop}
         }, 
         ContractError
     };
@@ -311,7 +216,7 @@ mod creating_routed_pairs_tests {
     fn create_route(
         deps: DepsMut, 
         info: MessageInfo,
-        route: PairRoute
+        route: Route
     ) -> Pair {
         let pair = Pair::new_routed(
             to_asset_info(DENOM_AARCH), 
@@ -329,7 +234,7 @@ mod creating_routed_pairs_tests {
     }
 
 
-    fn init_with_route(route: PairRoute) -> InitData  {
+    fn init_with_route(route: Route) -> InitData  {
         let mut data = init();
 
         let pair = create_route(
@@ -348,14 +253,17 @@ mod creating_routed_pairs_tests {
     #[test]
     fn can_create_router_pair() {
 
-        let data = init_with_route(vec![HopInfo {
-            prev: HopSide {
+        let data = init_with_route(vec![RouteHop {
+            prev: HopInfo {
                 address: "address".to_string(),
                 pool_type: PoolType::Standard,
+                asset_info: to_asset_info(DENOM_AARCH),
             },
-            next: Some(HopSide {
+            next: Some(HopInfo {
                 address: "address".to_string(),
                 pool_type: PoolType::Standard,
+                asset_info: to_asset_info(DENOM_UUSDC),
+
             }),
             denom: DENOM_UOSMO.to_string(),
         }]);
@@ -363,26 +271,26 @@ mod creating_routed_pairs_tests {
         let deps = data.deps.as_ref();
         let pair = data.pair.unwrap();
     
-        assert!(pair_exists(deps.storage, &pair));
+        assert!(pair_exists(deps.storage, &pair.denoms()));
         assert_eq!(get_pairs(deps.storage, None, None).len(), 1);
 
-        let pairs = validated_route_pairs(
+        let route = validated_routed_pair(
             deps, 
             &pair, 
-            false
-        ).unwrap();
+            Some(to_asset_info(DENOM_AARCH))
+        ).unwrap().route();
 
-        assert!(pairs.len() == 2);
+        assert!(route.len() == 2);
 
-        let first = pairs.first().unwrap();
+        let first = route.first().unwrap();
         assert_eq!(first.base_asset, to_asset_info(DENOM_AARCH));
         assert_eq!(first.quote_asset, to_asset_info(DENOM_UOSMO));
-        assert!(route_pair_exists(deps.storage, first.denoms()));
+        assert!(route_exists(deps.storage, &first.denoms()));
 
-        let second = pairs.last().unwrap();
+        let second = route.last().unwrap();
         assert_eq!(second.base_asset, to_asset_info(DENOM_UOSMO));
         assert_eq!(second.quote_asset, to_asset_info(DENOM_UUSDC));
-        assert!(route_pair_exists(deps.storage, second.denoms()));
+        assert!(pool_exists(deps.storage, &second.denoms()));
     }
 
 
@@ -391,36 +299,34 @@ mod creating_routed_pairs_tests {
     fn astrohops_work() {
 
         let data = init_with_route(vec![
-            HopInfo {
-                prev: HopSide {
+            RouteHop {
+                prev: HopInfo {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
+                    asset_info: to_asset_info(DENOM_AARCH),
                 },
-                next: Some(HopSide {
-                    address: "address".to_string(),
-                    pool_type: PoolType::Standard,
-                }),
+                next: None,
                 denom: DENOM_UOSMO.to_string(),
             },
-            HopInfo {
-                prev: HopSide {
+            RouteHop {
+                prev: HopInfo {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
+                    asset_info: to_asset_info(DENOM_UOSMO),
                 },
-                next: Some(HopSide {
-                    address: "address".to_string(),
-                    pool_type: PoolType::Standard,
-                }),
+                next: None,
                 denom: DENOM_USCRT.to_string(),
             },
-            HopInfo {
-                prev: HopSide {
+            RouteHop {
+                prev: HopInfo {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
+                    asset_info: to_asset_info(DENOM_USCRT),
                 },
-                next: Some(HopSide {
+                next: Some(HopInfo {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
+                    asset_info: to_asset_info(DENOM_UUSDC),
                 }),
                 denom: DENOM_UNTRN.to_string(),
             }
@@ -440,13 +346,17 @@ mod creating_routed_pairs_tests {
             amount: Uint128::new(1_000_000),
         };
 
-        let mut pairs_hops = pair.route_pairs();
+        
+        let mut pairs_hops = validated_routed_pair(
+            deps, 
+            &pair, 
+            None
+        ).unwrap().route();
 
         let astro_hops = route_pairs_to_astro_hops(
-            deps,
+            &deps.querier,
             &pairs_hops,
-            &offer,
-            &target.info,
+            &offer.info,
         ).unwrap();
 
         assert!(astro_hops.len() == 4);
@@ -467,9 +377,8 @@ mod creating_routed_pairs_tests {
         pairs_hops.reverse();
 
         let astro_hops = route_pairs_to_astro_hops(
-            deps,
+            &deps.querier,
             &pairs_hops,
-            &target,
             &offer.info,
         ).unwrap();
 
@@ -497,25 +406,25 @@ mod creating_routed_pairs_tests {
     fn astroroute_msg_work() {
 
         let data = init_with_route(vec![
-            HopInfo {
-                prev: HopSide {
+            RouteHop {
+                prev: HopInfo {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
+                    asset_info: to_asset_info(DENOM_AARCH),
                 },
-                next: Some(HopSide {
-                    address: "address".to_string(),
-                    pool_type: PoolType::Standard,
-                }),
+                next: None,
                 denom: DENOM_UOSMO.to_string(),
             },
-            HopInfo {
-                prev: HopSide {
+            RouteHop {
+                prev: HopInfo {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
+                    asset_info: to_asset_info(DENOM_UOSMO),
                 },
-                next: Some(HopSide {
+                next: Some(HopInfo {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
+                    asset_info: to_asset_info(DENOM_UUSDC),
                 }),
                 denom: DENOM_UNTRN.to_string(),
             }
@@ -536,17 +445,21 @@ mod creating_routed_pairs_tests {
             amount: Uint128::new(1_000_000),
         };
 
-        let pairs_hops = pair.route_pairs();
+        let pair = validated_routed_pair(
+            deps, 
+            &pair, 
+            Some(offer.info.clone())
+        ).unwrap();
+
         let swap_funds = vec![asset_to_coin(offer.clone())];
 
 
         let swap_msg = route_swap_cosmos_msg(
             deps,
             env.clone(),
-            &pair,
+            pair,
             offer.clone(),
             target.clone(),
-            None,
             swap_funds.clone()
         ).unwrap();
 
@@ -585,36 +498,34 @@ mod creating_routed_pairs_tests {
     fn pairs_from_initial_route_works() {
 
         let data = init_with_route(vec![
-            HopInfo {
-                prev: HopSide {
+            RouteHop {
+                prev: HopInfo {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
+                    asset_info: to_asset_info(DENOM_AARCH),
                 },
-                next: Some(HopSide {
-                    address: "address".to_string(),
-                    pool_type: PoolType::Standard,
-                }),
+                next: None,
                 denom: DENOM_UOSMO.to_string(),
             },
-            HopInfo {
-                prev: HopSide {
+            RouteHop {
+                prev: HopInfo {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
+                    asset_info: to_asset_info(DENOM_UOSMO),
                 },
-                next: Some(HopSide {
-                    address: "address".to_string(),
-                    pool_type: PoolType::Standard,
-                }),
+                next: None,
                 denom: DENOM_UNTRN.to_string(),
             },
-            HopInfo {
-                prev: HopSide {
+            RouteHop {
+                prev: HopInfo {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
+                    asset_info: to_asset_info(DENOM_UNTRN),
                 },
-                next: Some(HopSide {
+                next: Some(HopInfo {
                     address: "address".to_string(),
                     pool_type: PoolType::Standard,
+                    asset_info: to_asset_info(DENOM_UUSDC),
                 }),
                 denom: DENOM_USCRT.to_string(),
             },
@@ -629,35 +540,35 @@ mod creating_routed_pairs_tests {
             to_asset_info(DENOM_AARCH), 
             to_asset_info(DENOM_UNTRN),
             vec![
-                HopInfo {
-                    prev: HopSide {
+                RouteHop {
+                    prev: HopInfo {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
+                        asset_info: to_asset_info(DENOM_AARCH),
                     },
-                    next: Some(HopSide {
-                        address: "address".to_string(),
-                        pool_type: PoolType::Standard,
-                    }),
+                    next: None,
                     denom: DENOM_UOSMO.to_string(),
                 },
-                HopInfo {
-                    prev: HopSide {
+                RouteHop {
+                    prev: HopInfo {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
+                        asset_info: to_asset_info(DENOM_UOSMO),
                     },
-                    next: Some(HopSide {
+                    next: Some(HopInfo {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
+                        asset_info: to_asset_info(DENOM_UNTRN),
                     }),
                     denom: DENOM_UNTRN.to_string(),
                 },
             ]
         );
 
-        assert_eq!(validated_route_pairs(
+        assert_eq!(validated_routed_pair(
             deps, 
             &pair, 
-            false
+            None
         ).unwrap_err(), StdError::generic_err("Route denoms are not unique").into());
 
 
@@ -666,25 +577,27 @@ mod creating_routed_pairs_tests {
             to_asset_info(DENOM_AARCH), 
             to_asset_info(DENOM_UNTRN),
             vec![
-                HopInfo {
-                    prev: HopSide {
+                RouteHop {
+                    prev: HopInfo {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
+                        asset_info: to_asset_info(DENOM_AARCH),
                     },
-                    next: Some(HopSide {
+                    next: Some(HopInfo {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
+                        asset_info: to_asset_info(DENOM_UNTRN),
                     }),
                     denom: DENOM_UOSMO.to_string(),
                 },
             ]
         );
 
-        assert_eq!(validated_route_pairs(
+        assert_eq!(validated_routed_pair(
             deps, 
             &pair, 
-            false
-        ).unwrap().len(), 2);
+            None
+        ).unwrap().route().len(), 2);
 
 
 
@@ -695,24 +608,26 @@ mod creating_routed_pairs_tests {
             to_asset_info(DENOM_UUSDC),
             to_asset_info(DENOM_UOSMO), 
             vec![
-                HopInfo {
-                    prev: HopSide {
+                RouteHop {
+                    prev: HopInfo {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
+                        asset_info: to_asset_info(DENOM_UUSDC),
                     },
-                    next: Some(HopSide {
+                    next: Some(HopInfo {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
+                        asset_info: to_asset_info(DENOM_UOSMO),
                     }),
                     denom: DENOM_UNTRN.to_string(),
                 },
             ]
         );
 
-        assert_eq!(validated_route_pairs(
+        assert_eq!(validated_routed_pair(
             deps, 
             &pair, 
-            false
+            None
         ).unwrap_err(), ContractError::NoRoutedPair {});
 
 
@@ -721,25 +636,25 @@ mod creating_routed_pairs_tests {
             to_asset_info(DENOM_UUSDC),
             to_asset_info(DENOM_UOSMO), 
             vec![
-                HopInfo {
-                    prev: HopSide {
+                RouteHop {
+                    prev: HopInfo {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
+                        asset_info: to_asset_info(DENOM_UUSDC),
                     },
-                    next: Some(HopSide {
-                        address: "address".to_string(),
-                        pool_type: PoolType::Standard,
-                    }),
+                    next: None,
                     denom: DENOM_UNTRN.to_string(),
                 },
-                HopInfo {
-                    prev: HopSide {
+                RouteHop {
+                    prev: HopInfo {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
+                        asset_info: to_asset_info(DENOM_UNTRN),
                     },
-                    next: Some(HopSide {
+                    next: Some(HopInfo {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
+                        asset_info: to_asset_info(DENOM_UOSMO),
                     }),
                     denom: DENOM_USCRT.to_string(),
                 },
@@ -747,10 +662,10 @@ mod creating_routed_pairs_tests {
         );
 
 
-        assert_eq!(validated_route_pairs(
+        assert_eq!(validated_routed_pair(
             deps, 
             &pair, 
-            false
+            None
         ).unwrap_err(), ContractError::NoRoutedPair {});
 
 
@@ -759,25 +674,25 @@ mod creating_routed_pairs_tests {
             to_asset_info(DENOM_UUSDC),
             to_asset_info(DENOM_UOSMO), 
             vec![
-                HopInfo {
-                    prev: HopSide {
+                RouteHop {
+                    prev: HopInfo {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
+                        asset_info: to_asset_info(DENOM_UUSDC),
                     },
-                    next: Some(HopSide {
-                        address: "address".to_string(),
-                        pool_type: PoolType::Standard,
-                    }),
+                    next: None,
                     denom: DENOM_USCRT.to_string(),
                 },
-                HopInfo {
-                    prev: HopSide {
+                RouteHop {
+                    prev: HopInfo {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
+                        asset_info: to_asset_info(DENOM_USCRT),
                     },
-                    next: Some(HopSide {
+                    next: Some(HopInfo {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
+                        asset_info: to_asset_info(DENOM_UOSMO),
                     }),
                     denom: DENOM_UNTRN.to_string(),
                 }
@@ -791,14 +706,16 @@ mod creating_routed_pairs_tests {
     #[test]
     fn routed_simulation_works() {
         let data = init_with_route(vec![
-            HopInfo {
-                prev: HopSide {
+            RouteHop {
+                prev: HopInfo {
                     address: "arch_scrt_pair".to_string(),
                     pool_type: PoolType::Standard,
+                    asset_info: to_asset_info(DENOM_AARCH),
                 },
-                next: Some(HopSide {
+                next: Some(HopInfo {
                     address: "scrt_usdc_pair".to_string(),
                     pool_type: PoolType::Standard,
+                    asset_info: to_asset_info(DENOM_UUSDC),
                 }),
                 denom: DENOM_USCRT.to_string(),
             },
@@ -884,213 +801,6 @@ mod creating_routed_pairs_tests {
 
 
 
-
-    
-
-    #[test]
-    fn pairs_overriding_and_counts() {
-
-        let data = init_with_route(vec![
-            HopInfo {
-                prev: HopSide {
-                    address: "address".to_string(),
-                    pool_type: PoolType::Standard,
-                },
-                next: Some(HopSide {
-                    address: "address".to_string(),
-                    pool_type: PoolType::Standard,
-                }),
-                denom: DENOM_UOSMO.to_string(),
-            },
-            HopInfo {
-                prev: HopSide {
-                    address: "address".to_string(),
-                    pool_type: PoolType::Standard,
-                },
-                next: Some(HopSide {
-                    address: "address".to_string(),
-                    pool_type: PoolType::Standard,
-                }),
-                denom: DENOM_UNTRN.to_string(),
-            },
-            HopInfo {
-                prev: HopSide {
-                    address: "address".to_string(),
-                    pool_type: PoolType::Standard,
-                },
-                next: Some(HopSide {
-                    address: "address".to_string(),
-                    pool_type: PoolType::Standard,
-                }),
-                denom: DENOM_USCRT.to_string(),
-            },
-        ]);
-
-        let deps = data.deps.as_ref();
-
-        // not saving any following pairs
-
-        // UNTRN repeating
-        let pair = Pair::new_routed(
-            to_asset_info(DENOM_AARCH), 
-            to_asset_info(DENOM_UNTRN),
-            vec![
-                HopInfo {
-                    prev: HopSide {
-                        address: "address".to_string(),
-                        pool_type: PoolType::Standard,
-                    },
-                    next: Some(HopSide {
-                        address: "address".to_string(),
-                        pool_type: PoolType::Standard,
-                    }),
-                    denom: DENOM_UOSMO.to_string(),
-                },
-                HopInfo {
-                    prev: HopSide {
-                        address: "address".to_string(),
-                        pool_type: PoolType::Standard,
-                    },
-                    next: Some(HopSide {
-                        address: "address".to_string(),
-                        pool_type: PoolType::Standard,
-                    }),
-                    denom: DENOM_UNTRN.to_string(),
-                },
-            ]
-        );
-
-        assert_eq!(validated_route_pairs(
-            deps, 
-            &pair, 
-            false
-        ).unwrap_err(), StdError::generic_err("Route denoms are not unique").into());
-
-
-        // Okay
-        let pair = Pair::new_routed(
-            to_asset_info(DENOM_AARCH), 
-            to_asset_info(DENOM_UNTRN),
-            vec![
-                HopInfo {
-                    prev: HopSide {
-                        address: "address".to_string(),
-                        pool_type: PoolType::Standard,
-                    },
-                    next: Some(HopSide {
-                        address: "address".to_string(),
-                        pool_type: PoolType::Standard,
-                    }),
-                    denom: DENOM_UOSMO.to_string(),
-                },
-            ]
-        );
-
-        assert_eq!(validated_route_pairs(
-            deps, 
-            &pair, 
-            false
-        ).unwrap().len(), 2);
-
-
-
-        // Reverse
-
-        // Skipping SCRT
-        let pair = Pair::new_routed(
-            to_asset_info(DENOM_UUSDC),
-            to_asset_info(DENOM_UOSMO), 
-            vec![
-                HopInfo {
-                    prev: HopSide {
-                        address: "address".to_string(),
-                        pool_type: PoolType::Standard,
-                    },
-                    next: Some(HopSide {
-                        address: "address".to_string(),
-                        pool_type: PoolType::Standard,
-                    }),
-                    denom: DENOM_UNTRN.to_string(),
-                },
-            ]
-        );
-
-        assert_eq!(validated_route_pairs(
-            deps, 
-            &pair, 
-            false
-        ).unwrap_err(), ContractError::NoRoutedPair {});
-
-
-        // Wring order
-        let pair = Pair::new_routed(
-            to_asset_info(DENOM_UUSDC),
-            to_asset_info(DENOM_UOSMO), 
-            vec![
-                HopInfo {
-                    prev: HopSide {
-                        address: "address".to_string(),
-                        pool_type: PoolType::Standard,
-                    },
-                    next: Some(HopSide {
-                        address: "address".to_string(),
-                        pool_type: PoolType::Standard,
-                    }),
-                    denom: DENOM_UNTRN.to_string(),
-                },
-                HopInfo {
-                    prev: HopSide {
-                        address: "address".to_string(),
-                        pool_type: PoolType::Standard,
-                    },
-                    next: Some(HopSide {
-                        address: "address".to_string(),
-                        pool_type: PoolType::Standard,
-                    }),
-                    denom: DENOM_USCRT.to_string(),
-                },
-            ]
-        );
-
-
-        assert_eq!(validated_route_pairs(
-            deps, 
-            &pair, 
-            false
-        ).unwrap_err(), ContractError::NoRoutedPair {});
-
-
-        // Ok
-        let pair = Pair::new_routed(
-            to_asset_info(DENOM_UUSDC),
-            to_asset_info(DENOM_UOSMO), 
-            vec![
-                HopInfo {
-                    prev: HopSide {
-                        address: "address".to_string(),
-                        pool_type: PoolType::Standard,
-                    },
-                    next: Some(HopSide {
-                        address: "address".to_string(),
-                        pool_type: PoolType::Standard,
-                    }),
-                    denom: DENOM_USCRT.to_string(),
-                },
-                HopInfo {
-                    prev: HopSide {
-                        address: "address".to_string(),
-                        pool_type: PoolType::Standard,
-                    },
-                    next: Some(HopSide {
-                        address: "address".to_string(),
-                        pool_type: PoolType::Standard,
-                    }),
-                    denom: DENOM_UNTRN.to_string(),
-                }
-            ]
-        );
-
-    }
 
 
 

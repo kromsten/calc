@@ -9,5 +9,6 @@ pub fn get_pairs_handler(
     limit: Option<u16>,
 ) -> StdResult<Vec<Pair>> {
     let pairs = get_pairs(deps.storage, start_after.map(|pair| pair.denoms), limit);
+    
     Ok(pairs.into_iter().map(|pair| pair.into()).collect())
 }

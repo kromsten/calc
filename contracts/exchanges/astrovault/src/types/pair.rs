@@ -1,66 +1,67 @@
 use astrovault::assets::asset::AssetInfo;
 use cosmwasm_schema::cw_serde;
 
-
-#[cw_serde]
-pub enum PoolType {
-    Standard,
-    Stable,
-    Ratio
-}
-
-
-#[cw_serde]
-pub struct HopSide {
-    pub address:   String,
-    pub pool_type: PoolType,
-}
-
-
-#[cw_serde]
-pub struct HopInfo {
-    pub denom:     String,
-    /// Direct pool info connecting the hop asset to the previous asset in route
-    pub prev:      HopSide,
-    /// Direct pool info connecting the hop asset to the next asset in route.
-    /// Must be specified for the last hop in the route.
-    pub next:      Option<HopSide>,
-}
-
-
-#[cw_serde]
-pub struct PoolInfo {
-    pub address:       String,
-    pub pool_type:     PoolType,
-    pub base_asset:    AssetInfo,
-    pub quote_asset:   AssetInfo,
-    pub base_index:    Option<u32>,
-    pub quote_index:   Option<u32>,
-}
-
-
-pub type PairRoute = Vec<HopInfo>;
+use super::pool::PoolType;
+use super::route::{Route, PopulatedRoute};
 
 
 #[cw_serde]
 pub enum PairType {
     Direct {
-        address:         String,
-        pool_type:       PoolType,
-        // to be auto-populated inside contract
-        base_index:      Option<u32>,
-        // no need to sepcify on the client side
-        quote_index:     Option<u32>,
+        address:   String,
+        pool_type: PoolType,
     },
     Routed {
-        route: PairRoute
+        route: Route
     },
 }
 
 
 #[cw_serde]
+pub enum PopulatedPairType {
+    Direct {
+        address:         String,
+        pool_type:       PoolType,
+        base_index:      u32,
+        quote_index:     u32,
+    },
+    Routed {
+        route: PopulatedRoute
+    },
+}
+
+
+
+
+#[cw_serde]
 pub struct Pair {
-    pub base_asset: AssetInfo,
+    pub base_asset:  AssetInfo,
     pub quote_asset: AssetInfo,
-    pub pair_type: PairType,
+    pub pair_type:   PairType,
+}
+
+
+
+#[cw_serde]
+pub struct PopulatedPair {
+    pub base_asset:  AssetInfo,
+    pub quote_asset: AssetInfo,
+    pub pair_type:   PopulatedPairType,
+}
+
+
+#[cw_serde]
+pub enum StoredPair {
+    Direct,
+    Routed
+}
+
+
+impl From<&PopulatedPair> for StoredPair {
+    fn from(pair: &PopulatedPair) -> Self {
+        match pair.pair_type {
+            PopulatedPairType::Direct { .. } => StoredPair::Direct,
+            PopulatedPairType::Routed { .. } => StoredPair::Routed,
+        }
+    }
 }

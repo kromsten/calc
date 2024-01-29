@@ -22,10 +22,6 @@ pub enum ContractError {
     #[error("There is no route for the give pair")]
     NoRoutedPair {},
 
-
-    #[error("Invalid route. Something went wrong")]
-    RouteRuntimeError {},
-
     #[error("Invalid route. Can't get from: {base:?} to {quote:?}")]
     InvalidRoute { base: String, quote: String },
 
@@ -35,8 +31,32 @@ pub enum ContractError {
     #[error("Assets cannot be empty")]
     EmptyAsset {},
 
-    #[error("Pair already exists")]
-    PairExist {},
+    #[error("Couldn't get asset info from the pool")]
+    AssetQueryFail {},
+
+    #[error("Error reconstructing a route. Invalid Hop info")]
+    InvalidHops {},
+
+    #[error("Last hop in a route must have info about next connecting pool ")]
+    MissingNextPoolHop {},
+
+    #[error("Pair not found")]
+    PairNotFound {},
+
+    #[error("Route not found")]
+    RouteNotFound {},
+
+    #[error("Route is empty")]
+    RouteEmpty {},
+
+    #[error("Route assets are not unique and contains dublicates")]
+    RouteDublicates {},
+
+    #[error("Pool not found")]
+    PoolNotFound {},
+
+    #[error("Error getting assets info from the pool")]
+    PoolError {},
 
     #[error("{0}")]
     Payment(#[from] PaymentError),

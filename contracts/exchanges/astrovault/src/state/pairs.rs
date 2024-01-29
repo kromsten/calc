@@ -1,62 +1,112 @@
-use crate::types::pair::Pair;
 use cosmwasm_std::{Order, StdError, StdResult, Storage};
-use cw_storage_plus::{Bound, Map};
+use cw_storage_plus::Bound;
+use exchange::msg::Pair;
 
-const PAIRS         : Map<String, Pair> = Map::new("pairs_v1");
-const ROUTE_PAIRS   : Map<String, Pair> = Map::new("rpairs_v1");
+use crate::{state::{pools::pool_exists, routes::route_exists}, types::pair::{PopulatedPair, StoredPair}, ContractError};
+
+use super::{common::{allow_implicit, denoms_from, key_from, PAIRS}, pools::{delete_pool_pair, find_pool, get_pool_pair, save_pool_pair}, routes::{delete_routed_pair, get_routed_pair, save_routed_pair}};
 
 
-fn key_from(mut denoms: [String; 2]) -> String {
-    denoms.sort();
-    format!("{}-{}", denoms[0], denoms[1])
+
+pub fn pair_exists(storage: &dyn Storage, denoms: &[String; 2]) -> bool {
+    PAIRS.has(storage, key_from(&denoms))
 }
 
 
-pub fn save_route_pair(storage: &mut dyn Storage, pair: &Pair) -> StdResult<()> {
-    ROUTE_PAIRS.save(storage, key_from(pair.denoms()), &pair)
+
+
+pub fn find_pair(storage: &dyn Storage, denoms: [String; 2]) -> StdResult<PopulatedPair> {
+
+    let key = key_from(&denoms);
+    let pair = PAIRS.load(storage, key.clone());
+    
+    if let Ok(stored) = pair {
+        match stored {
+            StoredPair::Direct {} => get_pool_pair(storage, key),
+            StoredPair::Routed { } => get_routed_pair(storage, denoms, false)
+        }
+
+    }  else {
+
+        if pool_exists(storage, &denoms) || route_exists(storage, &denoms) {
+
+            if allow_implicit(storage) {
+
+                if let Ok(pair) = get_pool_pair(storage, key) {
+                    Ok(pair)
+                } else if let Ok(pair) = get_routed_pair(storage, denoms, false) {
+                    Ok(pair)
+                } else {
+                    Err(StdError::generic_err("Runtime error: couldn't get pair"))
+                }
+            } else {
+                Err(StdError::generic_err("Pair exist but implicit pairs are not allowed"))
+            }
+
+        } else {
+            Err(StdError::generic_err("Pair not found"))
+
+        }
+
+    }
 }
 
 
-pub fn find_route_pair(storage: &dyn Storage, denoms: [String; 2]) -> StdResult<Pair> {
-    let key = key_from(denoms);
-    if let Ok(pair) =  ROUTE_PAIRS.load(storage, key.clone()) {
-        return Ok(pair);
-    } else if let Ok(pair) = PAIRS.load(storage, key) {
-        return Ok(pair);
+
+pub fn find_pool_pair(storage: &dyn Storage, denoms: [String; 2]) -> StdResult<PopulatedPair> {
+    Ok(find_pool(storage, denoms)?.into())
+}
+
+
+
+
+
+pub fn find_route_pair(storage: &dyn Storage, denoms: [String; 2], reverse: bool) -> StdResult<PopulatedPair> {
+    Ok(get_routed_pair(storage, denoms, reverse)?)
+}
+
+
+
+pub fn save_pair(storage: &mut dyn Storage, pair: &PopulatedPair) -> Result<(), ContractError> {
+    
+    if pair.is_pool_pair() {
+        save_pool_pair(storage, pair)
     } else {
-        return Err(StdError::generic_err("Pair not found"));
+        save_routed_pair(storage, pair)
     }
 }
 
-pub fn route_pair_exists(storage: &dyn Storage, denoms: [String; 2]) -> bool {
-    let key = key_from(denoms);
-    if ROUTE_PAIRS.has(storage, key.clone()) {
-        true
+
+
+
+pub fn delete_pair(storage: &mut dyn Storage, pair: &PopulatedPair) {
+
+    if pair.is_pool_pair() {
+        delete_pool_pair(storage, pair)
     } else {
-        PAIRS.has(storage, key)
+        delete_routed_pair(storage, pair)
     }
 }
 
 
-pub fn pair_exists(storage: &dyn Storage, pair: &Pair) -> bool {
-    PAIRS.has(storage, key_from(pair.denoms()))
+pub fn get_stored_pairs(
+    storage: &dyn Storage,
+    start_after: Option<[String; 2]>,
+    limit: Option<u16>,
+) -> Vec<StoredPair> {
+    PAIRS
+        .range(
+            storage,
+            start_after.map(|denoms| Bound::exclusive(key_from(&denoms))),
+            None,
+            Order::Ascending,
+        )
+        .take(limit.unwrap_or(30) as usize)
+        .flat_map(|result| result.map(|(_, pair)| pair))
+        .collect::<Vec<StoredPair>>()
 }
 
-pub fn save_pair(storage: &mut dyn Storage, pair: &Pair) -> StdResult<()> {
-    let key = key_from(pair.denoms());
-    if ROUTE_PAIRS.has(storage, key.clone()) {
-        ROUTE_PAIRS.remove(storage, key.clone());
-    }
-    PAIRS.save(storage, key_from(pair.denoms()), &pair)
-}
 
-pub fn find_pair(storage: &dyn Storage, denoms: [String; 2]) -> StdResult<Pair> {
-    PAIRS.load(storage, key_from(denoms))
-}
-
-pub fn delete_pair(storage: &mut dyn Storage, pair: &Pair) {
-    PAIRS.remove(storage, key_from(pair.denoms()))
-}
 
 pub fn get_pairs(
     storage: &dyn Storage,
@@ -66,14 +116,40 @@ pub fn get_pairs(
     PAIRS
         .range(
             storage,
-            start_after.map(|denoms| Bound::exclusive(key_from(denoms))),
+            start_after.map(|denoms| Bound::exclusive(key_from(&denoms))),
             None,
             Order::Ascending,
         )
         .take(limit.unwrap_or(30) as usize)
-        .flat_map(|result| result.map(|(_, pair)| pair))
+        .flat_map(|result| result.map(|(key, _)| Pair { denoms: denoms_from(&key) }))
         .collect::<Vec<Pair>>()
 }
+
+
+
+pub fn get_pairs_full(
+    storage: &dyn Storage,
+    start_after: Option<[String; 2]>,
+    limit: Option<u16>,
+) -> Vec<PopulatedPair> {
+    PAIRS
+    .range(
+        storage,
+        start_after.map(|denoms| Bound::exclusive(key_from(&denoms))),
+        None,
+        Order::Ascending,
+    )
+    .take(limit.unwrap_or(30) as usize)
+    .flat_map(|result| 
+        result.map(|(key, pair)| match pair {
+            StoredPair::Direct { } => find_pool_pair(storage, denoms_from(&key)),
+            StoredPair::Routed { } => find_route_pair(storage, denoms_from(&key), false)
+        })
+    )
+    .collect::<StdResult<Vec<PopulatedPair>>>().unwrap()
+}
+
+
 
 
 #[cfg(test)]
@@ -84,7 +160,7 @@ mod find_pair_tests {
     #[test]
     fn saves_and_finds_pair() {
         let mut deps = mock_dependencies();
-        let pair = Pair::default();
+        let pair = PopulatedPair::default();
 
         save_pair(deps.as_mut().storage, &pair).unwrap();
 
@@ -95,7 +171,7 @@ mod find_pair_tests {
     #[test]
     fn saves_and_finds_pair_with_denoms_reversed() {
         let mut deps = mock_dependencies();
-        let pair = Pair::default();
+        let pair = PopulatedPair::default();
 
         save_pair(deps.as_mut().storage, &pair).unwrap();
 
@@ -109,7 +185,7 @@ mod find_pair_tests {
     fn find_pair_that_does_not_exist_fails() {
         let deps = mock_dependencies();
 
-        let result = find_pair(&deps.storage, Pair::default().denoms()).unwrap_err();
+        let result = find_pair(&deps.storage, PopulatedPair::default().denoms()).unwrap_err();
 
         assert!(result.to_string().starts_with("type: astrovault_calc::types::pair"));
     }
@@ -121,7 +197,7 @@ mod get_pairs_tests {
     use astrovault::assets::asset::AssetInfo;
     use cosmwasm_std::testing::mock_dependencies;
 
-    use crate::types::pair::Pair;
+    use crate::types::pair::PopulatedPair;
 
     use super::{get_pairs, save_pair};
 
@@ -130,7 +206,7 @@ mod get_pairs_tests {
         let mut deps = mock_dependencies();
 
         for i in 0..10 {
-            let pair = Pair::from_assets(
+            let pair = PopulatedPair::from_assets(
                 AssetInfo::NativeToken { denom: format!("base_denom_{}", i) },
                 AssetInfo::NativeToken { denom: format!("quote_denom_{}", i) }
             );

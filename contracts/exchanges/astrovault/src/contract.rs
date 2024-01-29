@@ -14,6 +14,7 @@ use crate::handlers::get_pairs_internal::get_pairs_internal_handler;
 use crate::handlers::get_twap_to_now::get_twap_to_now_handler;
 use crate::handlers::swap::{return_swapped_funds, swap_native_handler, swap_cw20_handler};
 use crate::msg::{InstantiateMsg, InternalExecuteMsg, InternalQueryMsg, MigrateMsg};
+use crate::state::common::update_allow_implicit;
 use crate::state::config::{get_config, update_config, update_router_config};
 use crate::types::config::Config;
 
@@ -45,6 +46,7 @@ pub fn instantiate(
     )?;
 
     update_router_config(&deps.querier, deps.storage, msg.router_address.as_ref())?;
+    update_allow_implicit(deps.storage, msg.allow_implicit)?;
 
     Ok(Response::new()
         .add_attribute("instantiate", "true")
@@ -56,7 +58,7 @@ pub fn instantiate(
 #[entry_point]
 pub fn migrate(deps: DepsMut, _: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
 
-    let mut attributes : Vec<(&str, String)> = Vec::with_capacity(4);
+    let mut attributes : Vec<(&str, String)> = Vec::with_capacity(5);
     attributes.push(("migrate", String::from("true")));
 
     let config = get_config(deps.storage)?;
@@ -89,7 +91,13 @@ pub fn migrate(deps: DepsMut, _: Env, msg: MigrateMsg) -> Result<Response, Contr
         config.router_address
     };
 
+    if msg.allow_implicit.is_some() {
+        attributes.push(("allow_implicit_routes", msg.allow_implicit.unwrap().to_string()));
+        update_allow_implicit(deps.storage, msg.allow_implicit)?;
+    }
+
     update_config(deps.storage, Config { admin, dca_contract_address, router_address })?;
+
     Ok(Response::new().add_attributes(attributes))
 }
 
@@ -153,6 +161,8 @@ pub fn execute(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _: Env, msg: QueryMsg) -> StdResult<Binary> {
+
+    
     match msg {
         QueryMsg::GetPairs { start_after, limit } => {
             to_json_binary(&get_pairs_handler(deps, start_after, limit)?)
@@ -182,7 +192,11 @@ pub fn query(deps: Deps, _: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::InternalQuery { msg } => match from_json(&msg).unwrap() {
             InternalQueryMsg::GetPairs { start_after, limit } => {
                 to_json_binary(&get_pairs_internal_handler(deps, start_after, limit)?)
-            }
+            },
+
+            InternalQueryMsg::GetPairsFull { start_after, limit } => {
+                to_json_binary(&get_pairs_internal_handler(deps, start_after, limit)?)
+            },
         },
     }
 }

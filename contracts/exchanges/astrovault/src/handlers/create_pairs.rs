@@ -1,11 +1,7 @@
 use cosmwasm_std::{DepsMut, MessageInfo, Response};
 
 use crate::{
-    helpers::{
-        pool::validated_direct_pair, 
-        route::validated_route_pairs_to_save}, 
-        state::{config::get_config, pairs::{save_pair, save_route_pair}}, 
-        types::pair::Pair, ContractError
+    helpers::validated::validated_pair, state::{config::get_config, pairs::save_pair}, types::pair::Pair, ContractError
 };
 
 
@@ -23,16 +19,14 @@ pub fn create_pairs_handler(
     let pairs_len = pairs.len();
 
     for pair in pairs {
-        if pair.is_pool_pair() {
-            let pair = validated_direct_pair(deps.as_ref(), &pair)?;
-            save_pair(deps.storage, &pair)?;
-        } else {
-            let route_pairs = validated_route_pairs_to_save(deps.as_ref(), &pair)?;
-            for route_pair in route_pairs {
-                save_route_pair(deps.storage, &route_pair)?;
-            }
-            save_pair(deps.storage, &pair)?;
-        }
+
+        let validated = validated_pair(
+            deps.as_ref(), 
+            &pair, 
+            None
+        )?;
+
+        save_pair(deps.storage, &validated)?;
     }
 
     Ok(Response::new()
@@ -53,7 +47,7 @@ mod create_pairs_tests {
         msg::InstantiateMsg,
         state::pairs::{find_pair, save_pair},
         tests::constants::ADMIN,
-        types::pair::{Pair, PairType},
+        types::pair::{Pair, PairType, PopulatedPair},
         ContractError,
     };
 
@@ -69,6 +63,7 @@ mod create_pairs_tests {
                 admin: Addr::unchecked(ADMIN),
                 dca_contract_address: Addr::unchecked("dca-contract-address"),
                 router_address: Addr::unchecked("router-address"),
+                allow_implicit: None,
             },
         )
         .unwrap();
@@ -91,12 +86,13 @@ mod create_pairs_tests {
                 admin: Addr::unchecked(ADMIN),
                 dca_contract_address: Addr::unchecked("dca-contract-address"),
                 router_address: Addr::unchecked("router-address"),
+                allow_implicit: None,
             },
         )
         .unwrap();
 
-        let pair = Pair::default();
-        let pool = pair.pool_info();
+        let pair = PopulatedPair::default();
+        let pool = pair.pool();
 
         save_pair(deps.as_mut().storage, &pair).unwrap();
 
@@ -108,18 +104,17 @@ mod create_pairs_tests {
             vec![Pair {
                 pair_type: PairType::Direct { 
                     address: new_address.clone(), 
-                    base_index: None,
-                    quote_index: None,
                     pool_type: pool.pool_type
                 },
-                ..pair.clone()
+                base_asset: pool.base_asset.clone(),
+                quote_asset: pool.quote_asset.clone(),
             }],
         )
         .unwrap();
 
         let updated_pair = find_pair(deps.as_ref().storage, pair.denoms()).unwrap();
 
-        let updated_pool = updated_pair.pool_info();
+        let updated_pool = updated_pair.pool();
 
         assert_ne!(pool.address, updated_pool.address);
         assert_eq!(updated_pool.address, new_address);
