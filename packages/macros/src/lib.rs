@@ -86,7 +86,7 @@ pub fn exchange_query(metadata: TokenStream, input: TokenStream) -> TokenStream 
         input,
         quote! {
             enum Right {
-                #[returns(Vec<Pair>)]
+                #[returns(Vec<::exchange::msg::Pair>)]
                 GetPairs {
                     start_after: Option<::exchange::msg::Pair>,
                     limit: Option<u16>,

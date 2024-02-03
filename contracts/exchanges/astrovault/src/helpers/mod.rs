@@ -3,6 +3,7 @@ pub mod pool;
 pub mod route;
 pub mod pair;
 pub mod populated;
+pub mod unpopulated;
 pub mod validated;
 pub mod registry;
 pub mod msg;

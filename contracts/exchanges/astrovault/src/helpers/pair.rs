@@ -26,18 +26,6 @@ impl From<Pair> for ExchangePair {
 }
 
 
-impl From<PopulatedPair> for ExchangePair {
-    fn from(val: PopulatedPair) -> Self {
-        ExchangePair {
-            denoms: val.denoms(),
-        }
-    }
-}
-
-
-
-
-
 
 impl Pair {
 

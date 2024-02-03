@@ -1,6 +1,6 @@
 #![allow(unused_variables, unused_imports)]
 
-use crate::{state::{config::{get_config, get_router_config}, pairs::{find_pair, pair_exists}}, types::{pair::{Pair, PopulatedPair, StoredPair}, route::{self, HopInfo, PopulatedRoute, Route, RouteHop, StoredRoute}, wrapper::ContractWrapper}, ContractError};
+use crate::{state::{config::{get_config, get_router_config}, pairs::{find_pair, pair_exists}}, types::{pair::{Pair, PopulatedPair, StoredPairType}, route::{self, HopInfo, PopulatedRoute, Route, RouteHop, StoredRoute}, wrapper::ContractWrapper}, ContractError};
 use astrovault::assets::{asset::{Asset, AssetInfo}, querier};
 use cosmwasm_std::{ensure, from_json, to_json_binary, Binary, Coin, CosmosMsg, Deps, Env, QuerierWrapper, StdError, StdResult, Uint128};
 use cw20::Cw20ReceiveMsg;
@@ -68,6 +68,7 @@ pub fn reversed(route: &Route) -> Route {
 }
 
 
+/// Return all denoms involved in the route
 pub fn populated_route_denoms(
     route: &PopulatedRoute
 ) -> Vec<String> {

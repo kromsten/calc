@@ -1,7 +1,6 @@
 use cosmwasm_std::{Deps, StdResult};
 
-use crate::{state::pairs::{get_pairs, get_pairs_full}, types::pair::PopulatedPair};
-use exchange::msg::Pair;
+use crate::{state::pairs::{get_pairs, get_pairs_full}, types::pair::{Pair, PopulatedPair}};
 
 pub fn get_pairs_internal_handler(
     deps: Deps,
@@ -11,7 +10,7 @@ pub fn get_pairs_internal_handler(
 
     Ok(get_pairs(
         deps.storage,
-        start_after.map(|pair| pair.denoms),
+        start_after.map(|pair| pair.denoms()),
         limit,
     ))
 
@@ -25,7 +24,7 @@ pub fn get_pairs_internal_full_handler(
 
     Ok(get_pairs_full(
         deps.storage,
-        start_after.map(|pair| pair.denoms),
+        start_after.map(|pair| pair.denoms()),
         limit,
     ))
 }

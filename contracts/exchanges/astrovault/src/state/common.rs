@@ -1,7 +1,7 @@
 use cosmwasm_std::{StdResult, Storage};
 use cw_storage_plus::{Item, Map};
 
-use crate::types::pair::StoredPair;
+use crate::types::pair::StoredPairType;
 
 
 pub fn sorted_denoms(denoms: &[String; 2]) -> [String; 2] {
@@ -22,11 +22,10 @@ pub fn denoms_from(key: &str) -> [String; 2] {
 }
 
 
-/// explicitly added pairs with minimal info and exted fields
-/// sorted (base.denom, quote.denom) -> Direct / Routed info
-pub const PAIRS             : Map<String, StoredPair>    = Map::new("pairs_v1");
+/// Store explicirely created pairs with infomation about pair type
+pub const PAIRS             : Map<String, StoredPairType>    = Map::new("pairs_v1");
 
-
+/// flag that tell whether to use pairs that wasn't explicite created for querying and swapping
 const IMPLICT_PAIRS        : Item<bool>           = Item::new("i");
 
 

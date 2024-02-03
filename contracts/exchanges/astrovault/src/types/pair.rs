@@ -51,17 +51,7 @@ pub struct PopulatedPair {
 
 
 #[cw_serde]
-pub enum StoredPair {
+pub enum StoredPairType {
     Direct,
     Routed
-}
-
-
-impl From<&PopulatedPair> for StoredPair {
-    fn from(pair: &PopulatedPair) -> Self {
-        match pair.pair_type {
-            PopulatedPairType::Direct { .. } => StoredPair::Direct,
-            PopulatedPairType::Routed { .. } => StoredPair::Routed,
-        }
-    }
 }

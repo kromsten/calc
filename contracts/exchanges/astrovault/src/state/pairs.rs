@@ -1,10 +1,10 @@
 use cosmwasm_std::{Order, StdError, StdResult, Storage};
 use cw_storage_plus::Bound;
-use exchange::msg::Pair;
 
-use crate::{state::{pools::pool_exists, routes::route_exists}, types::pair::{PopulatedPair, StoredPair}, ContractError};
+use crate::{state::{pools::pool_exists, routes::route_exists}, types::pair::{Pair, PopulatedPair, StoredPairType}, ContractError};
 
 use super::{common::{allow_implicit, denoms_from, key_from, PAIRS}, pools::{delete_pool_pair, find_pool, get_pool_pair, save_pool_pair, POOLS}, routes::{delete_routed_pair, get_routed_pair, save_routed_pair}};
+use exchange::msg::Pair as ExchangePair;
 
 
 
@@ -21,8 +21,8 @@ pub fn find_pair(storage: &dyn Storage, denoms: [String; 2]) -> StdResult<Popula
     
     if let Ok(stored) = pair {
         match stored {
-            StoredPair::Direct {} => get_pool_pair(storage, key),
-            StoredPair::Routed { } => get_routed_pair(storage, denoms, false)
+            StoredPairType::Direct {} => get_pool_pair(storage, key),
+            StoredPairType::Routed { } => get_routed_pair(storage, denoms, false)
         }
 
     }  else {
@@ -58,8 +58,6 @@ pub fn find_pool_pair(storage: &dyn Storage, denoms: [String; 2]) -> StdResult<P
 
 
 
-
-
 pub fn find_route_pair(storage: &dyn Storage, denoms: [String; 2], reverse: bool) -> StdResult<PopulatedPair> {
     Ok(get_routed_pair(storage, denoms, reverse)?)
 }
@@ -68,8 +66,6 @@ pub fn find_route_pair(storage: &dyn Storage, denoms: [String; 2], reverse: bool
 
 pub fn save_pair(storage: &mut dyn Storage, pair: &PopulatedPair) -> Result<(), ContractError> {
     
-    println!("sav pair: {:?}", pair);
-
     if pair.is_pool_pair() {
         save_pool_pair(storage, pair)
     } else {
@@ -90,21 +86,20 @@ pub fn delete_pair(storage: &mut dyn Storage, pair: &PopulatedPair) {
 }
 
 
-pub fn get_stored_pairs(
+
+pub fn get_exchange_pairs(
     storage: &dyn Storage,
     start_after: Option<[String; 2]>,
     limit: Option<u16>,
-) -> Vec<StoredPair> {
-    PAIRS
-        .range(
-            storage,
-            start_after.map(|denoms| Bound::exclusive(key_from(&denoms))),
-            None,
-            Order::Ascending,
-        )
-        .take(limit.unwrap_or(30) as usize)
-        .flat_map(|result| result.map(|(_, pair)| pair))
-        .collect::<Vec<StoredPair>>()
+) -> Vec<ExchangePair> {
+    get_pairs_full(
+        storage,
+        start_after,
+        limit,
+    )
+    .into_iter()
+    .map(|pair| pair.into())
+    .collect()
 }
 
 
@@ -144,8 +139,8 @@ pub fn get_pairs_full(
         .take(limit.unwrap_or(30) as usize)
         .flat_map(|result| 
             result.map(|(key, pair)| match pair {
-                StoredPair::Direct { } => find_pool_pair(storage, denoms_from(&key)),
-                StoredPair::Routed { } => find_route_pair(storage, denoms_from(&key), false)
+                StoredPairType::Direct { } => find_pool_pair(storage, denoms_from(&key)),
+                StoredPairType::Routed { } => find_route_pair(storage, denoms_from(&key), false)
             })
         )
         .collect::<StdResult<Vec<PopulatedPair>>>().unwrap()
@@ -189,8 +184,8 @@ fn get_pairs_full_implicit(
             .take(limit)
             .flat_map(|result| 
                 result.map(|(key, pair)| match pair {
-                    StoredPair::Direct { } => find_pool_pair(storage, denoms_from(&key)),
-                    StoredPair::Routed { } => find_route_pair(storage, denoms_from(&key), false)
+                    StoredPairType::Direct { } => find_pool_pair(storage, denoms_from(&key)),
+                    StoredPairType::Routed { } => find_route_pair(storage, denoms_from(&key), false)
                 })
             )
             .collect::<StdResult<Vec<PopulatedPair>>>().unwrap();
@@ -265,7 +260,7 @@ mod find_pair_tests {
     fn find_pair_that_does_not_exist_fails() {
         let deps = mock_dependencies();
 
-        let result = find_pair(&deps.storage, Pair::default().denoms).unwrap_err();
+        let result = find_pair(&deps.storage, PopulatedPair::default().denoms()).unwrap_err();
 
         assert_eq!(result, StdError::generic_err("Pair not found"));
     }
@@ -281,7 +276,7 @@ mod get_pairs_tests {
 
     use super::{get_pairs, save_pair};
 
-   #[test]
+    #[test]
     fn fetches_all_pairs() {
         let mut deps = mock_dependencies();
 
@@ -297,45 +292,31 @@ mod get_pairs_tests {
         assert_eq!(pairs.len(), 10);
     }
 
-    /*
-
     #[test]
     fn fetches_all_pairs_with_limit() {
         let mut deps = mock_dependencies();
-
         for i in 0..10 {
-            let pair = Pair {
-                base_denom: format!("base_denom_{}", i),
-                quote_denom: format!("quote_denom_{}", i),
-                address: Addr::unchecked(format!("address_{}", i)),
-                decimal_delta: 0,
-                price_precision: 3,
-                pool_type: PoolType::Standard
-
-            };
-
+            let pair = PopulatedPair::from_assets(
+                AssetInfo::NativeToken { denom: format!("base_denom_{}", i) },
+                AssetInfo::NativeToken { denom: format!("quote_denom_{}", i) }
+            );
             save_pair(deps.as_mut().storage, &pair).unwrap();
         }
 
         let pairs = get_pairs(deps.as_ref().storage, None, Some(5));
-
         assert_eq!(pairs.len(), 5);
     }
+
 
     #[test]
     fn fetches_all_pairs_with_start_after() {
         let mut deps = mock_dependencies();
 
         for i in 0..10 {
-            let pair = Pair {
-                base_denom: format!("base_denom_{}", i),
-                quote_denom: format!("quote_denom_{}", i),
-                address: Addr::unchecked(format!("address_{}", i)),
-                decimal_delta: 0,
-                price_precision: 3,
-                pool_type: PoolType::Standard
-            };
-
+            let pair = PopulatedPair::from_assets(
+                AssetInfo::NativeToken { denom: format!("base_denom_{}", i) },
+                AssetInfo::NativeToken { denom: format!("quote_denom_{}", i) }
+            );
             save_pair(deps.as_mut().storage, &pair).unwrap();
         }
 
@@ -346,8 +327,13 @@ mod get_pairs_tests {
         );
 
         assert_eq!(pairs.len(), 4);
-        assert_eq!(pairs[0].base_denom, "base_denom_6");
+        assert_eq!(pairs[0].base_denom(), "base_denom_6");
     }
+
+    /*
+
+
+    
 
     #[test]
     fn fetches_all_pairs_with_start_after_and_limit() {

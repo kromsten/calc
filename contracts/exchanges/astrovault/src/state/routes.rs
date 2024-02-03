@@ -101,11 +101,12 @@ pub fn save_routed_pair(
     let [base, quote] = sorted_denoms(&pair.denoms());
     let key =  format!("{}-{}", base, quote);
 
+    // save explicit routed pair
     PAIRS.save(storage, key.clone(), &pair.into())?;
-
     
     let route = pair.route();
 
+    // save each hop link as a pool
     route
     .iter()
     .map(|pool| save_pool(storage, key_from(&pool.denoms()), pool))

@@ -154,6 +154,26 @@ impl PopulatedPool {
         }
     }
 
+    pub fn common_asset(&self, other: &PopulatedPool) -> AssetInfo {
+        if other.has_asset(&self.quote_asset) {
+            self.quote_asset.clone()
+        } else {
+            self.base_asset.clone()
+        }
+    }
+
+    pub fn uncommon_asset(&self, other: &PopulatedPool) -> AssetInfo {
+        if other.has_asset(&self.quote_asset) {
+            self.base_asset.clone()
+        } else {
+            self.quote_asset.clone()
+        }
+    }
+
+    pub fn common_denom(&self, other: &PopulatedPool) -> String {
+        self.common_asset(other).to_string()
+    }
+
     pub fn asset_index(
         &self,
         offer_asset: &AssetInfo
