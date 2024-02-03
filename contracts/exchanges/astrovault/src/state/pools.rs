@@ -8,9 +8,7 @@ use super::common::{allow_implicit, key_from, PAIRS};
 
 /// pool info to populate both direct pool pairs and routed pairs
 /// sorted (base.denom, quote.denom) -> PopulatedPool
-const POOLS             : Map<String, PopulatedPool> = Map::new("p_v1");
-
-
+pub const POOLS             : Map<String, PopulatedPool> = Map::new("p_v1");
 
 
 pub fn pool_exists(

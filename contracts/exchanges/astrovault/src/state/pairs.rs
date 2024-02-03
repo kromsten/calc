@@ -4,14 +4,13 @@ use exchange::msg::Pair;
 
 use crate::{state::{pools::pool_exists, routes::route_exists}, types::pair::{PopulatedPair, StoredPair}, ContractError};
 
-use super::{common::{allow_implicit, denoms_from, key_from, PAIRS}, pools::{delete_pool_pair, find_pool, get_pool_pair, save_pool_pair}, routes::{delete_routed_pair, get_routed_pair, save_routed_pair}};
+use super::{common::{allow_implicit, denoms_from, key_from, PAIRS}, pools::{delete_pool_pair, find_pool, get_pool_pair, save_pool_pair, POOLS}, routes::{delete_routed_pair, get_routed_pair, save_routed_pair}};
 
 
 
 pub fn pair_exists(storage: &dyn Storage, denoms: &[String; 2]) -> bool {
     PAIRS.has(storage, key_from(&denoms))
 }
-
 
 
 
@@ -115,16 +114,14 @@ pub fn get_pairs(
     start_after: Option<[String; 2]>,
     limit: Option<u16>,
 ) -> Vec<Pair> {
-    PAIRS
-        .range(
-            storage,
-            start_after.map(|denoms| Bound::exclusive(key_from(&denoms))),
-            None,
-            Order::Ascending,
-        )
-        .take(limit.unwrap_or(30) as usize)
-        .flat_map(|result| result.map(|(key, _)| Pair { denoms: denoms_from(&key) }))
-        .collect::<Vec<Pair>>()
+    get_pairs_full(
+        storage,
+        start_after,
+        limit,
+    )
+    .into_iter()
+    .map(|pair| pair.into())
+    .collect()
 }
 
 
@@ -134,22 +131,103 @@ pub fn get_pairs_full(
     start_after: Option<[String; 2]>,
     limit: Option<u16>,
 ) -> Vec<PopulatedPair> {
-    PAIRS
-    .range(
-        storage,
-        start_after.map(|denoms| Bound::exclusive(key_from(&denoms))),
-        None,
-        Order::Ascending,
-    )
-    .take(limit.unwrap_or(30) as usize)
-    .flat_map(|result| 
-        result.map(|(key, pair)| match pair {
-            StoredPair::Direct { } => find_pool_pair(storage, denoms_from(&key)),
-            StoredPair::Routed { } => find_route_pair(storage, denoms_from(&key), false)
-        })
-    )
-    .collect::<StdResult<Vec<PopulatedPair>>>().unwrap()
+    if allow_implicit(storage) {
+        get_pairs_full_implicit(storage, start_after, limit)
+    } else {
+        PAIRS
+        .range(
+            storage,
+            start_after.map(|denoms| Bound::exclusive(key_from(&denoms))),
+            None,
+            Order::Ascending,
+        )
+        .take(limit.unwrap_or(30) as usize)
+        .flat_map(|result| 
+            result.map(|(key, pair)| match pair {
+                StoredPair::Direct { } => find_pool_pair(storage, denoms_from(&key)),
+                StoredPair::Routed { } => find_route_pair(storage, denoms_from(&key), false)
+            })
+        )
+        .collect::<StdResult<Vec<PopulatedPair>>>().unwrap()
+    }
+
 }
+
+
+fn get_pairs_full_implicit(
+    storage: &dyn Storage,
+    start_after: Option<[String; 2]>,
+    limit: Option<u16>,
+) -> Vec<PopulatedPair> {
+
+    let (pair_start_after, pool_start_after) = if start_after.is_some() {
+        let denoms = start_after.unwrap();
+        let key = key_from(&denoms);
+        let pair_exist = PAIRS.has(storage, key.clone());
+        if !POOLS.has(storage, key.clone()) {
+            return vec![]
+        }
+        let bound = Some(Bound::exclusive(key.clone()));
+        if pair_exist {
+            (bound, None)
+        } else {
+            (None, bound)}
+    } else {
+        (None, None)
+    };
+
+    let limit = limit.unwrap_or(30) as usize;
+
+
+    let mut pairs = PAIRS
+            .range(
+                storage,
+                pair_start_after,
+                None,
+                Order::Ascending,
+            )
+            .take(limit)
+            .flat_map(|result| 
+                result.map(|(key, pair)| match pair {
+                    StoredPair::Direct { } => find_pool_pair(storage, denoms_from(&key)),
+                    StoredPair::Routed { } => find_route_pair(storage, denoms_from(&key), false)
+                })
+            )
+            .collect::<StdResult<Vec<PopulatedPair>>>().unwrap();
+    
+
+    let limit = pairs.len() - limit;
+
+    if limit > 0 {
+
+        let pools = POOLS
+            .range(
+                storage,
+                pool_start_after,
+                None,
+                Order::Ascending,
+            )
+            .filter_map(|pool_res| {
+                if let Ok((key, pool)) = pool_res {
+                    if !pair_exists(storage, &denoms_from(&key)) {
+                        Some(pool.into())
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .take(limit)
+            .collect::<Vec<PopulatedPair>>();
+
+        pairs.extend(pools);
+    }
+
+
+    pairs
+}
+
 
 
 
