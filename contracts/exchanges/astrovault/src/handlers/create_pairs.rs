@@ -1,7 +1,7 @@
 use cosmwasm_std::{DepsMut, MessageInfo, Response};
 
 use crate::{
-    helpers::validated::validated_pair, state::{config::get_config, pairs::save_pair}, types::pair::Pair, ContractError
+    helpers::validated::validated_pair_on_creation, state::{config::get_config, pairs::save_pair}, types::pair::Pair, ContractError
 };
 
 
@@ -20,10 +20,9 @@ pub fn create_pairs_handler(
 
     for pair in pairs {
 
-        let validated = validated_pair(
+        let validated = validated_pair_on_creation(
             deps.as_ref(), 
             &pair, 
-            None
         )?;
 
         save_pair(deps.storage, &validated)?;

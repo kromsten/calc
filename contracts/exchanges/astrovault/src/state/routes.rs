@@ -23,7 +23,7 @@ pub fn route_exists(
 
 
 
-fn get_stored_route(
+pub fn get_stored_route(
     storage:        &dyn Storage, 
     key:            String,
     reverse:        bool

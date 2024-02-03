@@ -12,7 +12,7 @@ use astrovault::router::{
     handle_msg::ExecuteMsg as RouterExecute
 };
 
-use super::{balance::to_asset_info, validated::validated_routed_pair};
+use super::balance::to_asset_info;
 
 
 pub fn reversed(route: &Route) -> Route {
@@ -65,6 +65,14 @@ pub fn reversed(route: &Route) -> Route {
     }
 
     reversed
+}
+
+
+
+pub fn route_denoms(
+    route: &Route
+) -> Vec<String> {
+    route.iter().map(|h| h.denom.clone()).collect()
 }
 
 
