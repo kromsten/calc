@@ -31,7 +31,7 @@ const IMPLICT_PAIRS        : Item<bool>           = Item::new("i");
 
 
 pub fn allow_implicit(storage: &dyn Storage) -> bool {
-    IMPLICT_PAIRS.load(storage).unwrap()
+    IMPLICT_PAIRS.load(storage).unwrap_or(false)
 }
 
 

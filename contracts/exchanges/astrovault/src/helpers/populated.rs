@@ -1,12 +1,14 @@
-use cosmwasm_std::{ensure, QuerierWrapper};
-
+use cosmwasm_std::QuerierWrapper;
 use crate::types::pair::{PopulatedPair, PopulatedPairType};
 use crate::types::pool::{Pool, PopulatedPool};
 use crate::types::route::PopulatedRoute;
 use crate::ContractError;
 
-use super::pool::query_assets;
 
+#[cfg(not(test))]
+use cosmwasm_std::ensure;
+#[cfg(not(test))]
+use super::pool::query_assets;
 
 
 impl Into<PopulatedPool> for &PopulatedPair {
@@ -77,6 +79,17 @@ impl From<PopulatedRoute> for PopulatedPair {
 
 
 
+#[cfg(test)]
+pub fn populated_pool(
+    _:      &QuerierWrapper,
+    pool:   &Pool,
+) -> Result<PopulatedPool, ContractError> {
+    Ok(PopulatedPool::from_pool(&pool))
+}
+
+
+
+#[cfg(not(test))]
 pub fn populated_pool(
     querier:    &QuerierWrapper,
     pool:       &Pool,
@@ -104,5 +117,4 @@ pub fn populated_pool(
         base_index: base_pos.unwrap() as u32, 
         quote_index: quot_pos.unwrap() as u32,
     })
-
 }

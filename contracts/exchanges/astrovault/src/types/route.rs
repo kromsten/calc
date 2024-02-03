@@ -23,10 +23,6 @@ pub struct RouteHop {
 }
 
 
-
-
 pub type Route              =  Vec<RouteHop>;
-
 pub type PopulatedRoute     =  Vec<PopulatedPool>;
-
 pub type StoredRoute        =  Vec<String>;

@@ -2,10 +2,21 @@ use astrovault::assets::asset::AssetInfo;
 use cosmwasm_std::{ensure, Deps};
 
 use crate::{
-    helpers::balance::to_asset_info, state::{pairs::find_pair, pools::find_pool, routes::find_route}, types::{pair::{Pair, PopulatedPair}, pool::{Pool, PopulatedPool}, route::{HopInfo, PopulatedRoute, Route}}, ContractError};
+    helpers::{balance::to_asset_info, route::reversed}, 
+    state::{
+        pairs::find_pair, 
+        pools::find_pool, 
+        routes::find_route
+    }, 
+    types::{
+        pair::{Pair, PopulatedPair}, 
+        pool::{Pool, PopulatedPool}, 
+        route::{PopulatedRoute, Route, RouteHop}
+    }, 
+    ContractError
+};
 
 use super::populated::populated_pool;
-
 
 
 
@@ -16,7 +27,18 @@ pub fn validated_pair(
 ) -> Result<PopulatedPair, ContractError> {
     let from_storage = find_pair(deps.storage, pair.denoms());
     if from_storage.is_ok() {
-        Ok(from_storage?)
+        let stored_pair = from_storage?;
+        // only pool pair overriding is supported
+        if pair.is_pool_pair() && stored_pair.is_pool_pair() {
+            let pool = pair.pool();
+            let mut stored_pool = stored_pair.pool();
+            stored_pool.base_asset = pool.base_asset.clone();
+            stored_pool.quote_asset = pool.quote_asset.clone();
+            stored_pool.address = pool.address;
+            Ok(stored_pool.into())
+        } else {
+            Ok(stored_pair)
+        }
     } else {
         if pair.is_pool_pair() {
             validated_pool_pair(deps, pair)
@@ -25,6 +47,8 @@ pub fn validated_pair(
         }
     }
 }
+
+
 
 
 pub fn validated_pool(deps: Deps, pool: &Pool) -> Result<PopulatedPool, ContractError> {
@@ -36,23 +60,35 @@ pub fn validated_pool(deps: Deps, pool: &Pool) -> Result<PopulatedPool, Contract
     }
 }
 
+
 pub fn validated_pool_pair(deps: Deps, pair: &Pair) -> Result<PopulatedPair, ContractError> {
     Ok(validated_pool(deps, &pair.pool())?.into())
 }
 
 
-pub fn validated_hop_info(
+pub fn validated_hop(
     deps:       Deps,
-    hop_info:   &HopInfo,
-    other:      &AssetInfo,
+    hop:        &RouteHop,
+    next:       bool
 ) -> Result<PopulatedPool, ContractError> {
 
-    let pool = Pool {
-        address: hop_info.address.clone(),
-        base_asset: other.clone(),
-        quote_asset: hop_info.asset_info.clone(),
-        pool_type: hop_info.pool_type.clone(),
+    let hop_asset = to_asset_info(&hop.denom);
+
+    let (hop_pool, base_asset, quote_asset) = if next {
+        let hop_pool = hop.next.clone().unwrap();
+        (hop_pool.clone(), hop_asset, hop_pool.asset_info)
+    } else {
+        (hop.prev.clone(), hop.prev.asset_info.clone(), hop_asset)
     };
+
+    let pool = Pool {
+        address: hop_pool.address,
+        pool_type: hop_pool.pool_type,
+        base_asset,
+        quote_asset,
+    };
+
+    println!("validated_hop: {:?}", pool);
 
     validated_pool(deps, &pool)
 }
@@ -84,23 +120,24 @@ pub fn validated_route(
 
     let mut hops = Vec::with_capacity(route.len() + 1);
     let first = route.first().unwrap();
+    println!("before first invalid check");
     ensure!(first.prev.asset_info.equal(base_asset), ContractError::InvalidHops{});
-    hops.push(validated_hop_info(deps, &first.prev, &base_asset)?);
-
+    hops.push(validated_hop(deps, &first, false)?);
 
     for (index, hop) in route.iter().enumerate().skip(1) {
         let prev_denom = &route.get(index - 1).clone().unwrap().denom;
+        println!("before {} invalid check", index);
         ensure!(*prev_denom == hop.prev.asset_info.to_string(), ContractError::InvalidHops{});
-        hops.push(validated_hop_info(deps, &hop.prev, &to_asset_info(prev_denom))?);
+        hops.push(validated_hop(deps, &hop, false)?);
         route_denoms.push(hop.denom.clone());
     }
-    
 
     let last = route.last().unwrap();
     ensure!(last.next.is_some(), ContractError::MissingNextPoolHop{});
     let next = last.next.clone().unwrap();
+    println!("before last invalid check");
     ensure!(next.asset_info.equal(quote_asset), ContractError::InvalidHops{});
-    hops.push(validated_hop_info(deps, &next, &quote_asset)?);
+    hops.push(validated_hop(deps, &last, true)?);
     route_denoms.push(quote_asset.to_string());
 
     validate_route_denoms(&route_denoms)?;
@@ -117,6 +154,8 @@ pub fn validated_routed_pair(
     offer_asset: Option<AssetInfo>
 ) -> Result<PopulatedPair, ContractError> {
 
+    println!("\nbase: {:?}, quote: {:?}, offer: {:?}\n", pair.base_asset, pair.quote_asset, offer_asset);
+
     let offer_asset = offer_asset.unwrap_or(pair.base_asset.clone());
 
     let (
@@ -128,7 +167,6 @@ pub fn validated_routed_pair(
         (&pair.quote_asset, &pair.base_asset, true)
     };
 
-
     let from_storage = find_route(
         deps.storage, 
         [base.to_string(), quote.to_string()],
@@ -139,11 +177,12 @@ pub fn validated_routed_pair(
         return Ok(from_storage?.into());
     }
 
-    let mut route = pair.route();
-    if reverse {
-        route.reverse();
-    }
-
+    let route = if reverse {
+        reversed(&pair.route())
+    } else {
+        pair.route()
+    };
+    
     Ok(validated_route(deps, base, quote, &route)?.into())
 }
 

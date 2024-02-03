@@ -6,6 +6,22 @@
 
 CONTRACT=archway14akhhwmuwzs8mfh4vwtctx23gh8naxmkajmwpfqx5se7k4x3tmrq2vh37u
 
+#       Pair map:
+#  aconst   
+#           -> xConst  archway1sdzaas0068n42xk8ndm6959gpu6n09tajmeuq7vak8t9qt5jrp6sjjtnka 
+#
+#  
+#           -> BUSD.axv archway1lcxaem4gqnp2mdeh5hawacxlzge8e6wzjaat73ahpf2rclqv9v4sj8e4kf
+#        
+#        
+#        archway1lcxaem4gqnp2mdeh5hawacxlzge8e6wzjaat73ahpf2rclqv9v4sj8e4kf
+#
+#
+#
+#
+#   
+#
+#       
 
 
 # xCONST - sARCH (ratio)

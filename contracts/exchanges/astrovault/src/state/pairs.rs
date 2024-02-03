@@ -69,6 +69,8 @@ pub fn find_route_pair(storage: &dyn Storage, denoms: [String; 2], reverse: bool
 
 pub fn save_pair(storage: &mut dyn Storage, pair: &PopulatedPair) -> Result<(), ContractError> {
     
+    println!("sav pair: {:?}", pair);
+
     if pair.is_pool_pair() {
         save_pool_pair(storage, pair)
     } else {
@@ -185,9 +187,9 @@ mod find_pair_tests {
     fn find_pair_that_does_not_exist_fails() {
         let deps = mock_dependencies();
 
-        let result = find_pair(&deps.storage, PopulatedPair::default().denoms()).unwrap_err();
+        let result = find_pair(&deps.storage, Pair::default().denoms).unwrap_err();
 
-        assert!(result.to_string().starts_with("type: astrovault_calc::types::pair"));
+        assert_eq!(result, StdError::generic_err("Pair not found"));
     }
 }
 

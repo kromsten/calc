@@ -1,6 +1,6 @@
 #![allow(unused_variables, unused_imports)]
 
-use crate::{state::{config::{get_config, get_router_config}, pairs::{find_pair, pair_exists}}, types::{pair::{Pair, PopulatedPair, StoredPair}, route::{self, PopulatedRoute, Route, RouteHop, StoredRoute}, wrapper::ContractWrapper}, ContractError};
+use crate::{state::{config::{get_config, get_router_config}, pairs::{find_pair, pair_exists}}, types::{pair::{Pair, PopulatedPair, StoredPair}, route::{self, HopInfo, PopulatedRoute, Route, RouteHop, StoredRoute}, wrapper::ContractWrapper}, ContractError};
 use astrovault::assets::{asset::{Asset, AssetInfo}, querier};
 use cosmwasm_std::{ensure, from_json, to_json_binary, Binary, Coin, CosmosMsg, Deps, Env, QuerierWrapper, StdError, StdResult, Uint128};
 use cw20::Cw20ReceiveMsg;
@@ -12,8 +12,60 @@ use astrovault::router::{
     handle_msg::ExecuteMsg as RouterExecute
 };
 
-use super::validated::validated_routed_pair;
+use super::{balance::to_asset_info, validated::validated_routed_pair};
 
+
+pub fn reversed(route: &Route) -> Route {
+
+    if route.len() == 1 {
+        let hop = route.first().unwrap().clone();
+        return vec![RouteHop {
+            prev: hop.next.unwrap(),
+            next: Some(hop.prev),
+            denom: hop.denom,
+        }]
+    }
+
+
+    let mut reversed: Vec<RouteHop> = Vec::with_capacity(route.len());
+
+    let last = route.last().unwrap().clone();
+    reversed.push(RouteHop {
+        prev: last.next.unwrap(),
+        next: None,
+        denom: last.denom,
+    });
+
+    let hops_num = route.len();
+
+    // take all but first in original
+    for (index, hop) in route.iter().rev().enumerate().skip(1) {
+
+        // git next hop in original route
+        let orig_next = route.get(
+            hops_num - index
+        ).unwrap().clone();
+
+        let next = if index == hops_num - 1 {
+            Some(hop.prev.clone())
+        } else {
+            None
+        };
+
+        let rev_hop = RouteHop {
+            prev: HopInfo {
+                asset_info: to_asset_info(orig_next.denom),
+                ..orig_next.prev
+            },
+            next,
+            denom: hop.denom.clone(),
+        };
+
+        reversed.push(rev_hop);
+    }
+
+    reversed
+}
 
 
 pub fn populated_route_denoms(
@@ -38,7 +90,6 @@ pub fn populated_route_denoms(
 
     route_denoms
 }
-
 
 
 
@@ -163,7 +214,7 @@ mod creating_routed_pairs_tests {
         }, 
         helpers::{balance::{asset_to_coin, to_asset_info}, validated::{validated_route, validated_routed_pair}}, 
         state::{
-            config::{get_config, update_config, update_router_config}, pairs::{find_pair, get_pairs, pair_exists}, pools::pool_exists, routes::route_exists
+            config::{get_config, update_config, update_router_config}, pairs::{find_pair, get_pairs, pair_exists, save_pair}, pools::pool_exists, routes::route_exists
         }, 
         tests::constants::{
             DCA_CONTRACT, DENOM_AARCH, DENOM_UATOM, DENOM_UNTRN, 
@@ -280,17 +331,20 @@ mod creating_routed_pairs_tests {
             Some(to_asset_info(DENOM_AARCH))
         ).unwrap().route();
 
+
         assert!(route.len() == 2);
 
         let first = route.first().unwrap();
         assert_eq!(first.base_asset, to_asset_info(DENOM_AARCH));
         assert_eq!(first.quote_asset, to_asset_info(DENOM_UOSMO));
-        assert!(route_exists(deps.storage, &first.denoms()));
+        assert!(pool_exists(deps.storage, &first.denoms()));
 
         let second = route.last().unwrap();
         assert_eq!(second.base_asset, to_asset_info(DENOM_UOSMO));
         assert_eq!(second.quote_asset, to_asset_info(DENOM_UUSDC));
         assert!(pool_exists(deps.storage, &second.denoms()));
+
+        assert!(route_exists(deps.storage, &[DENOM_AARCH.to_string(), DENOM_UUSDC.to_string()]));
     }
 
 
@@ -345,13 +399,14 @@ mod creating_routed_pairs_tests {
             info: to_asset_info(DENOM_UUSDC),
             amount: Uint128::new(1_000_000),
         };
-
         
         let mut pairs_hops = validated_routed_pair(
             deps, 
             &pair, 
             None
         ).unwrap().route();
+
+        println!("validated: {:?}", pairs_hops);
 
         let astro_hops = route_pairs_to_astro_hops(
             &deps.querier,
@@ -379,7 +434,7 @@ mod creating_routed_pairs_tests {
         let astro_hops = route_pairs_to_astro_hops(
             &deps.querier,
             &pairs_hops,
-            &offer.info,
+            &target.info,
         ).unwrap();
 
         assert!(astro_hops.len() == 4);
@@ -445,19 +500,20 @@ mod creating_routed_pairs_tests {
             amount: Uint128::new(1_000_000),
         };
 
-        let pair = validated_routed_pair(
+        
+        let route_pair = validated_routed_pair(
             deps, 
             &pair, 
             Some(offer.info.clone())
         ).unwrap();
 
-        let swap_funds = vec![asset_to_coin(offer.clone())];
 
+        let swap_funds = vec![asset_to_coin(offer.clone())];
 
         let swap_msg = route_swap_cosmos_msg(
             deps,
             env.clone(),
-            pair,
+            route_pair,
             offer.clone(),
             target.clone(),
             swap_funds.clone()
@@ -565,11 +621,14 @@ mod creating_routed_pairs_tests {
             ]
         );
 
-        assert_eq!(validated_routed_pair(
-            deps, 
-            &pair, 
-            None
-        ).unwrap_err(), StdError::generic_err("Route denoms are not unique").into());
+        assert_eq!(
+            validated_routed_pair(
+                deps, 
+                &pair, 
+                None
+            ).unwrap_err(), 
+            ContractError::RouteDublicates {}
+        );
 
 
         // Okay
@@ -603,7 +662,37 @@ mod creating_routed_pairs_tests {
 
         // Reverse
 
-        // Skipping SCRT
+        // Wrong previous
+        let pair = Pair::new_routed(
+            to_asset_info(DENOM_UUSDC),
+            to_asset_info(DENOM_UOSMO), 
+            vec![
+                RouteHop {
+                    prev: HopInfo {
+                        address: "address".to_string(),
+                        pool_type: PoolType::Standard,
+                        asset_info: to_asset_info(DENOM_USCRT),
+                    },
+                    next: Some(HopInfo {
+                        address: "address".to_string(),
+                        pool_type: PoolType::Standard,
+                        asset_info: to_asset_info(DENOM_UOSMO),
+                    }),
+                    denom: DENOM_UNTRN.to_string(),
+                },
+            ]
+        );
+
+        assert_eq!(
+            validated_routed_pair(
+                deps, 
+                &pair, 
+                Some(to_asset_info(DENOM_UOSMO))
+            ).unwrap_err(), 
+            ContractError::InvalidHops{}
+        );
+
+        // Wrong next
         let pair = Pair::new_routed(
             to_asset_info(DENOM_UUSDC),
             to_asset_info(DENOM_UOSMO), 
@@ -617,21 +706,24 @@ mod creating_routed_pairs_tests {
                     next: Some(HopInfo {
                         address: "address".to_string(),
                         pool_type: PoolType::Standard,
-                        asset_info: to_asset_info(DENOM_UOSMO),
+                        asset_info: to_asset_info(DENOM_USCRT),
                     }),
                     denom: DENOM_UNTRN.to_string(),
                 },
             ]
         );
 
-        assert_eq!(validated_routed_pair(
-            deps, 
-            &pair, 
-            None
-        ).unwrap_err(), ContractError::NoRoutedPair {});
+        assert_eq!(
+            validated_routed_pair(
+                deps, 
+                &pair, 
+                Some(to_asset_info(DENOM_UOSMO))
+            ).unwrap_err(), 
+            ContractError::InvalidHops{}
+        );
 
 
-        // Wring order
+        // Missing next
         let pair = Pair::new_routed(
             to_asset_info(DENOM_UUSDC),
             to_asset_info(DENOM_UOSMO), 
@@ -645,29 +737,19 @@ mod creating_routed_pairs_tests {
                     next: None,
                     denom: DENOM_UNTRN.to_string(),
                 },
-                RouteHop {
-                    prev: HopInfo {
-                        address: "address".to_string(),
-                        pool_type: PoolType::Standard,
-                        asset_info: to_asset_info(DENOM_UNTRN),
-                    },
-                    next: Some(HopInfo {
-                        address: "address".to_string(),
-                        pool_type: PoolType::Standard,
-                        asset_info: to_asset_info(DENOM_UOSMO),
-                    }),
-                    denom: DENOM_USCRT.to_string(),
-                },
             ]
         );
 
+        assert_eq!(
+            validated_routed_pair(
+                deps, 
+                &pair, 
+                None
+            ).unwrap_err(), 
+            ContractError::MissingNextPoolHop{}
+        );
 
-        assert_eq!(validated_routed_pair(
-            deps, 
-            &pair, 
-            None
-        ).unwrap_err(), ContractError::NoRoutedPair {});
-
+    
 
         // Ok
         let pair = Pair::new_routed(
@@ -698,7 +780,51 @@ mod creating_routed_pairs_tests {
                 }
             ]
         );
+        
 
+
+        
+
+        let validated = validated_routed_pair(
+            deps, 
+            &pair, 
+            None
+        ).unwrap();
+
+        let route = validated.route();
+        assert_eq!(route.len(), 3);
+
+        let first = route.first().unwrap();
+        assert_eq!(first.base_asset, pair.base_asset);
+        assert_eq!(first.base_asset, to_asset_info(DENOM_UUSDC));
+        assert_eq!(first.quote_asset, to_asset_info(DENOM_USCRT));
+
+        let last = route.last().unwrap();
+        assert_eq!(last.base_asset, to_asset_info(DENOM_UNTRN));
+        assert_eq!(last.quote_asset, to_asset_info(DENOM_UOSMO));
+        assert_eq!(last.quote_asset, pair.quote_asset);
+
+
+        // not base and not quote
+        assert_eq!(
+            validated_routed_pair(
+                deps, 
+                &pair, 
+                Some(to_asset_info(DENOM_USCRT))
+            ).unwrap_err(), 
+            ContractError::RouteNotFound{}
+        );
+
+
+        let reversed = validated_routed_pair(
+            deps, 
+            &pair, 
+            Some(to_asset_info(DENOM_UOSMO))
+        ).unwrap();
+
+        let route = reversed.route();
+        assert_eq!(*route.first().unwrap(), last.reversed() );
+        assert_eq!( *route.last().unwrap(), first.reversed());
     }
 
   

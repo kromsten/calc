@@ -3,6 +3,7 @@ use crate::helpers::balance::coin_to_asset;
 use crate::helpers::route::get_route_swap_simulate;
 use crate::state::pairs::find_pair;
 
+
 pub fn get_expected_receive_amount_handler(
     deps: Deps,
     swap_amount: Coin,
@@ -14,7 +15,11 @@ pub fn get_expected_receive_amount_handler(
         [swap_amount.denom.clone(), target_denom.clone()],
     )?;
 
+    println!("pair: {:?}", pair);
+
     let offer_asset = coin_to_asset(swap_amount);
+
+    println!("offer_asset: {:?}", offer_asset);
     
     let amount = if pair.is_pool_pair() {
         pair.pool().swap_simulation(
@@ -62,13 +67,9 @@ mod get_expected_receive_amount_handler_tests {
                 amount: Uint128::zero()
             },
             DENOM_UUSDC.to_string()
-        );
+        ).unwrap_err();
 
-        match err {
-            Err(StdError::NotFound { kind }) => assert!(kind.starts_with("type: astrovault_calc::types::pair::Pair")),
-            _ => panic!("Unexpected error type"),
-            
-        }
+        assert_eq!(err, StdError::generic_err("Pair not found"));
     }
 
 

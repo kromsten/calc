@@ -226,10 +226,8 @@ mod swap_tests {
             None 
         ).unwrap_err();
 
-        match err {
-            ContractError::Std(StdError::NotFound { kind }) => assert!(kind.starts_with("type: astrovault_calc::types::pair::Pair")),
-            _ => panic!("Wrong error type returned")
-        }
+        println!("err {:?}", err);
+        assert_eq!(err, ContractError::Std(StdError::generic_err("Pair not found")));
     }
 
     #[test]
