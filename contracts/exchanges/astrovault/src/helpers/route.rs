@@ -178,11 +178,11 @@ pub fn route_swap_cosmos_msg(
 
 pub fn get_route_swap_simulate(
     deps:                  Deps,
-    pair:                  PopulatedPair,
+    route:                 PopulatedRoute,
     mut offer_asset:       Asset,
 ) -> StdResult<Uint128> {
 
-    for pool in pair.route() {
+    for pool in route {
         
         let amount = pool.swap_simulation(
             &deps.querier, 
@@ -415,7 +415,6 @@ mod creating_routed_pairs_tests {
             None
         ).unwrap().route();
 
-        println!("validated: {:?}", pairs_hops);
 
         let astro_hops = route_pairs_to_astro_hops(
             &deps.querier,
@@ -760,7 +759,6 @@ mod creating_routed_pairs_tests {
 
     
 
-        // Ok
         let pair = Pair::new_routed(
             to_asset_info(DENOM_UUSDC),
             to_asset_info(DENOM_UOSMO), 
@@ -790,8 +788,6 @@ mod creating_routed_pairs_tests {
             ]
         );
         
-
-
         
 
         let validated = validated_routed_pair(
@@ -803,15 +799,16 @@ mod creating_routed_pairs_tests {
         let route = validated.route();
         assert_eq!(route.len(), 3);
 
+        // pairs have been created earlier so the base <-> quote is swapped with original
         let first = route.first().unwrap();
-        assert_eq!(first.base_asset, pair.base_asset);
-        assert_eq!(first.base_asset, to_asset_info(DENOM_UUSDC));
-        assert_eq!(first.quote_asset, to_asset_info(DENOM_USCRT));
+        assert_eq!(first.quote_asset, pair.base_asset);
+        assert_eq!(first.quote_asset, to_asset_info(DENOM_UUSDC));
+        assert_eq!(first.base_asset, to_asset_info(DENOM_USCRT));
 
         let last = route.last().unwrap();
-        assert_eq!(last.base_asset, to_asset_info(DENOM_UNTRN));
-        assert_eq!(last.quote_asset, to_asset_info(DENOM_UOSMO));
-        assert_eq!(last.quote_asset, pair.quote_asset);
+        assert_eq!(last.quote_asset, to_asset_info(DENOM_UNTRN));
+        assert_eq!(last.base_asset, to_asset_info(DENOM_UOSMO));
+        assert_eq!(last.base_asset, pair.quote_asset);
 
 
         // not base and not quote
@@ -832,8 +829,8 @@ mod creating_routed_pairs_tests {
         ).unwrap();
 
         let route = reversed.route();
-        assert_eq!(*route.first().unwrap(), last.reversed() );
-        assert_eq!( *route.last().unwrap(), first.reversed());
+        assert_eq!(route.first().unwrap(), last);
+        assert_eq!(route.last().unwrap(),first);
     }
 
   

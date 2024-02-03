@@ -218,6 +218,7 @@ impl PopulatedPair {
                 funds
             )?;
             swap_msg
+            
         } else {
 
             let routed_pair = if let Some(route) = route {

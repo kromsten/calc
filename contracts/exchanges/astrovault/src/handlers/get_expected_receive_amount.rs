@@ -15,12 +15,8 @@ pub fn get_expected_receive_amount_handler(
         [swap_amount.denom.clone(), target_denom.clone()],
     )?;
 
-    println!("pair: {:?}", pair);
-
     let offer_asset = coin_to_asset(swap_amount);
 
-    println!("offer_asset: {:?}", offer_asset);
-    
     let amount = if pair.is_pool_pair() {
         pair.pool().swap_simulation(
             &deps.querier, 
@@ -29,7 +25,7 @@ pub fn get_expected_receive_amount_handler(
     }  else {
         get_route_swap_simulate(
             deps,
-            pair,
+            pair.route(),
             offer_asset,
         )?
     };

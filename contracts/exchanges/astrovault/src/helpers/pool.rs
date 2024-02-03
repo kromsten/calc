@@ -360,7 +360,8 @@ impl PopulatedPool {
                     to_asset_index
                 ) = self.from_to_indeces(offer_asset_info);
 
-                // get all assets that exist in the pool
+                // Stable astrop hop requires info about all assets in the pool
+                // querying every time since complex to store in general pool info
                 let asset_infos = query_assets(
                         querier, 
                         &self.address, 

@@ -113,8 +113,6 @@ mod create_pairs_tests {
 
         let updated_pair = find_pair(deps.as_ref().storage, pair.denoms()).unwrap();
 
-        println!("updated pair{:?}", updated_pair);
-
         let updated_pool = updated_pair.pool();
 
         assert_ne!(pool.address, updated_pool.address);

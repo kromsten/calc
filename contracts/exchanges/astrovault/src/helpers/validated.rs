@@ -141,12 +141,14 @@ fn validated_hop(
     next:       bool
 ) -> Result<PopulatedPool, ContractError> {
     let hop_asset = to_asset_info(&hop.denom);
+
     let (hop_pool, base_asset, quote_asset) = if next {
         let hop_pool = hop.next.clone().unwrap();
         (hop_pool.clone(), hop_asset, hop_pool.asset_info)
     } else {
         (hop.prev.clone(), hop.prev.asset_info.clone(), hop_asset)
     };
+
     let pool = Pool {
         address: hop_pool.address,
         pool_type: hop_pool.pool_type,

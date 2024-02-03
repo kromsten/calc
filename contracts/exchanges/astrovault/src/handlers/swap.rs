@@ -226,7 +226,6 @@ mod swap_tests {
             None 
         ).unwrap_err();
 
-        println!("err {:?}", err);
         assert_eq!(err, ContractError::Std(StdError::generic_err("Pair not found")));
     }
 

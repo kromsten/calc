@@ -3,7 +3,7 @@ use cw_storage_plus::Bound;
 
 use crate::{state::{pools::pool_exists, routes::route_exists}, types::pair::{Pair, PopulatedPair, StoredPairType}, ContractError};
 
-use super::{common::{allow_implicit, denoms_from, key_from, PAIRS}, pools::{find_pool, get_pool_pair, save_pool_pair, POOLS}, routes::{delete_routes_with_pool, get_routed_pair, save_routed_pair, ROUTES}};
+use super::{common::{allow_implicit, denoms_from, key_from, PAIRS}, pools::{find_pool, get_pool_pair, save_pool_pair, POOLS}, routes::{delete_routes_with_pool, find_route, get_routed_pair, save_routed_pair, ROUTES}};
 use exchange::msg::Pair as ExchangePair;
 
 
@@ -59,8 +59,9 @@ pub fn find_pool_pair(storage: &dyn Storage, denoms: [String; 2]) -> StdResult<P
 
 
 pub fn find_route_pair(storage: &dyn Storage, denoms: [String; 2], reverse: bool) -> StdResult<PopulatedPair> {
-    Ok(get_routed_pair(storage, denoms, reverse)?)
+    Ok(find_route(storage, denoms, reverse)?.into())
 }
+
 
 
 
@@ -71,8 +72,6 @@ pub fn save_pair(storage: &mut dyn Storage, pair: &PopulatedPair) -> Result<(), 
         save_routed_pair(storage, pair)
     }
 }
-
-
 
 
 pub fn delete_pair(storage: &mut dyn Storage, pair: &PopulatedPair) {
