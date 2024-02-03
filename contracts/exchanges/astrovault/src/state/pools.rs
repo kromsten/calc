@@ -55,17 +55,6 @@ pub fn save_pool_pair(
 
 
 
-pub fn delete_pool_pair(
-    storage: &mut dyn Storage,
-    pair:       &PopulatedPair
-)  {
-    let key = key_from(&pair.denoms());
-    PAIRS.remove(storage, key.clone());
-    POOLS.remove(storage, key)
-}
-
-
-
 
 pub fn find_pool(storage: &dyn Storage, denoms: [String; 2]) -> StdResult<PopulatedPool> {
 

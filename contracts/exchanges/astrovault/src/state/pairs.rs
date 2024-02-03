@@ -3,7 +3,7 @@ use cw_storage_plus::Bound;
 
 use crate::{state::{pools::pool_exists, routes::route_exists}, types::pair::{Pair, PopulatedPair, StoredPairType}, ContractError};
 
-use super::{common::{allow_implicit, denoms_from, key_from, PAIRS}, pools::{delete_pool_pair, find_pool, get_pool_pair, save_pool_pair, POOLS}, routes::{delete_routed_pair, get_routed_pair, save_routed_pair}};
+use super::{common::{allow_implicit, denoms_from, key_from, PAIRS}, pools::{find_pool, get_pool_pair, save_pool_pair, POOLS}, routes::{delete_routes_with_pool, get_routed_pair, save_routed_pair, ROUTES}};
 use exchange::msg::Pair as ExchangePair;
 
 
@@ -65,7 +65,6 @@ pub fn find_route_pair(storage: &dyn Storage, denoms: [String; 2], reverse: bool
 
 
 pub fn save_pair(storage: &mut dyn Storage, pair: &PopulatedPair) -> Result<(), ContractError> {
-    
     if pair.is_pool_pair() {
         save_pool_pair(storage, pair)
     } else {
@@ -78,10 +77,14 @@ pub fn save_pair(storage: &mut dyn Storage, pair: &PopulatedPair) -> Result<(), 
 
 pub fn delete_pair(storage: &mut dyn Storage, pair: &PopulatedPair) {
 
+    let key = key_from(&pair.denoms());
+    PAIRS.remove(storage, key.clone());
+
     if pair.is_pool_pair() {
-        delete_pool_pair(storage, pair)
+        POOLS.remove(storage, key.clone());
+        delete_routes_with_pool(storage, key);
     } else {
-        delete_routed_pair(storage, pair)
+        ROUTES.remove(storage, key);
     }
 }
 
