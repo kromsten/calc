@@ -1,6 +1,20 @@
 use astrovault::assets::asset::AssetInfo;
-use crate::types::{pair::{Pair, PopulatedPair, PopulatedPairType}, pool::{Pool, PoolType, PopulatedPool}};
+use crate::types::{pair::{Pair, PopulatedPair, PopulatedPairType}, pool::{Pool, PoolType, PopulatedPool}, route::PopulatedRoute};
 use super::constants::{DENOM_AARCH, DENOM_UOSMO, DENOM_UUSDC};
+
+
+impl Default for PopulatedPool {
+    fn default() -> Self {
+        PopulatedPool {
+            pool_type: PoolType::Standard,
+            base_index: 0,
+            quote_index: 1,
+            base_asset: AssetInfo::NativeToken { denom: DENOM_AARCH.to_string() },
+            quote_asset: AssetInfo::NativeToken { denom: DENOM_UUSDC.to_string() },
+            address: String::from("pair-address"),
+        }
+    }
+}
 
 
 impl Default for PopulatedPair {
@@ -29,6 +43,18 @@ impl PopulatedPair {
             ..Default::default()
         }
     }
+
+    pub fn from_assets_routed(
+        base_asset:  AssetInfo, 
+        quote_asset: AssetInfo,
+        route:       PopulatedRoute  
+    ) -> Self {
+        PopulatedPair {
+            base_asset,
+            quote_asset,
+            pair_type: PopulatedPairType::Routed { route },
+        }
+    }
 }
 
 impl PopulatedPool {
@@ -54,6 +80,7 @@ impl PopulatedPool {
         }
     }
 
+
     pub fn from_pair(pair: &Pair) -> Self {
         let pool = pair.pool();
         PopulatedPool::from_pool(&pool)
@@ -67,6 +94,17 @@ impl PopulatedPool {
             quote_asset: self.base_asset.clone(),
             base_index: self.quote_index,
             quote_index: self.base_index,
+        }
+    }
+
+    pub fn from_assets(
+        base_asset: AssetInfo, 
+        quote_asset: AssetInfo
+    ) -> Self {
+        PopulatedPool {
+            base_asset,
+            quote_asset,
+            ..Default::default()
         }
     }
 

@@ -30,7 +30,6 @@ pub struct PopulatedPool {
 }
 
 
-
 #[cw_serde]
 pub struct PopulatedHopInfo {
     pub address:       String,

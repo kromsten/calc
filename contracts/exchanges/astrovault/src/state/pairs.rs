@@ -157,20 +157,28 @@ fn get_pairs_full_implicit(
     limit: Option<u16>,
 ) -> Vec<PopulatedPair> {
 
-    let (pair_start_after, pool_start_after) = if start_after.is_some() {
+    let (pair_start_after, pool_start_after, route_start_after) = if start_after.is_some() {
         let denoms = start_after.unwrap();
         let key = key_from(&denoms);
+
         let pair_exist = PAIRS.has(storage, key.clone());
-        if !POOLS.has(storage, key.clone()) {
+        let pool_exist = POOLS.has(storage, key.clone());
+        let route_exist = ROUTES.has(storage, key.clone());
+
+        if !pair_exist && !pool_exist && !route_exist{
             return vec![]
         }
+
         let bound = Some(Bound::exclusive(key.clone()));
         if pair_exist {
-            (bound, None)
+            (bound, None, None)
+        } else if pool_exist {
+            (None, bound, None)
         } else {
-            (None, bound)}
+            (None, None, bound)
+        }
     } else {
-        (None, None)
+        (None, None, None)
     };
 
     let limit = limit.unwrap_or(30) as usize;
@@ -193,10 +201,9 @@ fn get_pairs_full_implicit(
             .collect::<StdResult<Vec<PopulatedPair>>>().unwrap();
     
 
-    let limit = pairs.len() - limit;
+    let limit = limit.checked_sub(pairs.len()).unwrap_or(0);
 
     if limit > 0 {
-
         let pools = POOLS
             .range(
                 storage,
@@ -221,6 +228,33 @@ fn get_pairs_full_implicit(
         pairs.extend(pools);
     }
 
+    let limit = limit.checked_sub(pairs.len()).unwrap_or(0);
+
+    if limit > 0 {
+        let pools = ROUTES
+            .range(
+                storage,
+                route_start_after,
+                None,
+                Order::Ascending,
+            )
+            .filter_map(|route_res| {
+                if let Ok((key, _)) = route_res {
+                    let denoms = denoms_from(&key);
+                    if !pair_exists(storage, &denoms) {
+                        Some(get_routed_pair(storage, denoms, false).unwrap())
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .take(limit)
+            .collect::<Vec<PopulatedPair>>();
+
+        pairs.extend(pools);
+    }
 
     pairs
 }

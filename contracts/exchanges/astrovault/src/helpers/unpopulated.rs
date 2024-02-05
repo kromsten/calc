@@ -67,17 +67,16 @@ fn unpopulated_route(route: PopulatedRoute) -> Route {
     let mut hops : Vec<RouteHop> = Vec::with_capacity(route.len() - 1);    
 
     for (index, hop) in route.iter().enumerate().skip(1) {
-        
+
         let prev = route.get(index - 1).unwrap();
-
+        
         // if second to last hop, populate next
-        let next = if index == route.len() - 2 {
-            let next = route.last().unwrap();
-
+        let next = if index == route.len() - 1 {
+            
             Some(HopInfo {
-                address: next.address.clone(),
-                pool_type: next.pool_type.clone(),
-                asset_info: hop.uncommon_asset(next)
+                address: hop.address.clone(),
+                pool_type: hop.pool_type.clone(),
+                asset_info: hop.uncommon_asset(prev)
             })
         } else {
             None
@@ -87,7 +86,7 @@ fn unpopulated_route(route: PopulatedRoute) -> Route {
             prev: HopInfo {
                 address: prev.address.clone(),
                 pool_type: prev.pool_type.clone(),
-                asset_info: hop.uncommon_asset(prev)
+                asset_info: prev.uncommon_asset(hop)
             },
             next,
             denom: hop.common_denom(prev),

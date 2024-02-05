@@ -14,7 +14,6 @@ use astrovault::router::{
 
 use super::balance::to_asset_info;
 
-
 pub fn reversed(route: &Route) -> Route {
 
     if route.len() == 1 {
@@ -92,9 +91,13 @@ pub fn populated_route_denoms(
             let combined = pool.combined_denoms(next);
             route_denoms.extend(combined);
         } else {
-            let last = route_denoms.last().unwrap();
-            route_denoms.push(next.other_denom(last));
+            let last_saved = route_denoms.last().unwrap();
+            route_denoms.push(next.other_denom(last_saved));
         }
+
+        /* if index == length - 2 {
+            route_denoms.push(next.other_denom
+        } */
     }
 
     route_denoms
@@ -230,11 +233,11 @@ mod creating_routed_pairs_tests {
             DENOM_UOSMO, DENOM_USCRT, DENOM_UUSDC, ROUTER_CONTRACT
         }, 
         types::{
-            config::Config, pair::{Pair, PopulatedPair, PopulatedPairType}, pool::PoolType, route::{HopInfo, PopulatedRoute, Route, RouteHop}
+            config::Config, pair::{Pair, PopulatedPair, PopulatedPairType}, pool::{PoolType, PopulatedPool}, route::{HopInfo, PopulatedRoute, Route, RouteHop}
         }, 
         ContractError
     };
-    use super::{route_pairs_to_astro_hops, route_swap_cosmos_msg};
+    use super::{populated_route_denoms, route_pairs_to_astro_hops, route_swap_cosmos_msg};
     use astrovault::router::{
         state::{
             Hop as AstroHop, 
@@ -307,6 +310,36 @@ mod creating_routed_pairs_tests {
             pair: Some(pair),
             ..data
         }
+    }
+
+    fn default_routed_pair() -> PopulatedPair {
+        PopulatedPair::from_assets_routed(
+            AssetInfo::NativeToken { denom: format!("A") },
+            AssetInfo::NativeToken { denom: format!("F") },
+            vec![
+                PopulatedPool::from_assets(
+                    AssetInfo::NativeToken { denom: format!("A") },
+                    AssetInfo::NativeToken { denom: format!("B") }
+                ),
+                PopulatedPool::from_assets(
+                    AssetInfo::NativeToken { denom: format!("B") },
+                    AssetInfo::NativeToken { denom: format!("C") }
+                ),
+                PopulatedPool::from_assets(
+                    AssetInfo::NativeToken { denom: format!("C") },
+                    AssetInfo::NativeToken { denom: format!("D") }
+                ),
+                PopulatedPool::from_assets(
+                    AssetInfo::NativeToken { denom: format!("D") },
+                    AssetInfo::NativeToken { denom: format!("E") }
+                ),
+                PopulatedPool::from_assets(
+                    AssetInfo::NativeToken { denom: format!("E") },
+                    AssetInfo::NativeToken { denom: format!("F") }
+                ),
+                
+            ]
+        )
     }
 
 
@@ -921,6 +954,18 @@ mod creating_routed_pairs_tests {
     }
 
 
+    #[test]
+    fn populated_denoms_work () {
+      let denoms = populated_route_denoms(&default_routed_pair().route());
+      assert_eq!(vec![
+          "A".to_string(),
+          "B".to_string(),
+          "C".to_string(),
+          "D".to_string(),
+          "E".to_string(),
+          "F".to_string(),
+      ], denoms);
+    }
 
 
 

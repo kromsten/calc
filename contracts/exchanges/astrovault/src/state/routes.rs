@@ -63,8 +63,8 @@ pub fn get_route(
     );
 
 
-    for (index, denom) in route.iter().skip(1).enumerate() {
-        let prev = route.get(index).unwrap().clone();
+    for (index, denom) in route.iter().enumerate().skip(1) {
+        let prev = route.get(index - 1).unwrap().clone();
         hop_pools.push(
             get_pool(storage, key_from(&[denom.clone(), prev]))?
         );
@@ -102,7 +102,6 @@ pub fn save_routed_pair(
     // save info that pair exists
     PAIRS.save(storage, key.clone(), &pair.into())?;
 
-    
     let route = pair.route();
 
     // save all intermideary pool infos
@@ -195,4 +194,194 @@ pub fn delete_routes_with_pool(
     for route in get_routes_with_pool_hop(storage, key) {
         ROUTES.remove(storage, route);
     }
+}
+
+
+
+#[cfg(test)]
+mod saving_routed_pairs_tests {
+    use astrovault::assets::asset::AssetInfo;
+    use cosmwasm_std::{testing::mock_dependencies, Order, Storage};
+
+    use crate::{state::{common::{key_from, update_allow_implicit, PAIRS}, pairs::get_pairs, pools::POOLS, routes::save_routed_pair}, types::{pair::PopulatedPair, pool::PopulatedPool}};
+
+    use super::route_exists;
+
+
+    fn default_denoms() -> [String; 2] {
+        [String::from("A"), String::from("F")]
+    }
+
+    fn default_key() -> String {
+        key_from(&default_denoms())
+    }
+
+    fn default_routed_pair() -> PopulatedPair {
+        PopulatedPair::from_assets_routed(
+            AssetInfo::NativeToken { denom: format!("A") },
+            AssetInfo::NativeToken { denom: format!("F") },
+            vec![
+                PopulatedPool::from_assets(
+                    AssetInfo::NativeToken { denom: format!("A") },
+                    AssetInfo::NativeToken { denom: format!("B") }
+                ),
+                PopulatedPool::from_assets(
+                    AssetInfo::NativeToken { denom: format!("B") },
+                    AssetInfo::NativeToken { denom: format!("C") }
+                ),
+                PopulatedPool::from_assets(
+                    AssetInfo::NativeToken { denom: format!("C") },
+                    AssetInfo::NativeToken { denom: format!("D") }
+                ),
+                PopulatedPool::from_assets(
+                    AssetInfo::NativeToken { denom: format!("D") },
+                    AssetInfo::NativeToken { denom: format!("E") }
+                ),
+                PopulatedPool::from_assets(
+                    AssetInfo::NativeToken { denom: format!("E") },
+                    AssetInfo::NativeToken { denom: format!("F") }
+                ),
+            ]
+        )
+    }
+
+    fn pairs_keys_len(storage: &dyn Storage) -> usize {
+        PAIRS.keys(storage, None, None, Order::Ascending).count()
+    }
+
+ 
+    #[test]
+    fn all_pair_pools_and_route_saved() {
+        let mut deps = mock_dependencies();
+        let deps = deps.as_mut();
+
+        let pair = default_routed_pair();
+        save_routed_pair(deps.storage, &pair).unwrap();
+
+        assert_eq!(pairs_keys_len(deps.storage), 1);
+        assert!(PAIRS.has(deps.storage, default_key()));
+        assert!(route_exists(deps.storage, &default_denoms()));
+
+        for pool in pair.route() {
+            assert!(POOLS.has(deps.storage, key_from(&pool.denoms())))
+        }
+
+        let pairs = get_pairs(deps.storage, None, None);
+
+        assert_eq!(pairs.len(), 1);
+    }
+
+
+    #[test]
+    fn implicit_routed_pairs_exist() {
+        let mut deps = mock_dependencies();
+        let deps = deps.as_mut();
+        update_allow_implicit(deps.storage, Some(true)).unwrap();
+
+
+        let pair = default_routed_pair();
+        let route = pair.route();
+        save_routed_pair(deps.storage, &pair).unwrap();
+
+        assert_eq!(pairs_keys_len(deps.storage), 1);
+        assert!(route_exists(deps.storage, &default_denoms()));
+
+        for pool in route.iter() {
+            assert!(POOLS.has(deps.storage, key_from(&pool.denoms())))
+        }
+
+        let pairs = get_pairs(deps.storage, None, None);
+
+        println!("\n\n");
+        for pair in pairs.iter() {
+            println!("{:?}\n", pair);
+        }
+        println!("\n\n");
+
+        
+        let direct_pool_count = route.len();
+
+        // at least 0 by definition
+        let len = route.len();
+
+        let routed_count = route
+            .iter()
+            .enumerate()
+            .take(len - 1)
+            .fold(0usize, |acc, (index, _)| {
+                acc + (route.len() - 1 - index)
+            });
+        
+        /*
+            A -> B   :  1
+            A -> C   :  2
+            A -> D   :  3
+            A -> E   :  4
+            A -> F   :  5
+            
+            B -> C   :  6
+            B -> D   :  7
+            B -> E   :  8
+            B -> F   :  9
+
+            C -> D   : 10
+            C -> E   : 11
+            C -> F   : 12
+
+            D -> E   : 13
+            D -> F   : 14
+
+            E -> F   : 15
+         */
+
+
+        let total =  direct_pool_count + routed_count;
+
+        assert_eq!(pairs.len(), total);
+        assert_eq!(total, 15);
+    }
+
+
+
+/* 
+    #[test]
+    fn fetches_all_pairs_with_limit() {
+        let mut deps = mock_dependencies();
+        for i in 0..10 {
+            let pair = PopulatedPair::from_assets(
+                AssetInfo::NativeToken { denom: format!("base_denom_{}", i) },
+                AssetInfo::NativeToken { denom: format!("quote_denom_{}", i) }
+            );
+            save_pair(deps.as_mut().storage, &pair).unwrap();
+        }
+
+        let pairs = get_pairs(deps.as_ref().storage, None, Some(5));
+        assert_eq!(pairs.len(), 5);
+    }
+
+
+    #[test]
+    fn fetches_all_pairs_with_start_after() {
+        let mut deps = mock_dependencies();
+
+        for i in 0..10 {
+            let pair = PopulatedPair::from_assets(
+                AssetInfo::NativeToken { denom: format!("base_denom_{}", i) },
+                AssetInfo::NativeToken { denom: format!("quote_denom_{}", i) }
+            );
+            save_pair(deps.as_mut().storage, &pair).unwrap();
+        }
+
+        let pairs = get_pairs(
+            deps.as_ref().storage,
+            Some(["base_denom_5".to_string(), "quote_denom_5".to_string()]),
+            None,
+        );
+
+        assert_eq!(pairs.len(), 4);
+        assert_eq!(pairs[0].base_denom(), "base_denom_6");
+    } */
+
+
+
 }
