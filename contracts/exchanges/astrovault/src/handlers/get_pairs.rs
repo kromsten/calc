@@ -14,3 +14,29 @@ pub fn get_pairs_handler(
         limit
     ))
 }
+
+
+
+
+#[cfg(test)]
+mod get_pairs_handler {
+    use crate::tests::common::{init_real_implicit, routed_pairs_real_implicit};
+
+    use super::get_pairs_handler;
+    
+
+    #[test]
+    fn get_real_work() {
+        let data = init_real_implicit();
+
+        let deps = data.deps.as_ref();
+        let pairs = routed_pairs_real_implicit();
+
+        let ex_pairs = get_pairs_handler(deps, None, None).unwrap();
+        println!("Exp {:?}", ex_pairs);
+
+        assert_eq!(pairs.len(), 2);    
+    }
+    
+
+}

@@ -3,7 +3,7 @@ use cw_storage_plus::Bound;
 
 use crate::{state::{pools::pool_exists, routes::route_exists}, types::pair::{Pair, PopulatedPair, StoredPairType}, ContractError};
 
-use super::{common::{allow_implicit, denoms_from, key_from, PAIRS}, pools::{find_pool, get_pool_pair, save_pool_pair, POOLS}, routes::{delete_routes_with_pool, find_route, get_routed_pair, save_routed_pair, ROUTES}};
+use super::{common::{allow_implicit, denoms_from, key_from, sorted_denoms, PAIRS}, pools::{find_pool, get_pool_pair, save_pool_pair, POOLS}, routes::{delete_routes_with_pool, find_route, get_routed_pair, save_routed_pair, ROUTES}};
 use exchange::msg::Pair as ExchangePair;
 
 
@@ -58,7 +58,9 @@ pub fn find_pool_pair(storage: &dyn Storage, denoms: [String; 2]) -> StdResult<P
 
 
 
-pub fn find_route_pair(storage: &dyn Storage, denoms: [String; 2], reverse: bool) -> StdResult<PopulatedPair> {
+pub fn find_route_pair(storage: &dyn Storage, denoms: [String; 2]) -> StdResult<PopulatedPair> {
+    let sorted = sorted_denoms(&denoms);
+    let reverse = sorted[0] != denoms[0];
     Ok(find_route(storage, denoms, reverse)?.into())
 }
 
@@ -142,7 +144,7 @@ pub fn get_pairs_full(
         .flat_map(|result| 
             result.map(|(key, pair)| match pair {
                 StoredPairType::Direct { } => find_pool_pair(storage, denoms_from(&key)),
-                StoredPairType::Routed { } => find_route_pair(storage, denoms_from(&key), false)
+                StoredPairType::Routed { } => find_route_pair(storage, denoms_from(&key))
             })
         )
         .collect::<StdResult<Vec<PopulatedPair>>>().unwrap()
@@ -195,7 +197,7 @@ fn get_pairs_full_implicit(
             .flat_map(|result| 
                 result.map(|(key, pair)| match pair {
                     StoredPairType::Direct { } => find_pool_pair(storage, denoms_from(&key)),
-                    StoredPairType::Routed { } => find_route_pair(storage, denoms_from(&key), false)
+                    StoredPairType::Routed { } => find_route_pair(storage, denoms_from(&key))
                 })
             )
             .collect::<StdResult<Vec<PopulatedPair>>>().unwrap();
@@ -338,7 +340,6 @@ mod get_pairs_tests {
             );
             save_pair(deps.as_mut().storage, &pair).unwrap();
         }
-
         let pairs = get_pairs(deps.as_ref().storage, None, Some(5));
         assert_eq!(pairs.len(), 5);
     }

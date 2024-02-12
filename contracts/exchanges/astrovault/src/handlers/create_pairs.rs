@@ -19,12 +19,10 @@ pub fn create_pairs_handler(
     let pairs_len = pairs.len();
 
     for pair in pairs {
-
         let validated = validated_pair_on_creation(
             deps.as_ref(), 
             &pair, 
         )?;
-
         save_pair(deps.storage, &validated)?;
     }
 

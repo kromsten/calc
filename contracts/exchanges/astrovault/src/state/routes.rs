@@ -41,40 +41,51 @@ pub fn get_route(
     denoms:         [String; 2],
     reverse:        bool
 ) -> StdResult<PopulatedRoute> {
-    let sorted = sorted_denoms(&denoms);
-    
+    let key = key_from(&denoms);
+
     let [base, quote] = if reverse {
-        [sorted[1].clone(), sorted[0].clone()]
+        [denoms[1].clone(), denoms[0].clone()]
     } else {
-        sorted
+        denoms
     };
 
-    let key = format!("{}-{}", base, quote);
-
-    let route = get_stored_route(storage, key.clone(), reverse)?;
-
+    
+    let mut route = get_stored_route(storage, key.clone(), reverse)?;
     let mut hop_pools : Vec<PopulatedPool> = Vec::with_capacity(route.len() + 2);
+    
 
     let first = route.first().unwrap().clone();
-    let last = route.last().unwrap().clone();
+    let mut last = route.last().unwrap().clone();
 
-    hop_pools.push(
-        get_pool(storage, key_from(&[base, first]))?
-    );
 
+    let fist_pool = match get_pool(storage, key_from(&[base.clone(), first.clone()])) {
+        Ok(pool) => pool,
+        Err(_) => {
+            let key = key_from(&[base.clone(), last.clone()]);
+            last = first.clone();
+            route.reverse();
+            get_pool(storage, key)?
+        }
+        
+    };
+    
+
+    hop_pools.push(fist_pool);
 
     for (index, denom) in route.iter().enumerate().skip(1) {
         let prev = route.get(index - 1).unwrap().clone();
+
         hop_pools.push(
             get_pool(storage, key_from(&[denom.clone(), prev]))?
         );
+
     }
 
 
     hop_pools.push(
         get_pool(storage, key_from(&[last, quote]))?
     );
-
+    println!("got last");
     
     Ok(hop_pools)
 }
@@ -98,6 +109,8 @@ pub fn save_routed_pair(
 
     let [base, quote] = sorted_denoms(&pair.denoms());
     let key =  format!("{}-{}", base, quote);
+
+    println!("saving routed pair {:?}", key);
 
     // save info that pair exists
     PAIRS.save(storage, key.clone(), &pair.into())?;
@@ -129,7 +142,6 @@ pub fn save_routed_pair(
 
 
 
-
 pub fn find_route(
     storage:    &dyn Storage, 
     denoms:     [String; 2],
@@ -137,16 +149,10 @@ pub fn find_route(
 ) -> StdResult<PopulatedRoute> {
 
     let pair = PAIRS.load(storage, key_from(&denoms));
-    
-    if pair.is_ok() {
-        return get_route(storage, denoms, reverse);
-    }
-
     let routed = get_route(storage, denoms, reverse);
 
-    if allow_implicit(storage) {
+    if pair.is_ok() || allow_implicit(storage) {
         routed
-        
     } else {
         Err(StdError::generic_err(
             if routed.is_ok() {
