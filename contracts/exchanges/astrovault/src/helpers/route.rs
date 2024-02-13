@@ -113,13 +113,10 @@ pub fn route_pairs_to_astro_hops(
     
     let mut astro_hops: Vec<AstroHop> = Vec::with_capacity(route.len());
 
-    let first = route.first().unwrap();
-    let last = route.last().unwrap();
-
     let mut offer_asset = offer_info.clone();
 
     for hop_pair in route {
-        let astro_hop = hop_pair.astro_hop(querier, &offer_asset)?;
+        let astro_hop = hop_pair.astro_hop(&offer_asset)?;
         astro_hops.push(astro_hop);
         offer_asset = hop_pair.other_asset(&offer_asset);
     }
@@ -153,7 +150,6 @@ pub fn route_swap_cosmos_msg(
     let route_binary = to_json_binary(&route)?;
 
     let cfg = get_config(deps.storage)?;
-    
     let router = ContractWrapper(cfg.router_address.into());
 
     let msg = if offer_asset.info.is_native_token() {
@@ -167,7 +163,7 @@ pub fn route_swap_cosmos_msg(
         )?
     } else {
         router.execute_cw20(
-            offer_asset.to_string(), 
+            offer_asset.info.to_string(), 
             offer_asset.amount, 
             route_binary
         )?
@@ -403,6 +399,38 @@ mod creating_routed_pairs_tests {
         assert_eq!(last_info.ask_asset_info, offer.info);
     }
 
+
+    #[test]
+    fn astrohops_real_work() {
+
+        use crate::tests::common::{init_real_implicit, routed_pairs_real_implicit};
+
+        let data = init_real_implicit();
+        let pairs = routed_pairs_real_implicit();
+        let deps = data.deps.as_ref();
+
+        for pair in pairs {
+
+            let pairs_hops = validated_routed_pair(
+                deps, 
+                &pair, 
+                None
+            ).unwrap().route();
+
+            
+            let astro_hops = route_pairs_to_astro_hops(
+                &deps.querier,
+                &pairs_hops,
+                &pair.base_asset,
+            ).unwrap();
+
+            assert!(astro_hops.len() == pairs_hops.len());
+        }
+        
+
+    }
+
+    
 
     #[test]
     fn astroroute_msg_work() {
@@ -872,15 +900,6 @@ mod creating_routed_pairs_tests {
           "F".to_string(),
       ], denoms);
     }
-
-
-
-
-
-
-
-
-
 
 
 

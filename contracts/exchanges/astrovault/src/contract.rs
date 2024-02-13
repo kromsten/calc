@@ -10,9 +10,9 @@ use crate::error::ContractError;
 use crate::handlers::create_pairs::create_pairs_handler;
 use crate::handlers::get_expected_receive_amount::get_expected_receive_amount_handler;
 use crate::handlers::get_pairs::get_pairs_handler;
-use crate::handlers::get_pairs_internal::get_pairs_internal_handler;
+use crate::handlers::get_pairs_internal::{get_pairs_internal_full_handler, get_pairs_internal_handler};
 use crate::handlers::get_twap_to_now::get_twap_to_now_handler;
-use crate::handlers::swap::{return_swapped_funds, swap_native_handler, swap_cw20_handler};
+use crate::handlers::swap::{return_swapped_funds, swap_cw20_handler, swap_msg, swap_native_handler};
 use crate::msg::{InstantiateMsg, InternalExecuteMsg, InternalQueryMsg, MigrateMsg};
 use crate::state::common::update_allow_implicit;
 use crate::state::config::{get_config, update_config, update_router_config};
@@ -159,9 +159,9 @@ pub fn execute(
     }
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _: Env, msg: QueryMsg) -> StdResult<Binary> {
 
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     
     match msg {
         QueryMsg::GetPairs { start_after, limit } => {
@@ -195,8 +195,22 @@ pub fn query(deps: Deps, _: Env, msg: QueryMsg) -> StdResult<Binary> {
             },
 
             InternalQueryMsg::GetPairsFull { start_after, limit } => {
-                to_json_binary(&get_pairs_internal_handler(deps, start_after, limit)?)
+                to_json_binary(&get_pairs_internal_full_handler(deps, start_after, limit)?)
             },
+
+            InternalQueryMsg::SwapMsg {
+                offer_asset,
+                minimum_receive_amount,
+                funds,
+                route,
+            } => to_json_binary(&swap_msg(
+                deps,
+                env,
+                offer_asset,
+                minimum_receive_amount,
+                funds,
+                route,
+            )?),
         },
     }
 }

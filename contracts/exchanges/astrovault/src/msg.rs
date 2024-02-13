@@ -1,5 +1,6 @@
+use astrovault::assets::asset::Asset;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr, Binary, Coin, CosmosMsg};
 use cw20::Cw20ReceiveMsg;
 use exchange_macros::{exchange_execute, exchange_query};
 use crate::types::pair::{Pair, PopulatedPair};
@@ -45,6 +46,14 @@ pub enum InternalQueryMsg {
     GetPairsFull {
         start_after: Option<Pair>,
         limit: Option<u16>,
+    },
+
+    #[returns(CosmosMsg)]
+    SwapMsg {
+        offer_asset:            Asset,
+        minimum_receive_amount: Asset,
+        funds:                  Vec<Coin>,
+        route:                  Option<Binary>
     },
 }
 

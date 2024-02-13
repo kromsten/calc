@@ -110,14 +110,12 @@ pub fn save_routed_pair(
     let [base, quote] = sorted_denoms(&pair.denoms());
     let key =  format!("{}-{}", base, quote);
 
-    println!("saving routed pair {:?}", key);
-
     // save info that pair exists
     PAIRS.save(storage, key.clone(), &pair.into())?;
 
     let route = pair.route();
 
-    // save all intermideary pool infos
+    // save all intermediary pool infos
     route
     .iter()
     .map(|pool| save_pool(storage, key_from(&pool.denoms()), pool))

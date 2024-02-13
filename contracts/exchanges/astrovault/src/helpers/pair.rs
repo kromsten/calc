@@ -1,4 +1,4 @@
-use cosmwasm_std::{ from_json, Binary, Coin, CosmosMsg, Deps, Env, QuerierWrapper};
+use cosmwasm_std::{ from_json, Binary, Coin, CosmosMsg, Deps, Env};
 use astrovault::{
     assets::asset::{Asset, AssetInfo},
     router::state::Hop as AstroHop
@@ -193,10 +193,9 @@ impl PopulatedPair {
 
     pub fn to_astro_hop(
         &self,
-        querier:     &QuerierWrapper,
         offer_asset: &AssetInfo,
     ) -> Result<AstroHop, ContractError> {
-        self.pool().astro_hop(querier, offer_asset)   
+        self.pool().astro_hop(offer_asset)
     }
 
 
@@ -211,6 +210,7 @@ impl PopulatedPair {
     ) -> Result<CosmosMsg, ContractError> {
 
         let msg = if self.is_pool_pair() {
+            
             let pool = self.pool();
             let swap_msg = pool.swap_msg_cosmos(
                 offer_asset.clone(),

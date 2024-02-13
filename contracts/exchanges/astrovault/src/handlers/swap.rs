@@ -1,5 +1,5 @@
 use astrovault::assets::asset::{Asset, AssetInfo};
-use cosmwasm_std::{Addr, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128};
+use cosmwasm_std::{Addr, Binary, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, SubMsg, Uint128};
 use cw_utils::one_coin;
 
 
@@ -41,16 +41,44 @@ pub fn swap_cw20_handler(
     minimum_receive_amount: Asset,
     route: Option<Binary>,
 ) -> Result<Response, ContractError> {
-    let sender = deps.api.addr_validate(sender.as_str())?;
-
+    let sender = deps.api.addr_validate(sender.as_ref())?;
     let asset = Asset {
         info: AssetInfo::Token { contract_addr: contract_addr.into_string() },
         amount
     };
-
     swap_handler(deps, env, sender, asset, minimum_receive_amount, vec![], route)
 }
 
+
+
+pub fn swap_msg(
+    deps: Deps,
+    env: Env,
+    offer_asset:            Asset,
+    minimum_receive_amount: Asset,
+    funds:                  Vec<Coin>,
+    route:                  Option<Binary>
+) -> StdResult<CosmosMsg> {
+
+    let pair = find_pair(
+        deps.storage,
+        [
+            offer_asset.info.to_string(),
+            minimum_receive_amount.info.to_string(),
+        ],
+    )?;
+
+    let swap_msg = pair.swap_msg(
+        deps,
+        env,
+        offer_asset.clone(), 
+        minimum_receive_amount.clone(),
+        route,
+        funds,
+    ).map_err(|e| StdError::generic_err(e.to_string()))?;
+
+    Ok(swap_msg)
+}
 
 
 fn swap_handler(
@@ -70,7 +98,6 @@ fn swap_handler(
             minimum_receive_amount.info.to_string(),
         ],
     )?;
-
 
     SWAP_CACHE.save(
         deps.storage,
@@ -107,8 +134,8 @@ fn swap_handler(
         .add_attribute("sender", sender)
         .add_attribute("swap_amount", offer_asset.amount.to_string())
         .add_attribute("minimum_receive_amount", minimum_receive_amount.to_string())
-        .add_submessage(sub_msg))
-
+        .add_submessage(sub_msg)
+    )
 }
 
 
@@ -199,6 +226,7 @@ mod swap_tests {
             ContractError::Payment(PaymentError::MultipleDenoms {}) 
         )
     }
+    
 
     #[test]
     fn with_zero_swap_amount_fails() {

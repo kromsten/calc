@@ -174,17 +174,6 @@ impl PopulatedPool {
         self.common_asset(other).to_string()
     }
 
-    pub fn asset_index(
-        &self,
-        offer_asset: &AssetInfo
-    ) -> u32 {
-        if self.quote_asset.equal(offer_asset) {
-            self.base_index
-        } else {
-            self.quote_index
-        }
-    }
-
     pub fn from_to_indeces(
         &self,
         offer_asset: &AssetInfo,
@@ -196,7 +185,39 @@ impl PopulatedPool {
         }
     }
 
+     pub fn asset_index(
+        &self,
+        offer_asset: &AssetInfo
+    ) -> u32 {
+        if self.base_asset.equal(offer_asset) {
+            self.base_index
+        } else {
+            self.quote_index
+        }
+    }
 
+    pub fn asset_index_from_assets(
+        &self,
+        offer_asset: &AssetInfo
+    ) -> u32 {
+        if self.quote_asset.equal(offer_asset) {
+            1
+        } else {
+            0
+        }
+    }
+
+    pub fn from_to_indeces_from_assets(
+        &self,
+        offer_asset: &AssetInfo,
+    ) -> (u32, u32) {
+        if self.quote_asset.equal(offer_asset) {
+            (1, 0)
+        } else {
+            (0, 1)
+        }
+    }
+    
 
     pub fn swap_simulation(
         &self,
@@ -316,7 +337,7 @@ impl PopulatedPool {
             )
         } else {
             pair_contact.execute_cw20(
-                offer_asset.to_string(), 
+                offer_asset.info.to_string(), 
                 offer_asset.amount, 
                 swap_msg
             )
@@ -325,7 +346,6 @@ impl PopulatedPool {
 
     pub fn astro_hop(
         &self,
-        querier:            &QuerierWrapper,
         offer_asset_info:   &AssetInfo,
     ) -> Result<AstroHop, ContractError> {
 
@@ -342,7 +362,7 @@ impl PopulatedPool {
             PoolType::Ratio => AstroHop {
                     ratio_hop_info: Some(RatioHopInfo {
                         asset_infos,
-                        from_asset_index: self.asset_index(offer_asset_info),
+                        from_asset_index: self.asset_index_from_assets(offer_asset_info),
                     }),
                     ..defaul_hop
             },
@@ -354,28 +374,16 @@ impl PopulatedPool {
                     ..defaul_hop
             },
             PoolType::Stable => {
-                
                 let (
                     from_asset_index, 
                     to_asset_index
-                ) = self.from_to_indeces(offer_asset_info);
-
-                // Stable astrop hop requires info about all assets in the pool
-                // querying every time since complex to store in general pool info
-                let asset_infos = query_assets(
-                        querier, 
-                        &self.address, 
-                        &self.pool_type
-                    )?
-                    .iter()
-                    .map(|a| a.info.clone()).collect::<Vec<AssetInfo>>();
-
+                ) = self.from_to_indeces_from_assets(offer_asset_info);
                 
                 AstroHop {
                     stable_hop_info: Some(StableHopInfo {
                         from_asset_index,
                         to_asset_index,
-                        asset_infos,
+                        asset_infos: asset_infos.to_vec(),
                     }),
                     ..defaul_hop
                 }
