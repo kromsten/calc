@@ -22,10 +22,11 @@ pub fn denoms_from(key: &str) -> [String; 2] {
 }
 
 
-/// Store explicirely created pairs with infomation about pair type
+/// Explicitely stored pairs with infomation about pair type
 pub const PAIRS             : Map<String, StoredPairType>    = Map::new("pairs_v1");
 
-/// flag that tell whether to use pairs that wasn't explicite created for querying and swapping
+/// Flag that tell whether to whether to allow swaps for pairs not created explicitly
+/// and wether to returns them in the list of pairs
 const IMPLICT_PAIRS        : Item<bool>           = Item::new("i");
 
 

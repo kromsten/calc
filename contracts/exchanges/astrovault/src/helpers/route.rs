@@ -116,7 +116,7 @@ pub fn route_pairs_to_astro_hops(
     let mut offer_asset = offer_info.clone();
 
     for hop_pair in route {
-        let astro_hop = hop_pair.astro_hop(&offer_asset)?;
+        let astro_hop = hop_pair.astro_hop(querier,&offer_asset)?;
         astro_hops.push(astro_hop);
         offer_asset = hop_pair.other_asset(&offer_asset);
     }

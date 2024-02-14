@@ -6,6 +6,9 @@ use cw_storage_plus::Item;
 use astrovault::router::query_msg as RouterQuery;
 
 const CONFIG                : Item<Config>          = Item::new("config_v2");
+
+/// A configuration of the astrovault router
+/// Not actively used since registry verification is opted out 
 const ROUTER_CONFIG         : Item<RouterConfig>    = Item::new("rc_v2");
 
 
@@ -13,6 +16,7 @@ const ROUTER_CONFIG         : Item<RouterConfig>    = Item::new("rc_v2");
 pub fn get_config(store: &dyn Storage) -> StdResult<Config> {
     CONFIG.load(store)
 }
+
 
 pub fn update_config(store: &mut dyn Storage, config: Config) -> StdResult<Config> {
     CONFIG.save(store, &config)?;

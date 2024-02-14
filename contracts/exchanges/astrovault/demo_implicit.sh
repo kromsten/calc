@@ -88,15 +88,15 @@ archwayd q wasm contract-state smart archway1lcxaem4gqnp2mdeh5hawacxlzge8e6wzjaa
 
 
 # Ratio Swap:
-echo "\nSwapping 10_000_000_000_000 xCONST for sARCH using CONTRACT variable "
-archwayd tx wasm execute archway1sdzaas0068n42xk8ndm6959gpu6n09tajmeuq7vak8t9qt5jrp6sjjtnka  '{ "send" : { "contract": "'$CONTRACT'", "amount": "10000000000000", "msg": "ewogICJzd2FwIjogewogICAgIm1pbmltdW1fcmVjZWl2ZV9hbW91bnQiOiB7CiAgICAgICJhbW91bnQiOiAiMTAwMDAwMCIsCiAgICAgICJkZW5vbSI6ICJhcmNod2F5MWVycWd1cWMzaG1mYWpndTdlMmR2Z2FjY3g2ZmV1NXJ1M2d5YXRkeHU5NHA2Nmo5aHA3bXNuMmtjcXAiCiAgICB9CiAgfQp9"  }  }' --gas-prices 900000000000aconst --from test  --gas 1600000 -y
+echo "\nSwapping 10_000_000_000_000 xCONST for sARCH  "
+archwayd tx wasm execute archway1sdzaas0068n42xk8ndm6959gpu6n09tajmeuq7vak8t9qt5jrp6sjjtnka  '{ "send" : { "contract": "'$CONTRACT'", "amount": "10000000000000", "msg": "ewogICJzd2FwIjogewogICAgIm1pbmltdW1fcmVjZWl2ZV9hbW91bnQiOiB7CiAgICAgICJhbW91bnQiOiAiMTAwMDAwMCIsCiAgICAgICJkZW5vbSI6ICJhcmNod2F5MWVycWd1cWMzaG1mYWpndTdlMmR2Z2FjY3g2ZmV1NXJ1M2d5YXRkeHU5NHA2Nmo5aHA3bXNuMmtjcXAiCiAgICB9CiAgfQp9"  }  }' --gas-prices 900000000000aconst --from test  --gas 2000000 -y
 echo "\Sleeping for 5 seconds..."
 sleep 5
 
 
 # Standard Swap:
 echo "\nSwapping 10_000_000_000_000 xCONST for USDC.axv:"
-archwayd tx wasm execute archway1sdzaas0068n42xk8ndm6959gpu6n09tajmeuq7vak8t9qt5jrp6sjjtnka  '{ "send" : { "contract": "'$CONTRACT'", "amount": "10000000000000", "msg": "ewogICJzd2FwIjogewogICAgIm1pbmltdW1fcmVjZWl2ZV9hbW91bnQiOiB7CiAgICAgICJhbW91bnQiOiAiMTAwMDAwMCIsCiAgICAgICJkZW5vbSI6ICJhcmNod2F5MW1tdTMyZjdobjBmeXc4Z2g1N3hsNXVoYXF1NHBxNXh4NTl5bmYwdGp1NjBuMm56aGEwYXMzdnRtY20iCiAgICB9CiAgfQp9"  }  }' --gas-prices 900000000000aconst --from test  --gas 1600000 -y
+archwayd tx wasm execute archway1sdzaas0068n42xk8ndm6959gpu6n09tajmeuq7vak8t9qt5jrp6sjjtnka  '{ "send" : { "contract": "'$CONTRACT'", "amount": "10000000000000", "msg": "ewogICJzd2FwIjogewogICAgIm1pbmltdW1fcmVjZWl2ZV9hbW91bnQiOiB7CiAgICAgICJhbW91bnQiOiAiMTAwMDAwMCIsCiAgICAgICJkZW5vbSI6ICJhcmNod2F5MW1tdTMyZjdobjBmeXc4Z2g1N3hsNXVoYXF1NHBxNXh4NTl5bmYwdGp1NjBuMm56aGEwYXMzdnRtY20iCiAgICB9CiAgfQp9"  }  }' --gas-prices 900000000000aconst --from test  --gas 2000000 -y
 
 echo "\nSleeping for 5 seconds..."
 sleep 5
@@ -110,12 +110,12 @@ archwayd q wasm contract-state smart archway12defza8nz2d2a3hgt6tftku28ly5lglsna6
 
 # Stable Swaps:
 echo "\nSwapping 1_000_000_000 (u)USDC.axv for USDT.axv"
-archwayd tx wasm execute archway1mmu32f7hn0fyw8gh57xl5uhaqu4pq5xx59ynf0tju60n2nzha0as3vtmcm  '{ "send" : { "contract": "'$CONTRACT'", "amount": "1000000000", "msg": "ewogICJzd2FwIjogewogICAgIm1pbmltdW1fcmVjZWl2ZV9hbW91bnQiOiB7CiAgICAgICJhbW91bnQiOiAiOTAwIiwKICAgICAgImRlbm9tIjogImFyY2h3YXkxMmRlZnphOG56MmQyYTNoZ3Q2dGZ0a3UyOGx5NWxnbHNuYTY5ajdycGpldWtnNHB6OHFlc2UyMzI2cyIKICAgIH0KICB9Cn0="  }  }' --gas-prices 900000000000aconst --from test  --gas 1600000 -y
+archwayd tx wasm execute archway1mmu32f7hn0fyw8gh57xl5uhaqu4pq5xx59ynf0tju60n2nzha0as3vtmcm  '{ "send" : { "contract": "'$CONTRACT'", "amount": "1000000000", "msg": "ewogICJzd2FwIjogewogICAgIm1pbmltdW1fcmVjZWl2ZV9hbW91bnQiOiB7CiAgICAgICJhbW91bnQiOiAiOTAwIiwKICAgICAgImRlbm9tIjogImFyY2h3YXkxMmRlZnphOG56MmQyYTNoZ3Q2dGZ0a3UyOGx5NWxnbHNuYTY5ajdycGpldWtnNHB6OHFlc2UyMzI2cyIKICAgIH0KICB9Cn0="  }  }' --gas-prices 900000000000aconst --from test  --gas 2400000 -y
 echo "\nSleeping for 6 seconds..."
 sleep 6
 echo "\nSwapping 1_000_000_000 (u)USDC.axv for BUSD.axv"
-archwayd tx wasm execute archway1mmu32f7hn0fyw8gh57xl5uhaqu4pq5xx59ynf0tju60n2nzha0as3vtmcm  '{ "send" : { "contract": "'$CONTRACT'", "amount": "1000000000", "msg": "ewogICJzd2FwIjogewogICAgIm1pbmltdW1fcmVjZWl2ZV9hbW91bnQiOiB7CiAgICAgICJhbW91bnQiOiAiOTAwIiwKICAgICAgImRlbm9tIjogImFyY2h3YXkxbGN4YWVtNGdxbnAybWRlaDVoYXdhY3hsemdlOGU2d3pqYWF0NzNhaHBmMnJjbHF2OXY0c2o4ZTRrZiIKICAgIH0KICB9Cn0="  }  }' --gas-prices 900000000000aconst --from test  --gas 1600000 -y
-echo "\nSleeping for 65 seconds..."
+archwayd tx wasm execute archway1mmu32f7hn0fyw8gh57xl5uhaqu4pq5xx59ynf0tju60n2nzha0as3vtmcm  '{ "send" : { "contract": "'$CONTRACT'", "amount": "1000000000", "msg": "ewogICJzd2FwIjogewogICAgIm1pbmltdW1fcmVjZWl2ZV9hbW91bnQiOiB7CiAgICAgICJhbW91bnQiOiAiOTAwIiwKICAgICAgImRlbm9tIjogImFyY2h3YXkxbGN4YWVtNGdxbnAybWRlaDVoYXdhY3hsemdlOGU2d3pqYWF0NzNhaHBmMnJjbHF2OXY0c2o4ZTRrZiIKICAgIH0KICB9Cn0="  }  }' --gas-prices 900000000000aconst --from test  --gas 3500000 -y
+echo "\nSleeping for 6 seconds..."
 sleep 6
 
 
@@ -142,7 +142,7 @@ echo "1_000_000 aCONST -> $ACONST_TO_SARCH sARCH"
 echo "Difference between manual and direct estimation: $ACONST_TO_SARCH - $XCONST_TO_SARCH = $(($ACONST_TO_SARCH-$XCONST_TO_SARCH))"
 
 echo "Swapping 1_000_000 aCONST for sARCH:"
-archwayd tx wasm execute $CONTRACT '{ "swap": { "minimum_receive_amount": { "amount": "180000", "denom": "archway1erqguqc3hmfajgu7e2dvgaccx6feu5ru3gyatdxu94p66j9hp7msn2kcqp"  } }  }' --gas-prices 900000000000aconst --from test -y --amount 1000000aconst --gas 2650000
+archwayd tx wasm execute $CONTRACT '{ "swap": { "minimum_receive_amount": { "amount": "180000", "denom": "archway1erqguqc3hmfajgu7e2dvgaccx6feu5ru3gyatdxu94p66j9hp7msn2kcqp"  } }  }' --gas-prices 900000000000aconst --from test -y --amount 1000000aconst --gas 3000000
 echo "\nSleeping for 7 seconds..."
 sleep 7
 
@@ -184,15 +184,14 @@ echo "10_000_000 xCONST -> $XCONST_TO_BUSD BUSD.axv"
 
 echo "Difference between manual and direct estimation: $XCONST_TO_BUSD - $USDT_TO_BUSD = $(($XCONST_TO_BUSD-$USDT_TO_BUSD))"
 
-echo "Currently failing due to a bug on Astrovault"
 echo "\nSwapping 10_000_000 xCONST for BUSD.axv:"
-archwayd tx wasm execute archway1sdzaas0068n42xk8ndm6959gpu6n09tajmeuq7vak8t9qt5jrp6sjjtnka  '{ "send" : { "contract": "'$CONTRACT'", "amount": "10000000", "msg": "ewogICJzd2FwIjogewogICAgIm1pbmltdW1fcmVjZWl2ZV9hbW91bnQiOiB7CiAgICAgICJhbW91bnQiOiAiMTAwMCIsCiAgICAgICJkZW5vbSI6ICJhcmNod2F5MWxjeGFlbTRncW5wMm1kZWg1aGF3YWN4bHpnZThlNnd6amFhdDczYWhwZjJyY2xxdjl2NHNqOGU0a2YiCiAgICB9CiAgfQp9"  }  }' --gas-prices 900000000000aconst --from test  --gas 2900000 -y
+archwayd tx wasm execute archway1sdzaas0068n42xk8ndm6959gpu6n09tajmeuq7vak8t9qt5jrp6sjjtnka  '{ "send" : { "contract": "'$CONTRACT'", "amount": "10000000", "msg": "ewogICJzd2FwIjogewogICAgIm1pbmltdW1fcmVjZWl2ZV9hbW91bnQiOiB7CiAgICAgICJhbW91bnQiOiAiOSIsCiAgICAgICJkZW5vbSI6ICJhcmNod2F5MWxjeGFlbTRncW5wMm1kZWg1aGF3YWN4bHpnZThlNnd6amFhdDczYWhwZjJyY2xxdjl2NHNqOGU0a2YiCiAgICB9CiAgfQp9"  }  }' --gas-prices 900000000000aconst --from test  --gas 4300000 -y
 echo "\nSleeping for 6 seconds..."
 sleep 6
 
 echo "\nBalances after swap:"
-XCONST_A= $( archwayd q wasm contract-state smart archway1sdzaas0068n42xk8ndm6959gpu6n09tajmeuq7vak8t9qt5jrp6sjjtnka '{ "balance": { "address": "'$USER'"  }  }' | jq -r data.balance ) 
-USDC_A= $( archwayd q wasm contract-state smart archway1mmu32f7hn0fyw8gh57xl5uhaqu4pq5xx59ynf0tju60n2nzha0as3vtmcm '{ "balance": { "address": "'$USER'"  }  }' | jq -r data.balance )
+XCONST_A=$( archwayd q wasm contract-state smart archway1sdzaas0068n42xk8ndm6959gpu6n09tajmeuq7vak8t9qt5jrp6sjjtnka '{ "balance": { "address": "'$USER'"  }  }' | jq -r '.data.balance' ) 
+USDC_A=$( archwayd q wasm contract-state smart archway1mmu32f7hn0fyw8gh57xl5uhaqu4pq5xx59ynf0tju60n2nzha0as3vtmcm '{ "balance": { "address": "'$USER'"  }  }' | jq -r '.data.balance' )
 echo "xCONST: $XCONST_A"
 echo "USDC.axv: $USDC_A"
 

@@ -7,11 +7,10 @@ use super::{common::{allow_implicit, denoms_from, key_from, sorted_denoms, PAIRS
 use exchange::msg::Pair as ExchangePair;
 
 
-
+/// Helper that check if explicily created pair exists
 pub fn pair_exists(storage: &dyn Storage, denoms: &[String; 2]) -> bool {
     PAIRS.has(storage, key_from(&denoms))
 }
-
 
 
 pub fn find_pair(storage: &dyn Storage, denoms: [String; 2]) -> StdResult<PopulatedPair> {
@@ -90,7 +89,9 @@ pub fn delete_pair(storage: &mut dyn Storage, pair: &PopulatedPair) {
 }
 
 
-
+/// Returns simple [base, quote] denom pairs
+/// Can be optimised a bit since it tries to populate all the pairs
+/// first and then unpopulated them to the simplest form
 pub fn get_exchange_pairs(
     storage: &dyn Storage,
     start_after: Option<[String; 2]>,
@@ -107,7 +108,9 @@ pub fn get_exchange_pairs(
 }
 
 
-
+/// Returns unpopulated pairs like they were originally provided
+/// primarly for debugging and testing purposes
+/// Can be optimised a bit since it first populate the pairs and then unpopulate them
 pub fn get_pairs(
     storage: &dyn Storage,
     start_after: Option<[String; 2]>,
@@ -124,7 +127,11 @@ pub fn get_pairs(
 }
 
 
-
+/// Returns populated pairs including pool routes and pools with asset indeces
+/// Primarly for debuggins and testing purposes
+/// The core function used by every other pair getter
+/// Crashes and return nothing if any of the explicit pairs is not populatable
+/// Skip implicit pairs if there was an error in their retrieval
 pub fn get_pairs_full(
     storage: &dyn Storage,
     start_after: Option<[String; 2]>,
@@ -153,6 +160,10 @@ pub fn get_pairs_full(
 }
 
 
+/// Returns fully populated information including pools and routes in the following order:
+/// Both direct pools and routed pairs explicitly created by the admins. No specifc order internally
+/// Direct pool pairs generated from hops of the explicitly created routed pairs
+/// Routed pairs generated from inner routes of the explicitly created routed pairs 
 fn get_pairs_full_implicit(
     storage: &dyn Storage,
     start_after: Option<[String; 2]>,
@@ -183,9 +194,11 @@ fn get_pairs_full_implicit(
         (None, None, None)
     };
 
-    let limit = limit.unwrap_or(30) as usize;
+    let original_limit = limit.unwrap_or(30) as usize;
 
+    let mut limit = original_limit;
 
+    // Get explicitly created pairs first
     let mut pairs = PAIRS
             .range(
                 storage,
@@ -202,9 +215,10 @@ fn get_pairs_full_implicit(
             )
             .collect::<StdResult<Vec<PopulatedPair>>>().unwrap();
     
-
-    let limit = limit.checked_sub(pairs.len()).unwrap_or(0);
-
+       
+    limit = original_limit.checked_sub(pairs.len()).unwrap_or(0);
+    
+    // Getting direct pools if limit is not reached
     if limit > 0 {
         let pools = POOLS
             .range(
@@ -215,6 +229,7 @@ fn get_pairs_full_implicit(
             )
             .filter_map(|pool_res| {
                 if let Ok((key, pool)) = pool_res {
+                    // skip explicit
                     if !pair_exists(storage, &denoms_from(&key)) {
                         Some(pool.into())
                     } else {
@@ -230,8 +245,9 @@ fn get_pairs_full_implicit(
         pairs.extend(pools);
     }
 
-    let limit = limit.checked_sub(pairs.len()).unwrap_or(0);
+    limit = original_limit.checked_sub(pairs.len()).unwrap_or(0);
 
+    // Getting routed pairs if limit is not reached
     if limit > 0 {
         let pools = ROUTES
             .range(

@@ -9,9 +9,10 @@ use super::{common::{allow_implicit, key_from, PAIRS}, pools::save_pool};
 
 
 /// list if intermidiate denoms between base and quote assets
-/// sorted (base.denom, quote.denom) -> List of denoms where
-/// each two consecutive denoms are pools that exist in storage
+/// sorted (base.denom, quote.denom) -> List of denoms in between
+/// each two consecutive denoms should be a valid populated pool that exist in the storage
 pub const ROUTES          : Map<String, StoredRoute>   = Map::new("sr_v1");
+
 
 
 pub fn route_exists(
@@ -34,6 +35,7 @@ pub fn get_stored_route(
     }
     Ok(route)
 }
+
 
 
 pub fn get_route(
@@ -85,10 +87,10 @@ pub fn get_route(
     hop_pools.push(
         get_pool(storage, key_from(&[last, quote]))?
     );
-    println!("got last");
     
     Ok(hop_pools)
 }
+
 
 
 
@@ -344,48 +346,6 @@ mod saving_routed_pairs_tests {
         assert_eq!(pairs.len(), total);
         assert_eq!(total, 15);
     }
-
-
-
-/* 
-    #[test]
-    fn fetches_all_pairs_with_limit() {
-        let mut deps = mock_dependencies();
-        for i in 0..10 {
-            let pair = PopulatedPair::from_assets(
-                AssetInfo::NativeToken { denom: format!("base_denom_{}", i) },
-                AssetInfo::NativeToken { denom: format!("quote_denom_{}", i) }
-            );
-            save_pair(deps.as_mut().storage, &pair).unwrap();
-        }
-
-        let pairs = get_pairs(deps.as_ref().storage, None, Some(5));
-        assert_eq!(pairs.len(), 5);
-    }
-
-
-    #[test]
-    fn fetches_all_pairs_with_start_after() {
-        let mut deps = mock_dependencies();
-
-        for i in 0..10 {
-            let pair = PopulatedPair::from_assets(
-                AssetInfo::NativeToken { denom: format!("base_denom_{}", i) },
-                AssetInfo::NativeToken { denom: format!("quote_denom_{}", i) }
-            );
-            save_pair(deps.as_mut().storage, &pair).unwrap();
-        }
-
-        let pairs = get_pairs(
-            deps.as_ref().storage,
-            Some(["base_denom_5".to_string(), "quote_denom_5".to_string()]),
-            None,
-        );
-
-        assert_eq!(pairs.len(), 4);
-        assert_eq!(pairs[0].base_denom(), "base_denom_6");
-    } */
-
 
 
 }

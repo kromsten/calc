@@ -58,7 +58,6 @@ pub enum InternalQueryMsg {
 }
 
 
-
 #[exchange_query]
 #[cw_serde]
 #[derive(QueryResponses)]
