@@ -302,9 +302,7 @@ pub fn assert_contract_destination_callbacks_are_valid(
             d.msg
                 .clone()
                 .map_or(Ok(()), |msg| match from_json(msg).unwrap() {
-                    ExecuteMsg::ZDelegate { .. }
-                    | ExecuteMsg::Deposit { .. }
-                    | ExecuteMsg::OldZDelegate { .. } => Ok(()),
+                    ExecuteMsg::ZDelegate { .. } | ExecuteMsg::Deposit { .. } => Ok(()),
                     _ => Err(ContractError::CustomError {
                         val: "Cannot invoke provided destination callback against the DCA contract"
                             .to_string(),

@@ -150,7 +150,7 @@ export const instantiateExchangeContract = async (
 const instantiateDCAContract = async (
   cosmWasmClient: SigningCosmWasmClient,
   adminWalletAddress: string,
-  feeCollectorAdress: string,
+  feeCollectorAddress: string,
   twapPeriod: number,
 ): Promise<string> => {
   const dcaContractAddress = await uploadAndInstantiate(
@@ -161,7 +161,7 @@ const instantiateDCAContract = async (
       admin: adminWalletAddress,
       executors: [adminWalletAddress],
       automation_fee_percent: `${automationFee}`,
-      fee_collectors: [{ address: feeCollectorAdress, allocation: '1.0' }],
+      fee_collectors: [{ address: feeCollectorAddress, allocation: '1.0' }],
       default_page_limit: 30,
       paused: false,
       default_slippage_tolerance: '0.05',
@@ -204,7 +204,7 @@ export const updateExchangeContractAddress = async (
 
   await execute(cosmWasmClient, adminWalletAddress, dcaContractAddress, {
     update_config: {
-      ...omit(['admin', 'old_staking_router_address'], configResponse.config),
+      ...omit(['admin'], configResponse.config),
       exchange_contract_address: exchangeContractAddress,
     },
   });

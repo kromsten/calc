@@ -93,7 +93,7 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
     2,
   );
 
-  const validatorAddress = (await queryClient.staking.validators('')).validators[0].operatorAddress;
+  const validatorAddress = (await queryClient.staking.validators('BOND_STATUS_BONDED')).validators[0].operatorAddress;
 
   return {
     beforeAll(this: Mocha.Context) {
@@ -129,7 +129,7 @@ export const mochaHooks = async (): Promise<Mocha.RootHookObject> => {
 const instantiateDCAContract = async (
   cosmWasmClient: SigningCosmWasmClient,
   adminWalletAddress: string,
-  feeCollectorAdress: string,
+  feeCollectorAddress: string,
 ): Promise<string> => {
   const dcaContractAddress = await uploadAndInstantiate(
     '../artifacts/dca.wasm',
@@ -139,7 +139,7 @@ const instantiateDCAContract = async (
       admin: adminWalletAddress,
       executors: [adminWalletAddress],
       automation_fee_percent: `${automationFee}`,
-      fee_collectors: [{ address: feeCollectorAdress, allocation: '1.0' }],
+      fee_collectors: [{ address: feeCollectorAddress, allocation: '1.0' }],
       default_page_limit: 30,
       paused: false,
       default_slippage_tolerance: '0.05',
@@ -147,7 +147,6 @@ const instantiateDCAContract = async (
       default_swap_fee_percent: `${dexSwapFee}`,
       weighted_scale_swap_fee_percent: '0.01',
       risk_weighted_average_escrow_level: '0.05',
-      old_staking_router_address: adminWalletAddress,
     },
     'dca',
   );
@@ -175,20 +174,19 @@ export const migrateDCAContract = async (
   adminWalletAddress: string,
   dcaContractAddress: string,
   exchangeContractAddress: string,
-) => {
-  await execute(cosmWasmClient, adminWalletAddress, dcaContractAddress, {
+) =>
+  execute(cosmWasmClient, adminWalletAddress, dcaContractAddress, {
     update_config: {
       exchange_contract_address: exchangeContractAddress,
     },
   });
-};
 
 export const instantiateExchangeContract = async (
   cosmWasmClient: SigningCosmWasmClient,
   adminWalletAddress: string,
   dcaContractAddress: string,
 ): Promise<string> =>
-  await uploadAndInstantiate(
+  uploadAndInstantiate(
     '../artifacts/fin.wasm',
     cosmWasmClient,
     adminWalletAddress,

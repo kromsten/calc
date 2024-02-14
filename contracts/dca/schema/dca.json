@@ -12,9 +12,9 @@
       "default_page_limit",
       "default_slippage_tolerance",
       "default_swap_fee_percent",
+      "exchange_contract_address",
       "executors",
       "fee_collectors",
-      "old_staking_router_address",
       "paused",
       "risk_weighted_average_escrow_level",
       "twap_period",
@@ -38,6 +38,9 @@
       "default_swap_fee_percent": {
         "$ref": "#/definitions/Decimal"
       },
+      "exchange_contract_address": {
+        "$ref": "#/definitions/Addr"
+      },
       "executors": {
         "type": "array",
         "items": {
@@ -49,9 +52,6 @@
         "items": {
           "$ref": "#/definitions/FeeCollector"
         }
-      },
-      "old_staking_router_address": {
-        "$ref": "#/definitions/Addr"
       },
       "paused": {
         "type": "boolean"
@@ -566,60 +566,6 @@
               },
               "validator_address": {
                 "$ref": "#/definitions/Addr"
-              }
-            },
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
-      },
-      {
-        "type": "object",
-        "required": [
-          "old_z_delegate"
-        ],
-        "properties": {
-          "old_z_delegate": {
-            "type": "object",
-            "required": [
-              "amount",
-              "delegator_address",
-              "denom",
-              "validator_address"
-            ],
-            "properties": {
-              "amount": {
-                "$ref": "#/definitions/Uint128"
-              },
-              "delegator_address": {
-                "$ref": "#/definitions/Addr"
-              },
-              "denom": {
-                "type": "string"
-              },
-              "validator_address": {
-                "$ref": "#/definitions/Addr"
-              }
-            },
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
-      },
-      {
-        "type": "object",
-        "required": [
-          "migrate_limit_order"
-        ],
-        "properties": {
-          "migrate_limit_order": {
-            "type": "object",
-            "required": [
-              "vault_id"
-            ],
-            "properties": {
-              "vault_id": {
-                "$ref": "#/definitions/Uint128"
               }
             },
             "additionalProperties": false
@@ -1272,7 +1218,6 @@
             "exchange_contract_address",
             "executors",
             "fee_collectors",
-            "old_staking_router_address",
             "paused",
             "risk_weighted_average_escrow_level",
             "twap_period",
@@ -1310,9 +1255,6 @@
               "items": {
                 "$ref": "#/definitions/FeeCollector"
               }
-            },
-            "old_staking_router_address": {
-              "$ref": "#/definitions/Addr"
             },
             "paused": {
               "type": "boolean"

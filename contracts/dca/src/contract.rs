@@ -1,6 +1,6 @@
 use crate::constants::{
     AFTER_DELEGATION_REPLY_ID, AFTER_FAILED_AUTOMATION_REPLY_ID, AFTER_LIMIT_ORDER_PLACED_REPLY_ID,
-    AFTER_ORDER_MIGRATION_REPLY_ID, AFTER_SWAP_REPLY_ID, FAIL_SILENTLY_REPLY_ID,
+    AFTER_SWAP_REPLY_ID, FAIL_SILENTLY_REPLY_ID,
 };
 use crate::error::ContractError;
 use crate::handlers::cancel_vault::cancel_vault_handler;
@@ -23,8 +23,6 @@ use crate::handlers::get_vaults_by_address::get_vaults_by_address_handler;
 use crate::handlers::handle_failed_automation::handle_failed_automation_handler;
 use crate::handlers::instantiate::instantiate_handler;
 use crate::handlers::migrate::migrate_handler;
-use crate::handlers::migrate_limit_order::{migrate_limit_order, save_new_limit_order_idx};
-use crate::handlers::old_z_delegate_handler::old_z_delegate_handler;
 use crate::handlers::update_config::update_config_handler;
 use crate::handlers::update_swap_adjustment_handler::update_swap_adjustment_handler;
 use crate::handlers::update_vault::update_vault_handler;
@@ -166,12 +164,6 @@ pub fn execute(
             delegator_address,
             validator_address,
         ),
-        ExecuteMsg::OldZDelegate {
-            delegator_address,
-            validator_address,
-            ..
-        } => old_z_delegate_handler(deps.as_ref(), info, delegator_address, validator_address),
-        ExecuteMsg::MigrateLimitOrder { vault_id } => migrate_limit_order(deps, vault_id),
     }
 }
 
@@ -182,7 +174,6 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, Contract
         AFTER_SWAP_REPLY_ID => disburse_funds_handler(deps, &env, reply),
         AFTER_FAILED_AUTOMATION_REPLY_ID => handle_failed_automation_handler(deps, env, reply),
         AFTER_DELEGATION_REPLY_ID => log_delegation_result(reply),
-        AFTER_ORDER_MIGRATION_REPLY_ID => save_new_limit_order_idx(deps, reply),
         FAIL_SILENTLY_REPLY_ID => Ok(Response::new()),
         id => Err(ContractError::CustomError {
             val: format!("unhandled DCA contract reply id: {}", id),

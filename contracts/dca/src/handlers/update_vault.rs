@@ -806,8 +806,7 @@ mod update_vault_tests {
                 base_receive_amount: Uint128::new(2732),
                 multiplier: Decimal::percent(150),
                 increase_only: false,
-            })
-            ,
+            }),
             Some(Uint128::new(436753262)),
         )
         .unwrap_err();
@@ -1215,7 +1214,7 @@ mod update_vault_tests {
                     get_next_target_time(
                         env.block.time,
                         vault.started_at.unwrap_or(env.block.time),
-                        time_interval
+                        time_interval,
                     )
                 )
             }
@@ -1312,7 +1311,7 @@ mod update_vault_tests {
                                     target_time: get_next_target_time(
                                         env.block.time,
                                         vault.started_at.unwrap_or(env.block.time),
-                                        new_time_interval
+                                        new_time_interval,
                                     )
                                 }
                             )

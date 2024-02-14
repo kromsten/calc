@@ -133,7 +133,7 @@ mod tests {
     use super::*;
     use cosmwasm_std::Uint64;
 
-    pub fn assert_expected_next_execution_time(
+    fn assert_expected_next_execution_time(
         last_execution_time: DateTime<Utc>,
         current_time: DateTime<Utc>,
         interval: TimeInterval,

@@ -6,6 +6,7 @@ import { reduce, assoc } from 'ramda';
 import { Config } from './config';
 import RelativeTime from 'dayjs/plugin/relativeTime';
 import fs from 'fs';
+import { Decimal } from '@cosmjs/math';
 dayjs.extend(RelativeTime);
 
 export const getWallet = async (mnemonic: string, prefix: string): Promise<DirectSecp256k1HdWallet> => {
@@ -17,7 +18,7 @@ export const getWallet = async (mnemonic: string, prefix: string): Promise<Direc
 export const createSigningCosmWasmClient = async (config: Config): Promise<SigningCosmWasmClient> => {
   const wallet = await getWallet(config.mnemonic, config.bech32AddressPrefix);
   return await SigningCosmWasmClient.connectWithSigner(config.rpcUrl, wallet, {
-    gasPrice: GasPrice.fromString(`${config.gasPrice}${config.feeDenom}`),
+    gasPrice: new GasPrice(Decimal.fromUserInput(`${config.gasPrice}`, 18) as any, config.feeDenom),
   });
 };
 

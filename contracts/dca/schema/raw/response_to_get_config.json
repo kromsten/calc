@@ -27,7 +27,6 @@
         "exchange_contract_address",
         "executors",
         "fee_collectors",
-        "old_staking_router_address",
         "paused",
         "risk_weighted_average_escrow_level",
         "twap_period",
@@ -65,9 +64,6 @@
           "items": {
             "$ref": "#/definitions/FeeCollector"
           }
-        },
-        "old_staking_router_address": {
-          "$ref": "#/definitions/Addr"
         },
         "paused": {
           "type": "boolean"

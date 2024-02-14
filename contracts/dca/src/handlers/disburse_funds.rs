@@ -172,7 +172,7 @@ mod disburse_funds_tests {
     use std::str::FromStr;
 
     #[test]
-    fn with_succcesful_swap_returns_funds_to_destination() {
+    fn with_successful_swap_returns_funds_to_destination() {
         let mut deps = mock_dependencies();
         let env = mock_env();
         instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
@@ -247,7 +247,7 @@ mod disburse_funds_tests {
     }
 
     #[test]
-    fn with_succcesful_swap_returns_fee_to_fee_collector() {
+    fn with_successful_swap_returns_fee_to_fee_collector() {
         let mut deps = mock_dependencies();
         let env = mock_env();
         instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
@@ -293,7 +293,7 @@ mod disburse_funds_tests {
     }
 
     #[test]
-    fn with_succcesful_swap_returns_fee_to_multiple_fee_collectors() {
+    fn with_successful_swap_returns_fee_to_multiple_fee_collectors() {
         let mut deps = mock_dependencies();
         let env = mock_env();
 
@@ -383,7 +383,7 @@ mod disburse_funds_tests {
     }
 
     #[test]
-    fn with_succcesful_swap_adjusts_vault_balance() {
+    fn with_successful_swap_adjusts_vault_balance() {
         let mut deps = mock_dependencies();
         let env = mock_env();
         instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
@@ -434,7 +434,7 @@ mod disburse_funds_tests {
     }
 
     #[test]
-    fn with_succcesful_swap_adjusts_swapped_amount_stat() {
+    fn with_successful_swap_adjusts_swapped_amount_stat() {
         let mut deps = mock_dependencies();
         let env = mock_env();
         instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
@@ -491,7 +491,7 @@ mod disburse_funds_tests {
     }
 
     #[test]
-    fn with_succcesful_swap_adjusts_received_amount_stat() {
+    fn with_successful_swap_adjusts_received_amount_stat() {
         let mut deps = mock_dependencies();
         let env = mock_env();
         instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
@@ -548,7 +548,7 @@ mod disburse_funds_tests {
     }
 
     #[test]
-    fn with_succcesful_swap_with_escrow_level_escrows_funds() {
+    fn with_successful_swap_with_escrow_level_escrows_funds() {
         let mut deps = mock_dependencies();
         let env = mock_env();
         instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
@@ -655,7 +655,7 @@ mod disburse_funds_tests {
     }
 
     #[test]
-    fn with_succcesful_swap_publishes_dca_execution_completed_event() {
+    fn with_successful_swap_publishes_dca_execution_completed_event() {
         let mut deps = mock_dependencies();
         let env = mock_env();
         instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));
@@ -751,7 +751,7 @@ mod disburse_funds_tests {
     }
 
     #[test]
-    fn with_succcesful_swap_for_non_standard_dca_publishes_execution_completed_event() {
+    fn with_successful_swap_for_non_standard_dca_publishes_execution_completed_event() {
         let mut deps = mock_dependencies();
         let env = mock_env();
         instantiate_contract(deps.as_mut(), env.clone(), mock_info(ADMIN, &[]));

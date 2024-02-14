@@ -69,7 +69,7 @@ pub fn instantiate_dca(
             risk_weighted_average_escrow_level: Decimal::percent(1),
             twap_period: 0,
             default_slippage_tolerance: Decimal::percent(5),
-            old_staking_router_address: addr.clone(),
+            exchange_contract_address: Addr::unchecked("exchange"),
         },
         key,
         Some(admin.parse().unwrap()),
