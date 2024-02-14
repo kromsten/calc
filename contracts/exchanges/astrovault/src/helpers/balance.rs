@@ -1,16 +1,7 @@
 use astrovault::assets::asset::{AssetInfo, Asset};
 use cosmwasm_std::{Addr, Coin, QuerierWrapper, StdResult, QueryRequest, WasmQuery, to_json_binary, Uint128, BalanceResponse, BankQuery};
 use cw20::BalanceResponse as Cw20BalanceResponse;
-use shared::coin::subtract;
 
-pub fn get_balance_delta(
-    querier: QuerierWrapper,
-    address: Addr,
-    old_balance: &Coin,
-) -> StdResult<Coin> {
-    let new_balance = querier.query_balance(address, old_balance.denom.clone())?;
-    subtract(&new_balance, old_balance)
-}
 
 
 pub fn get_asset_balance(
@@ -39,7 +30,8 @@ pub fn get_asset_balance(
 }
 
 
-pub fn to_asset_info(denom: String) -> AssetInfo {
+pub fn to_asset_info(denom: impl Into<String>) -> AssetInfo {
+    let denom = denom.into();
     if denom.starts_with("archway")  ||
         // or length is bigger than 10 characters and it isn't ibc denom'
         (denom.len() > 10 && !denom.starts_with("ibc/")

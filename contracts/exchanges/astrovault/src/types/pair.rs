@@ -1,57 +1,77 @@
-use astrovault::assets::asset::{AssetInfo, Asset};
+use astrovault::assets::asset::AssetInfo;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Uint128};
-use exchange::msg::Pair as ExchangePair;
 
+use super::pool::PoolType;
+use super::route::{Route, PopulatedRoute};
+
+
+/// Represents the type of unnpopulated pair provided on creation or when supplying a custom route
 #[cw_serde]
-pub enum PoolType {
-    Standard,
-    Stable,
-    Ratio
+pub enum PairType {
+    /// Direct pair type.
+    Direct {
+        /// The address of the pool.
+        address: String,
+        /// The type of pool.
+        pool_type: PoolType,
+    },
+    /// Routed pair type.
+    Routed {
+        /// The route for the pair.
+        route: Route,
+    },
 }
 
+/// Represents the type of a populated pair. 
+/// Serving as a wrapper for populated pools and routes for unifying typing 
+#[cw_serde]
+pub enum PopulatedPairType {
+    /// Direct populated pair type.
+    Direct {
+        /// The address of the pool.
+        address: String,
+        /// The type of pool.
+        pool_type: PoolType,
+        /// The index of the base asset.
+        base_index: u32,
+        /// The index of the quote asset.
+        quote_index: u32,
+    },
+    /// Routed populated pair type.
+    Routed {
+        /// The populated route for the pair including pools with the base and quote assets.
+        route: PopulatedRoute,
+    },
+}
 
+/// Unpopulated pair supplied for creation or when supplying a custom route.
 #[cw_serde]
 pub struct Pair {
+    /// Information about the base asset.
     pub base_asset: AssetInfo,
+    /// Information about the quote asset.
     pub quote_asset: AssetInfo,
-    pub address: Addr,
-    pub decimal_delta: i8,
-    pub price_precision: u8,
-    pub pool_type: PoolType,
+    /// The type of pair.
+    pub pair_type: PairType,
 }
 
-
-impl Pair {
-    
-    pub fn assets(&self) -> [AssetInfo; 2] {
-        [self.base_asset.clone(), self.quote_asset.clone()]
-    }
-
-    pub fn denoms(&self) -> [String; 2] {
-        [self.base_asset.to_string(), self.quote_asset.to_string()]
-    }
-
-    pub fn other_asset(&self, swap_asset: &AssetInfo) -> AssetInfo {
-        if self.quote_asset.equal(swap_asset) {
-            self.base_asset.clone()
-        } else {
-            self.quote_asset.clone()
-        }
-    }
-
-}
-
-impl From<Pair> for ExchangePair {
-    fn from(val: Pair) -> Self {
-        ExchangePair {
-            denoms: val.denoms(),
-        }
-    }
-}
-
+/// Populated pair with local information about indeces of the base and quote assets.
+//  Serving as a wrapper for populated pools and routes for unifying typing
 #[cw_serde]
-pub struct PoolResponse {
-    pub assets: [Asset; 2],
-    pub total_share: Uint128,
+pub struct PopulatedPair {
+    /// Information about the base asset.
+    pub base_asset: AssetInfo,
+    /// Information about the quote asset.
+    pub quote_asset: AssetInfo,
+    /// The type of populated pair.
+    pub pair_type: PopulatedPairType,
+}
+
+/// Primarly used for type of explicitely stored pair to simplify the logic 
+#[cw_serde]
+pub enum StoredPairType {
+    /// Direct stored pair type.
+    Direct,
+    /// Routed stored pair type.
+    Routed,
 }

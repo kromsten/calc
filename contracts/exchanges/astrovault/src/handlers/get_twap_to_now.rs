@@ -75,10 +75,6 @@ mod get_twap_to_now_tests {
         )
         .unwrap_err();
 
-        match err {
-            StdError::NotFound { kind } => assert!(kind.starts_with("type: astrovault_calc::types::pair::Pair")),
-            _ => panic!("unexpected error type"),
-        }
-
+        assert_eq!(err, StdError::generic_err("Pair not found"));
     }
 }

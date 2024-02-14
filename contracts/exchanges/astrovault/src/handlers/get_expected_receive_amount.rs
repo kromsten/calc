@@ -1,7 +1,8 @@
 use cosmwasm_std::{Coin, Deps, StdResult};
-use crate::helpers::balance::{coin_to_asset, to_asset_info};
-use crate::helpers::message::pool_swap_simulate;
+use crate::helpers::balance::coin_to_asset;
+use crate::helpers::route::get_route_swap_simulate;
 use crate::state::pairs::find_pair;
+
 
 pub fn get_expected_receive_amount_handler(
     deps: Deps,
@@ -14,18 +15,26 @@ pub fn get_expected_receive_amount_handler(
         [swap_amount.denom.clone(), target_denom.clone()],
     )?;
 
-    let amount = pool_swap_simulate(
-        &deps.querier,
-        pair.address,
-        pair.pool_type,
-        coin_to_asset(swap_amount),
-        to_asset_info(target_denom.clone())
-    )?;
+    let offer_asset = coin_to_asset(swap_amount);
+
+    let amount = if pair.is_pool_pair() {
+        pair.pool().swap_simulation(
+            &deps.querier, 
+            offer_asset,
+        )?
+    }  else {
+        get_route_swap_simulate(
+            deps,
+            pair.route(),
+            offer_asset,
+        )?
+    };
 
     Ok(Coin {
         denom: target_denom,
         amount,
     })
+
 }
 
 #[cfg(test)]
@@ -41,7 +50,7 @@ mod get_expected_receive_amount_handler_tests {
         handlers::get_expected_receive_amount::get_expected_receive_amount_handler,
         state::pairs::save_pair,
         tests::constants::{DENOM_AARCH, DENOM_UUSDC},
-        types::pair::Pair,
+        types::pair::PopulatedPair,
     };
 
     #[test]
@@ -54,13 +63,9 @@ mod get_expected_receive_amount_handler_tests {
                 amount: Uint128::zero()
             },
             DENOM_UUSDC.to_string()
-        );
+        ).unwrap_err();
 
-        match err {
-            Err(StdError::NotFound { kind }) => assert!(kind.starts_with("type: astrovault_calc::types::pair::Pair")),
-            _ => panic!("Unexpected error type"),
-            
-        }
+        assert_eq!(err, StdError::generic_err("Pair not found"));
     }
 
 
@@ -72,7 +77,7 @@ mod get_expected_receive_amount_handler_tests {
             SystemResult::Ok(ContractResult::Err("simulation failed".to_string()))
         });
 
-        let pair = Pair::default();
+        let pair = PopulatedPair::default();
 
         save_pair(deps.as_mut().storage, &pair).unwrap();
 
@@ -108,7 +113,7 @@ mod get_expected_receive_amount_handler_tests {
             ))
         });
 
-        let pair = Pair::default();
+        let pair = PopulatedPair::default();
 
         save_pair(deps.as_mut().storage, &pair).unwrap();
 

@@ -1,5 +1,5 @@
 [workspace]
-members = ["packages/*", "contracts/dca", "contracts/exchanges/*", "e2e/*"]
+members = ["packages/*", "contracts/dca", "contracts/exchanges/*"]
 
 [profile.release]
 opt-level = 3
@@ -12,22 +12,23 @@ panic = 'abort'
 incremental = false
 overflow-checks = true
 
+
 [workspace.dependencies]
-cosmwasm-std = { version = "1.2.6", features = ["stargate"] }
-cosmwasm-schema = "1.1.3"
-cosmwasm-storage = "1.1.3"
-cw-storage-plus = "1.0.1"
-cw-utils = "1.0.2"
-cw2 = "1.0.1"
-cw20 = "1.0.1"
+cosmwasm-std        = { version = "1.2.6", features = ["stargate"] }
+cosmwasm-schema     = "1.1.3"
+cosmwasm-storage    = "1.1.3"
+cw-storage-plus     = "1.0.1"
+cw-utils            = "1.0.2"
+cw2                 = "1.0.1"
+cw20                = "1.0.1"
 
-serde = { version = "1.0.145", default-features = false, features = ["derive"] }
-schemars = "0.8.10"
-thiserror = "1.0.31"
+serde               = { version = "1.0.145", default-features = false, features = ["derive"] }
+schemars            = "0.8.10"
+thiserror           = "1.0.31"
 
-shared = { path = "packages/shared" }
-exchange = { path = "packages/exchange" }
-exchange-macros = { path = "packages/macros" }
+shared              = { path = "packages/shared" }
+exchange            = { path = "packages/exchange" }
+exchange-macros     = { path = "packages/macros" }
 
-dca = { path = "contracts/dca" }
-astrovault-calc = { path = "contracts/exchanges/astrovault" }
+dca                 = { path = "contracts/dca" }
+astrovault-calc     = { path = "contracts/exchanges/astrovault" }

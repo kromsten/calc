@@ -44,7 +44,6 @@ fn merge_variants(metadata: TokenStream, left: TokenStream, right: TokenStream) 
 
 
 
-
 /// Note: `#[exchange_execute]` must be applied _before_ `#[cw_serde]`.
 #[proc_macro_attribute]
 pub fn exchange_execute(metadata: TokenStream, input: TokenStream) -> TokenStream {
@@ -55,6 +54,7 @@ pub fn exchange_execute(metadata: TokenStream, input: TokenStream) -> TokenStrea
             enum Right {
                 Swap {
                     minimum_receive_amount: ::cosmwasm_std::Coin,
+                    route: Option<::cosmwasm_std::Binary>
                 },
                 SubmitOrder {
                     target_price: ::cosmwasm_std::Decimal256,
@@ -86,7 +86,7 @@ pub fn exchange_query(metadata: TokenStream, input: TokenStream) -> TokenStream 
         input,
         quote! {
             enum Right {
-                #[returns(Vec<Pair>)]
+                #[returns(Vec<::exchange::msg::Pair>)]
                 GetPairs {
                     start_after: Option<::exchange::msg::Pair>,
                     limit: Option<u16>,
