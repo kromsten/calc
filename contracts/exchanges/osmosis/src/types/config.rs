@@ -4,6 +4,4 @@ use cosmwasm_std::Addr;
 #[cw_serde]
 pub struct Config {
     pub admin: Addr,
-    // pub dca_contract_address: Addr,
-    // pub limit_order_address: Addr,
 }

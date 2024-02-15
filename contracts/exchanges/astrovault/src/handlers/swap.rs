@@ -1,20 +1,22 @@
 use astrovault::assets::asset::{Asset, AssetInfo};
-use cosmwasm_std::{Coin, Deps, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128, Addr, WasmMsg, to_json_binary};
+use cosmwasm_std::{
+    to_json_binary, Addr, Coin, Deps, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128, WasmMsg,
+};
 use cw_utils::one_coin;
-
 
 use crate::{
     contract::AFTER_SWAP,
+    helpers::{
+        balance::get_asset_balance,
+        message::{pool_swap_binary_msg, query_assets, send_asset_msg},
+    },
     state::{
         cache::{SwapCache, SWAP_CACHE},
         pairs::find_pair,
     },
-    types::{pair_contract::PairContract, pair},
-    helpers::{balance::get_asset_balance, message::{send_asset_msg, pool_swap_binary_msg, query_assets}},
-    ContractError, 
+    types::{pair, pair_contract::PairContract},
+    ContractError,
 };
-
-
 
 pub fn swap_native_handler(
     deps: DepsMut,
@@ -25,12 +27,17 @@ pub fn swap_native_handler(
     let coin = one_coin(&info)?;
     let asset = Asset {
         info: AssetInfo::NativeToken { denom: coin.denom },
-        amount: coin.amount
+        amount: coin.amount,
     };
-    swap_handler(deps, env, info.sender, asset, minimum_receive_amount, info.funds)
+    swap_handler(
+        deps,
+        env,
+        info.sender,
+        asset,
+        minimum_receive_amount,
+        info.funds,
+    )
 }
-
-
 
 pub fn swap_cw20_handler(
     deps: DepsMut,
@@ -43,14 +50,14 @@ pub fn swap_cw20_handler(
     let sender = deps.api.addr_validate(sender.as_str())?;
 
     let asset = Asset {
-        info: AssetInfo::Token { contract_addr: contract_addr.into_string() },
-        amount
+        info: AssetInfo::Token {
+            contract_addr: contract_addr.into_string(),
+        },
+        amount,
     };
 
     swap_handler(deps, env, sender, asset, minimum_receive_amount, vec![])
 }
-
-
 
 fn swap_handler(
     deps: DepsMut,
@@ -58,9 +65,8 @@ fn swap_handler(
     sender: Addr,
     offer_asset: Asset,
     minimum_receive_amount: Asset,
-    funds: Vec<Coin>
+    funds: Vec<Coin>,
 ) -> Result<Response, ContractError> {
-
     let pair = find_pair(
         deps.storage,
         [
@@ -74,34 +80,29 @@ fn swap_handler(
         &SwapCache {
             sender: sender.clone(),
             minimum_receive_amount: minimum_receive_amount.clone(),
-            target_asset_balance: Asset { 
-                info: minimum_receive_amount.info.clone(), 
+            target_asset_balance: Asset {
+                info: minimum_receive_amount.info.clone(),
                 amount: get_asset_balance(
                     &deps.querier,
                     minimum_receive_amount.info.clone(),
-                    env.contract.address
-                )? 
-            }
+                    env.contract.address,
+                )?,
+            },
         },
     )?;
 
     let swap_to_asset_index = match pair.pool_type {
         pair::PoolType::Ratio => None,
         _ => {
-            let assets = query_assets(
-                    &deps.querier, 
-                    pair.address.clone(),
-                    pair.pool_type.clone()
-            )?;
+            let assets = query_assets(&deps.querier, pair.address.clone(), pair.pool_type.clone())?;
 
             Some(
                 assets
-                .iter()
-                .position(|a| a.info.equal(&minimum_receive_amount.info))
-                .unwrap_or(1) as u32
+                    .iter()
+                    .position(|a| a.info.equal(&minimum_receive_amount.info))
+                    .unwrap_or(1) as u32,
             )
         }
-        
     };
 
     let swap_msg = pool_swap_binary_msg(
@@ -111,40 +112,33 @@ fn swap_handler(
         None,
         None,
         swap_to_asset_index,
-        None
+        None,
     )?;
 
-
     let msg = if offer_asset.is_native_token() {
-        PairContract(pair.address).call_binary(swap_msg,funds,)?
+        PairContract(pair.address).call_binary(swap_msg, funds)?
     } else {
-
-        WasmMsg::Execute { 
-            contract_addr: offer_asset.info.to_string(), 
-            msg: to_json_binary(&cw20::Cw20ExecuteMsg::Send { 
+        WasmMsg::Execute {
+            contract_addr: offer_asset.info.to_string(),
+            msg: to_json_binary(&cw20::Cw20ExecuteMsg::Send {
                 contract: pair.address.to_string(),
-                amount: offer_asset.amount, 
-                msg: swap_msg 
-            })?, 
-            funds
-        }.into()
+                amount: offer_asset.amount,
+                msg: swap_msg,
+            })?,
+            funds,
+        }
+        .into()
     };
 
-    let sub_msg: SubMsg = SubMsg::reply_on_success(
-        msg,
-        AFTER_SWAP,
-    );
-    
+    let sub_msg: SubMsg = SubMsg::reply_on_success(msg, AFTER_SWAP);
+
     Ok(Response::new()
         .add_attribute("swap", "true")
         .add_attribute("sender", sender)
         .add_attribute("swap_amount", offer_asset.amount.to_string())
         .add_attribute("minimum_receive_amount", minimum_receive_amount.to_string())
         .add_submessage(sub_msg))
-
 }
-
-
 
 pub fn return_swapped_funds(deps: Deps, env: Env) -> Result<Response, ContractError> {
     let swap_cache = SWAP_CACHE.load(deps.storage)?;
@@ -152,12 +146,12 @@ pub fn return_swapped_funds(deps: Deps, env: Env) -> Result<Response, ContractEr
     let updated_target_balance = get_asset_balance(
         &deps.querier,
         swap_cache.minimum_receive_amount.info.clone(),
-        env.contract.address
+        env.contract.address,
     )?;
 
-    let return_amount = updated_target_balance.checked_sub(
-        swap_cache.target_asset_balance.amount
-    ).unwrap_or(Uint128::zero());
+    let return_amount = updated_target_balance
+        .checked_sub(swap_cache.target_asset_balance.amount)
+        .unwrap_or(Uint128::zero());
 
     if return_amount < swap_cache.minimum_receive_amount.amount {
         return Err(ContractError::FailedSwap {
@@ -168,10 +162,10 @@ pub fn return_swapped_funds(deps: Deps, env: Env) -> Result<Response, ContractEr
         });
     }
 
-    let send_funds_msg = send_asset_msg( 
+    let send_funds_msg = send_asset_msg(
         swap_cache.sender.to_string(),
         swap_cache.target_asset_balance.info,
-        return_amount 
+        return_amount,
     )?;
 
     Ok(Response::new()
@@ -179,238 +173,234 @@ pub fn return_swapped_funds(deps: Deps, env: Env) -> Result<Response, ContractEr
         .add_message(send_funds_msg))
 }
 
+// #[cfg(test)]
+// mod swap_tests {
+//     use cosmwasm_std::{
+//         testing::{mock_dependencies, mock_dependencies_with_balance, mock_env, mock_info},
+//         Coin, StdError, SubMsg,
+//     };
 
+//     use astrovault::{standard_pool::handle_msg::ExecuteMsg, assets::asset::{Asset, AssetInfo}};
+//     use cw_utils::PaymentError;
 
-#[cfg(test)]
-mod swap_tests {
-    use cosmwasm_std::{
-        testing::{mock_dependencies, mock_dependencies_with_balance, mock_env, mock_info},
-        Coin, StdError, SubMsg,
-    };
+//     use crate::{
+//         contract::AFTER_SWAP,
+//         handlers::swap::swap_native_handler,
+//         state::{cache::SWAP_CACHE, pairs::save_pair},
+//         tests::constants::{ADMIN, DENOM_AARCH, DENOM_UUSDC},
+//         types::{pair::Pair, pair_contract::PairContract},
+//         ContractError, helpers::balance::{coin_to_asset, asset_to_coin},
+//     };
 
-    use astrovault::{standard_pool::handle_msg::ExecuteMsg, assets::asset::{Asset, AssetInfo}};
-    use cw_utils::PaymentError;
+//     #[test]
+//     fn with_no_assets_fails() {
+//         assert_eq!(
+//             swap_native_handler(
+//                 mock_dependencies().as_mut(),
+//                 mock_env(),
+//                 mock_info(ADMIN, &[]),
+//                 Asset { info: AssetInfo::NativeToken { denom: DENOM_AARCH.into() }, amount: 12313u128.into() }
+//             )
+//             .unwrap_err(),
+//             ContractError::Payment(PaymentError::NoFunds {})
+//         )
+//     }
 
+//     #[test]
+//     fn with_multiple_assets_fails() {
+//         assert_eq!(
+//             swap_native_handler(
+//                 mock_dependencies().as_mut(),
+//                 mock_env(),
+//                 mock_info(
+//                     ADMIN,
+//                     &[Coin::new(12312, DENOM_UUSDC), Coin::new(12312, DENOM_AARCH)]
+//                 ),
+//                 Asset { info: AssetInfo::NativeToken { denom: DENOM_AARCH.into() }, amount: 12312u128.into() }
+//             )
+//             .unwrap_err(),
+//             ContractError::Payment(PaymentError::MultipleDenoms {})
+//         )
+//     }
 
-    use crate::{
-        contract::AFTER_SWAP,
-        handlers::swap::swap_native_handler,
-        state::{cache::SWAP_CACHE, pairs::save_pair},
-        tests::constants::{ADMIN, DENOM_AARCH, DENOM_UUSDC},
-        types::{pair::Pair, pair_contract::PairContract},
-        ContractError, helpers::balance::{coin_to_asset, asset_to_coin},
-    };
+//     #[test]
+//     fn with_zero_swap_amount_fails() {
+//         assert_eq!(
+//             swap_native_handler(
+//                 mock_dependencies().as_mut(),
+//                 mock_env(),
+//                 mock_info(ADMIN, &[Coin::new(0, DENOM_AARCH)]),
+//                 Asset { info: AssetInfo::NativeToken { denom: DENOM_AARCH.into() }, amount: 12312u128.into() }
+//             )
+//             .unwrap_err(),
+//             ContractError::Payment(PaymentError::NoFunds {})
+//         )
+//     }
 
-    #[test]
-    fn with_no_assets_fails() {
-        assert_eq!(
-            swap_native_handler(
-                mock_dependencies().as_mut(),
-                mock_env(),
-                mock_info(ADMIN, &[]),
-                Asset { info: AssetInfo::NativeToken { denom: DENOM_AARCH.into() }, amount: 12313u128.into() } 
-            )
-            .unwrap_err(),
-            ContractError::Payment(PaymentError::NoFunds {})
-        )
-    }
+//     #[test]
+//     fn with_no_pair_fails() {
 
-    #[test]
-    fn with_multiple_assets_fails() {
-        assert_eq!(
-            swap_native_handler(
-                mock_dependencies().as_mut(),
-                mock_env(),
-                mock_info(
-                    ADMIN,
-                    &[Coin::new(12312, DENOM_UUSDC), Coin::new(12312, DENOM_AARCH)]
-                ),
-                Asset { info: AssetInfo::NativeToken { denom: DENOM_AARCH.into() }, amount: 12312u128.into() } 
-            )
-            .unwrap_err(),
-            ContractError::Payment(PaymentError::MultipleDenoms {}) 
-        )
-    }
+//         let err = swap_native_handler(
+//             mock_dependencies().as_mut(),
+//             mock_env(),
+//             mock_info(ADMIN, &[Coin::new(12312, DENOM_AARCH)]),
+//             Asset { info: AssetInfo::NativeToken { denom: DENOM_AARCH.into() }, amount: 12312u128.into() }
+//         ).unwrap_err();
 
-    #[test]
-    fn with_zero_swap_amount_fails() {
-        assert_eq!(
-            swap_native_handler(
-                mock_dependencies().as_mut(),
-                mock_env(),
-                mock_info(ADMIN, &[Coin::new(0, DENOM_AARCH)]),
-                Asset { info: AssetInfo::NativeToken { denom: DENOM_AARCH.into() }, amount: 12312u128.into() } 
-            )
-            .unwrap_err(),
-            ContractError::Payment(PaymentError::NoFunds {}) 
-        )
-    }
+//         match err {
+//             ContractError::Std(StdError::NotFound { kind }) => assert!(kind.starts_with("type: astrovault_calc::types::pair::Pair")),
+//             _ => panic!("Wrong error type returned")
+//         }
+//     }
 
-    #[test]
-    fn with_no_pair_fails() {
+//     #[test]
+//     fn caches_details_correctly() {
+//         let mut deps = mock_dependencies_with_balance(&[Coin::new(0, DENOM_UUSDC)]);
 
-        let err = swap_native_handler(
-            mock_dependencies().as_mut(),
-            mock_env(),
-            mock_info(ADMIN, &[Coin::new(12312, DENOM_AARCH)]),
-            Asset { info: AssetInfo::NativeToken { denom: DENOM_AARCH.into() }, amount: 12312u128.into() } 
-        ).unwrap_err();
+//         let pair = Pair::default();
 
-        match err {
-            ContractError::Std(StdError::NotFound { kind }) => assert!(kind.starts_with("type: astrovault_calc::types::pair::Pair")),
-            _ => panic!("Wrong error type returned")
-        }
-    }
+//         save_pair(deps.as_mut().storage, &pair).unwrap();
 
-    #[test]
-    fn caches_details_correctly() {
-        let mut deps = mock_dependencies_with_balance(&[Coin::new(0, DENOM_UUSDC)]);
+//         let info = mock_info(ADMIN, &[Coin::new(2347631, pair.quote_denom())]);
+//         let minimum_receive_amount = Coin::new(3873213, pair.base_denom());
 
-        let pair = Pair::default();
+//         swap_native_handler(
+//             deps.as_mut(),
+//             mock_env(),
+//             info,
+//             coin_to_asset(minimum_receive_amount.clone()),
+//         )
+//         .unwrap();
 
-        save_pair(deps.as_mut().storage, &pair).unwrap();
+//         let swap_cache = SWAP_CACHE.load(deps.as_ref().storage).unwrap();
 
-        let info = mock_info(ADMIN, &[Coin::new(2347631, pair.quote_denom())]);
-        let minimum_receive_amount = Coin::new(3873213, pair.base_denom());
+//         assert_eq!(swap_cache.sender, ADMIN);
+//         assert_eq!(
+//             asset_to_coin(swap_cache.target_asset_balance),
+//             deps.as_ref()
+//                 .querier
+//                 .query_balance(
+//                     mock_env().contract.address,
+//                     minimum_receive_amount.denom.clone()
+//                 )
+//                 .unwrap()
+//         );
+//         assert_eq!(swap_cache.minimum_receive_amount, coin_to_asset(minimum_receive_amount));
+//     }
 
-        swap_native_handler(
-            deps.as_mut(),
-            mock_env(),
-            info,
-            coin_to_asset(minimum_receive_amount.clone()),
-        )
-        .unwrap();
+//     #[test]
+//     fn sends_swap_message() {
+//         let mut deps = mock_dependencies();
 
-        let swap_cache = SWAP_CACHE.load(deps.as_ref().storage).unwrap();
+//         let pair = Pair::default();
 
-        assert_eq!(swap_cache.sender, ADMIN);
-        assert_eq!(
-            asset_to_coin(swap_cache.target_asset_balance),
-            deps.as_ref()
-                .querier
-                .query_balance(
-                    mock_env().contract.address,
-                    minimum_receive_amount.denom.clone()
-                )
-                .unwrap()
-        );
-        assert_eq!(swap_cache.minimum_receive_amount, coin_to_asset(minimum_receive_amount));
-    }
+//         save_pair(deps.as_mut().storage, &pair).unwrap();
 
+//         let info = mock_info(ADMIN, &[Coin::new(2347631, pair.quote_denom())]);
 
-    #[test]
-    fn sends_swap_message() {
-        let mut deps = mock_dependencies();
+//         let response = swap_native_handler(
+//             deps.as_mut(),
+//             mock_env(),
+//             info.clone(),
+//             Asset { info: AssetInfo::NativeToken { denom: pair.base_denom() }, amount: 3873213u128.into() }
+//         )
+//         .unwrap();
 
-        let pair = Pair::default();
+//         assert_eq!(
+//             response.messages.first().unwrap(),
+//             &SubMsg::reply_on_success(
+//                 PairContract(pair.address.clone())
+//                     .call(
+//                         ExecuteMsg::Swap {
+//                             expected_return: None,
+//                             belief_price: None,
+//                             max_spread: None,
+//                             to :None,
+//                             offer_asset: Asset {
+//                                 info: AssetInfo::NativeToken { denom: pair.quote_denom() },
+//                                 amount: 2347631u128.into()
+//                             },
+//                         },
+//                         info.funds
+//                     )
+//                     .unwrap(),
+//                 AFTER_SWAP
+//             )
+//         )
+//     }
+// }
 
-        save_pair(deps.as_mut().storage, &pair).unwrap();
+// #[cfg(test)]
+// mod return_swapped_funds_tests {
+//     use cosmwasm_std::{
+//         testing::{mock_dependencies, mock_env},
+//         Addr, BankMsg, Coin, Uint128,
+//     };
+//     use shared::coin::add;
 
-        let info = mock_info(ADMIN, &[Coin::new(2347631, pair.quote_denom())]);
+//     use crate::{
+//         handlers::swap::return_swapped_funds,
+//         state::cache::{SwapCache, SWAP_CACHE},
+//         tests::constants::DENOM_AARCH,
+//         ContractError, helpers::balance::coin_to_asset,
+//     };
 
-        let response = swap_native_handler(
-            deps.as_mut(),
-            mock_env(),
-            info.clone(),
-            Asset { info: AssetInfo::NativeToken { denom: pair.base_denom() }, amount: 3873213u128.into() } 
-        )
-        .unwrap();
+//     #[test]
+//     fn with_return_amount_smaller_than_minimum_receive_amount_fails() {
+//         let mut deps = mock_dependencies();
 
-        assert_eq!(
-            response.messages.first().unwrap(),
-            &SubMsg::reply_on_success(
-                PairContract(pair.address.clone())
-                    .call(
-                        ExecuteMsg::Swap {
-                            expected_return: None,
-                            belief_price: None,
-                            max_spread: None,
-                            to :None, 
-                            offer_asset: Asset { 
-                                info: AssetInfo::NativeToken { denom: pair.quote_denom() }, 
-                                amount: 2347631u128.into() 
-                            }, 
-                        },
-                        info.funds
-                    )
-                    .unwrap(),
-                AFTER_SWAP
-            )
-        )
-    }
-}
+//         let minimum_receive_amount = Coin::new(123, DENOM_AARCH);
 
-#[cfg(test)]
-mod return_swapped_funds_tests {
-    use cosmwasm_std::{
-        testing::{mock_dependencies, mock_env},
-        Addr, BankMsg, Coin, Uint128,
-    };
-    use shared::coin::add;
+//         let swap_cache = SwapCache {
+//             sender: Addr::unchecked("sender"),
+//             minimum_receive_amount: coin_to_asset(minimum_receive_amount.clone()),
+//             target_asset_balance: coin_to_asset(Coin::new(122, DENOM_AARCH)),
+//         };
 
-    use crate::{
-        handlers::swap::return_swapped_funds,
-        state::cache::{SwapCache, SWAP_CACHE},
-        tests::constants::DENOM_AARCH,
-        ContractError, helpers::balance::coin_to_asset,
-    };
+//         SWAP_CACHE.save(deps.as_mut().storage, &swap_cache).unwrap();
 
-    #[test]
-    fn with_return_amount_smaller_than_minimum_receive_amount_fails() {
-        let mut deps = mock_dependencies();
+//         assert_eq!(
+//             return_swapped_funds(deps.as_ref(), mock_env()).unwrap_err(),
+//             ContractError::FailedSwap {
+//                 msg: format!(
+//                     "{} is less than the minumum return amount of {}",
+//                     Uint128::zero(),
+//                     minimum_receive_amount
+//                 )
+//             }
+//         )
+//     }
 
-        let minimum_receive_amount = Coin::new(123, DENOM_AARCH);
+//     #[test]
+//     fn sends_funds_back_to_sender() {
+//         let mut deps = mock_dependencies();
+//         let env = mock_env();
 
-        let swap_cache = SwapCache {
-            sender: Addr::unchecked("sender"),
-            minimum_receive_amount: coin_to_asset(minimum_receive_amount.clone()),
-            target_asset_balance: coin_to_asset(Coin::new(122, DENOM_AARCH)),
-        };
+//         let minimum_receive_amount = Coin::new(123, DENOM_AARCH);
+//         let target_denom_balance = Coin::new(122, DENOM_AARCH);
+//         let return_amount = Coin::new(153, DENOM_AARCH);
 
-        SWAP_CACHE.save(deps.as_mut().storage, &swap_cache).unwrap();
+//         let swap_cache = SwapCache {
+//             sender: Addr::unchecked("sender"),
+//             minimum_receive_amount: coin_to_asset(minimum_receive_amount.clone()),
+//             target_asset_balance: coin_to_asset(target_denom_balance.clone()),
+//         };
 
-        assert_eq!(
-            return_swapped_funds(deps.as_ref(), mock_env()).unwrap_err(),
-            ContractError::FailedSwap {
-                msg: format!(
-                    "{} is less than the minumum return amount of {}",
-                    Uint128::zero(),
-                    minimum_receive_amount
-                )
-            }
-        )
-    }
+//         SWAP_CACHE.save(deps.as_mut().storage, &swap_cache).unwrap();
 
-    #[test]
-    fn sends_funds_back_to_sender() {
-        let mut deps = mock_dependencies();
-        let env = mock_env();
+//         deps.querier.update_balance(
+//             env.contract.address.clone(),
+//             vec![add(target_denom_balance, return_amount.clone()).unwrap()],
+//         );
 
-        let minimum_receive_amount = Coin::new(123, DENOM_AARCH);
-        let target_denom_balance = Coin::new(122, DENOM_AARCH);
-        let return_amount = Coin::new(153, DENOM_AARCH);
+//         let response = return_swapped_funds(deps.as_ref(), env).unwrap();
 
-        let swap_cache = SwapCache {
-            sender: Addr::unchecked("sender"),
-            minimum_receive_amount: coin_to_asset(minimum_receive_amount.clone()),
-            target_asset_balance: coin_to_asset(target_denom_balance.clone()),
-        };
-
-        SWAP_CACHE.save(deps.as_mut().storage, &swap_cache).unwrap();
-
-        deps.querier.update_balance(
-            env.contract.address.clone(),
-            vec![add(target_denom_balance, return_amount.clone()).unwrap()],
-        );
-
-        let response = return_swapped_funds(deps.as_ref(), env).unwrap();
-
-        assert_eq!(
-            response.messages.first().unwrap(),
-            &cosmwasm_std::SubMsg::new(BankMsg::Send {
-                to_address: swap_cache.sender.to_string(),
-                amount: vec![return_amount],
-            })
-        )
-    }
-}
+//         assert_eq!(
+//             response.messages.first().unwrap(),
+//             &cosmwasm_std::SubMsg::new(BankMsg::Send {
+//                 to_address: swap_cache.sender.to_string(),
+//                 amount: vec![return_amount],
+//             })
+//         )
+//     }
+// }

@@ -1,6 +1,5 @@
-use cosmwasm_std::Addr;
-
 use crate::types::{config::Config, pair::Pair};
+use cosmwasm_std::Addr;
 
 use super::constants::{ADMIN, DENOM_STAKE, DENOM_UOSMO};
 
@@ -18,8 +17,6 @@ impl Default for Config {
     fn default() -> Self {
         Config {
             admin: Addr::unchecked(ADMIN),
-            // dca_contract_address: Addr::unchecked(DCA_CONTRACT_ADDRESS),
-            // limit_order_address: Addr::unchecked(LIMIT_ORDER_ADDRESS),
         }
     }
 }

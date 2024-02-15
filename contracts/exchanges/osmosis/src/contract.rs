@@ -19,7 +19,7 @@ use crate::handlers::submit_order::{return_order_idx, submit_order_handler};
 use crate::handlers::swap::{return_swapped_funds, swap_handler};
 use crate::handlers::withdraw_order::{return_withdrawn_funds, withdraw_order_handler};
 use crate::msg::{InstantiateMsg, InternalExternalMsg, InternalQueryMsg, MigrateMsg};
-use crate::state::config::{get_config, update_config};
+use crate::state::config::update_config;
 use crate::types::config::Config;
 
 /*
@@ -29,22 +29,8 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 */
 
 #[entry_point]
-pub fn migrate(deps: DepsMut, _: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
-    // deps.api.addr_validate(msg.dca_contract_address.as_ref())?;
-    // deps.api.addr_validate(msg.limit_order_address.as_ref())?;
-    let config = get_config(deps.storage)?;
-    update_config(
-        deps.storage,
-        Config {
-            // dca_contract_address: msg.dca_contract_address.clone(),
-            // limit_order_address: msg.limit_order_address.clone(),
-            ..config
-        },
-    )?;
-    Ok(Response::new()
-        .add_attribute("migrate", "true")
-        .add_attribute("dca_contract_address", msg.dca_contract_address)
-        .add_attribute("limit_order_address", msg.limit_order_address))
+pub fn migrate(_: DepsMut, _: Env, _: MigrateMsg) -> Result<Response, ContractError> {
+    Ok(Response::new().add_attribute("migrate", "true"))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -55,21 +41,16 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     deps.api.addr_validate(msg.admin.as_ref())?;
-    // deps.api.addr_validate(msg.limit_order_address.as_ref())?;
     update_config(
         deps.storage,
         Config {
             admin: msg.admin.clone(),
-            // dca_contract_address: msg.dc_contract_address.clone(),
-            // limit_order_address: msg.limit_order_address.clone(),
         },
     )?;
 
     Ok(Response::new()
         .add_attribute("instantiate", "true")
-        .add_attribute("admin", msg.admin)
-        .add_attribute("dca_contract_address", msg.dc_contract_address)
-        .add_attribute("limit_order_address", msg.limit_order_address))
+        .add_attribute("admin", msg.admin))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
