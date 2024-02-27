@@ -1,26 +1,25 @@
-use cosmwasm_std::{Coin, Deps, StdResult};
-use crate::helpers::balance::{coin_to_asset, to_asset_info};
-use crate::helpers::message::pool_swap_simulate;
+use crate::helpers::balance::coin_to_asset;
+use crate::helpers::route::get_route_swap_simulate;
 use crate::state::pairs::find_pair;
+use cosmwasm_std::{Coin, Deps, StdResult};
 
 pub fn get_expected_receive_amount_handler(
     deps: Deps,
     swap_amount: Coin,
     target_denom: String,
 ) -> StdResult<Coin> {
-
     let pair = find_pair(
         deps.storage,
         [swap_amount.denom.clone(), target_denom.clone()],
     )?;
 
-    let amount = pool_swap_simulate(
-        &deps.querier,
-        pair.address,
-        pair.pool_type,
-        coin_to_asset(swap_amount),
-        to_asset_info(target_denom.clone())
-    )?;
+    let offer_asset = coin_to_asset(swap_amount);
+
+    let amount = if pair.is_pool_pair() {
+        pair.pool().swap_simulation(&deps.querier, offer_asset)?
+    } else {
+        get_route_swap_simulate(deps, pair.route(), offer_asset)?
+    };
 
     Ok(Coin {
         denom: target_denom,
@@ -31,8 +30,8 @@ pub fn get_expected_receive_amount_handler(
 #[cfg(test)]
 mod get_expected_receive_amount_handler_tests {
     use cosmwasm_std::{
-        testing::mock_dependencies, Coin, ContractResult, StdError, SystemResult,
-        Uint128, to_json_binary,
+        testing::mock_dependencies, to_json_binary, Coin, ContractResult, StdError, SystemResult,
+        Uint128,
     };
 
     use astrovault::standard_pool::query_msg::SimulationResponse;
@@ -41,28 +40,23 @@ mod get_expected_receive_amount_handler_tests {
         handlers::get_expected_receive_amount::get_expected_receive_amount_handler,
         state::pairs::save_pair,
         tests::constants::{DENOM_AARCH, DENOM_UUSDC},
-        types::pair::Pair,
+        types::pair::PopulatedPair,
     };
 
     #[test]
     fn for_missing_pair_fails() {
-
         let err = get_expected_receive_amount_handler(
             mock_dependencies().as_ref(),
             Coin {
                 denom: DENOM_AARCH.to_string(),
-                amount: Uint128::zero()
+                amount: Uint128::zero(),
             },
-            DENOM_UUSDC.to_string()
-        );
+            DENOM_UUSDC.to_string(),
+        )
+        .unwrap_err();
 
-        match err {
-            Err(StdError::NotFound { kind }) => assert!(kind.starts_with("type: astrovault_calc::types::pair::Pair")),
-            _ => panic!("Unexpected error type"),
-            
-        }
+        assert_eq!(err, StdError::generic_err("Pair not found"));
     }
-
 
     #[test]
     fn for_failed_simulation_fails() {
@@ -72,7 +66,7 @@ mod get_expected_receive_amount_handler_tests {
             SystemResult::Ok(ContractResult::Err("simulation failed".to_string()))
         });
 
-        let pair = Pair::default();
+        let pair = PopulatedPair::default();
 
         save_pair(deps.as_mut().storage, &pair).unwrap();
 
@@ -108,7 +102,7 @@ mod get_expected_receive_amount_handler_tests {
             ))
         });
 
-        let pair = Pair::default();
+        let pair = PopulatedPair::default();
 
         save_pair(deps.as_mut().storage, &pair).unwrap();
 

@@ -1,5 +1,26 @@
 use cosmwasm_std::{Coin, StdError, StdResult, Uint128};
 
+pub fn one_from(funds: Vec<Coin>) -> StdResult<Coin> {
+    match funds.len() {
+        0 => Err(StdError::GenericErr {
+            msg: "No funds sent".to_string(),
+        }),
+        1 => {
+            let coin = &funds[0];
+            if coin.amount.is_zero() {
+                Err(StdError::GenericErr {
+                    msg: "No funds sent".to_string(),
+                })
+            } else {
+                Ok(coin.clone())
+            }
+        }
+        _ => Err(StdError::GenericErr {
+            msg: "Sent more than one denomination".to_string(),
+        }),
+    }
+}
+
 pub fn add(this: Coin, other: Coin) -> StdResult<Coin> {
     if this.denom != other.denom {
         return Err(StdError::generic_err(format!(

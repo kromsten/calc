@@ -1,57 +1,56 @@
-use astrovault::assets::asset::{AssetInfo, Asset};
+use astrovault::assets::asset::AssetInfo;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Uint128};
-use exchange::msg::Pair as ExchangePair;
 
+use super::pool::PoolType;
+use super::route::{PopulatedRoute, Route};
+
+/// Represents the type of unpopulated pair provided on creation or when supplying a custom route
 #[cw_serde]
-pub enum PoolType {
-    Standard,
-    Stable,
-    Ratio
+pub enum PairType {
+    Direct {
+        address: String,
+        pool_type: PoolType,
+    },
+    Routed {
+        route: Route,
+    },
 }
 
+/// Represents the type of a populated pair.
+/// Serving as a wrapper for populated pools and routes for unifying typing
+#[cw_serde]
+pub enum PopulatedPairType {
+    Direct {
+        address: String,
+        pool_type: PoolType,
+        base_index: u32,
+        quote_index: u32,
+    },
+    Routed {
+        route: PopulatedRoute,
+    },
+}
 
+/// Unpopulated pair supplied for creation or when supplying a custom route.
 #[cw_serde]
 pub struct Pair {
     pub base_asset: AssetInfo,
     pub quote_asset: AssetInfo,
-    pub address: Addr,
-    pub decimal_delta: i8,
-    pub price_precision: u8,
-    pub pool_type: PoolType,
+    pub pair_type: PairType,
 }
 
-
-impl Pair {
-    
-    pub fn assets(&self) -> [AssetInfo; 2] {
-        [self.base_asset.clone(), self.quote_asset.clone()]
-    }
-
-    pub fn denoms(&self) -> [String; 2] {
-        [self.base_asset.to_string(), self.quote_asset.to_string()]
-    }
-
-    pub fn other_asset(&self, swap_asset: &AssetInfo) -> AssetInfo {
-        if self.quote_asset.equal(swap_asset) {
-            self.base_asset.clone()
-        } else {
-            self.quote_asset.clone()
-        }
-    }
-
-}
-
-impl From<Pair> for ExchangePair {
-    fn from(val: Pair) -> Self {
-        ExchangePair {
-            denoms: val.denoms(),
-        }
-    }
-}
-
+/// Populated pair with local information about indices of the base and quote assets.
+//  Serving as a wrapper for populated pools and routes for unifying typing
 #[cw_serde]
-pub struct PoolResponse {
-    pub assets: [Asset; 2],
-    pub total_share: Uint128,
+pub struct PopulatedPair {
+    pub base_asset: AssetInfo,
+    pub quote_asset: AssetInfo,
+    pub pair_type: PopulatedPairType,
+}
+
+/// Primarily used for type of explicitly stored pair to simplify the logic
+#[cw_serde]
+pub enum StoredPairType {
+    Direct,
+    Routed,
 }

@@ -1,11 +1,3 @@
-#[cfg(not(feature = "library"))]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    from_json, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
-};
-use exchange::msg::{ExecuteMsg, QueryMsg};
-// use cw2::set_contract_version;
-
 use crate::error::ContractError;
 use crate::handlers::create_pairs::create_pairs_handler;
 use crate::handlers::delete_pair::delete_pairs_handler;
@@ -18,9 +10,15 @@ use crate::handlers::retract_order::{retract_order_handler, return_retracted_fun
 use crate::handlers::submit_order::{return_order_idx, submit_order_handler};
 use crate::handlers::swap::{return_swapped_funds, swap_handler};
 use crate::handlers::withdraw_order::{return_withdrawn_funds, withdraw_order_handler};
-use crate::msg::{InstantiateMsg, InternalExternalMsg, InternalQueryMsg, MigrateMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::config::update_config;
 use crate::types::config::Config;
+#[cfg(not(feature = "library"))]
+use cosmwasm_std::entry_point;
+use cosmwasm_std::{
+    from_json, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+};
+use shared::cw20::from_cw20;
 
 /*
 // version info for migration info
@@ -61,6 +59,8 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
+        ExecuteMsg::CreatePairs { pairs } => create_pairs_handler(deps, info, pairs),
+        ExecuteMsg::DeletePairs { pairs } => delete_pairs_handler(deps, info, pairs),
         ExecuteMsg::Swap {
             minimum_receive_amount,
             route,
@@ -75,10 +75,19 @@ pub fn execute(
         ExecuteMsg::WithdrawOrder { order_idx, denoms } => {
             withdraw_order_handler(deps, env, info, order_idx, denoms)
         }
-        ExecuteMsg::InternalMsg { msg } => match from_json(&msg).unwrap() {
-            InternalExternalMsg::CreatePairs { pairs } => create_pairs_handler(deps, info, pairs),
-            InternalExternalMsg::DeletePairs { pairs } => delete_pairs_handler(deps, info, pairs),
-        },
+        ExecuteMsg::Receive(receive_msg) => {
+            let info = from_cw20(&deps.as_ref(), info, receive_msg.clone())?;
+            let msg = from_json(receive_msg.msg)?;
+
+            match msg {
+                ExecuteMsg::Receive(_) => {
+                    Err(ContractError::Std(cosmwasm_std::StdError::GenericErr {
+                        msg: "nested receive not allowed".to_string(),
+                    }))
+                }
+                _ => execute(deps, env, info, msg),
+            }
+        }
     }
 }
 
@@ -114,11 +123,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             target_denom,
             route,
         )?),
-        QueryMsg::InternalQuery { msg } => match from_json(&msg).unwrap() {
-            InternalQueryMsg::GetPairs { start_after, limit } => {
-                to_json_binary(&get_pairs_internal_handler(deps, start_after, limit)?)
-            }
-        },
+        QueryMsg::Pairs { start_after, limit } => {
+            to_json_binary(&get_pairs_internal_handler(deps, start_after, limit)?)
+        }
     }
 }
 

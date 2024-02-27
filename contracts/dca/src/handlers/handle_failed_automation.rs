@@ -7,7 +7,8 @@ use crate::{
     },
     types::event::{EventBuilder, EventData},
 };
-use cosmwasm_std::{BankMsg, DepsMut, Env, Reply, Response, SubMsg, SubMsgResult};
+use cosmwasm_std::{DepsMut, Env, Reply, Response, SubMsg, SubMsgResult};
+use shared::cw20::into_bank_msg;
 
 pub fn handle_failed_automation_handler(
     deps: DepsMut,
@@ -41,10 +42,11 @@ pub fn handle_failed_automation_handler(
 
             Response::new()
                 .add_attribute(format!("destination_msg_{}", destination_num), "failed")
-                .add_submessage(SubMsg::new(BankMsg::Send {
-                    to_address: vault.owner.to_string(),
-                    amount: entry.funds,
-                }))
+                .add_submessage(SubMsg::new(into_bank_msg(
+                    deps.api,
+                    vault.owner.as_ref(),
+                    entry.funds,
+                )?))
         }
     })
 }
@@ -108,7 +110,13 @@ mod handle_failed_automation_handler_tests {
             },
         );
 
-        get_disbursement_messages(deps.as_mut().storage, &vault, vault.swap_amount).unwrap();
+        get_disbursement_messages(
+            &deps.api.clone(),
+            deps.as_mut().storage,
+            &vault,
+            vault.swap_amount,
+        )
+        .unwrap();
 
         handle_failed_automation_handler(
             deps.as_mut(),
@@ -183,7 +191,13 @@ mod handle_failed_automation_handler_tests {
             },
         );
 
-        get_disbursement_messages(deps.as_mut().storage, &vault, vault.swap_amount).unwrap();
+        get_disbursement_messages(
+            &deps.api.clone(),
+            deps.as_mut().storage,
+            &vault,
+            vault.swap_amount,
+        )
+        .unwrap();
 
         let response = handle_failed_automation_handler(
             deps.as_mut(),
@@ -235,7 +249,13 @@ mod handle_failed_automation_handler_tests {
             },
         );
 
-        get_disbursement_messages(deps.as_mut().storage, &vault, vault.swap_amount).unwrap();
+        get_disbursement_messages(
+            &deps.api.clone(),
+            deps.as_mut().storage,
+            &vault,
+            vault.swap_amount,
+        )
+        .unwrap();
 
         handle_failed_automation_handler(
             deps.as_mut(),
@@ -316,7 +336,13 @@ mod handle_failed_automation_handler_tests {
             },
         );
 
-        get_disbursement_messages(deps.as_mut().storage, &vault, vault.swap_amount).unwrap();
+        get_disbursement_messages(
+            &deps.api.clone(),
+            deps.as_mut().storage,
+            &vault,
+            vault.swap_amount,
+        )
+        .unwrap();
 
         handle_failed_automation_handler(
             deps.as_mut(),
@@ -402,7 +428,13 @@ mod handle_failed_automation_handler_tests {
             },
         );
 
-        get_disbursement_messages(deps.as_mut().storage, &vault, vault.swap_amount).unwrap();
+        get_disbursement_messages(
+            &deps.api.clone(),
+            deps.as_mut().storage,
+            &vault,
+            vault.swap_amount,
+        )
+        .unwrap();
 
         let response = handle_failed_automation_handler(
             deps.as_mut(),

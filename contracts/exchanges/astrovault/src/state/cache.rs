@@ -10,5 +10,4 @@ pub struct SwapCache {
     pub target_asset_balance: Asset,
 }
 
-
 pub const SWAP_CACHE: Item<SwapCache> = Item::new("swap_cache_v1");

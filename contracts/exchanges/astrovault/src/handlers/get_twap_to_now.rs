@@ -1,9 +1,8 @@
-use cosmwasm_std::{Decimal256, Deps, StdError, StdResult, Coin};
+use cosmwasm_std::{Coin, Decimal256, Deps, StdError, StdResult};
 
 use super::get_expected_receive_amount::get_expected_receive_amount_handler;
 
-pub const AMOUNT_TO_SIMULATE_TWAP : u128 = 1_000_000u128;
-
+pub const AMOUNT_TO_SIMULATE_TWAP: u128 = 1_000_000u128;
 
 pub fn get_twap_to_now_handler(
     deps: Deps,
@@ -19,30 +18,23 @@ pub fn get_twap_to_now_handler(
     }
 
     let coin = get_expected_receive_amount_handler(
-        deps, 
+        deps,
         Coin {
             denom: swap_denom,
-            amount: AMOUNT_TO_SIMULATE_TWAP.into()
+            amount: AMOUNT_TO_SIMULATE_TWAP.into(),
         },
-        target_denom
+        target_denom,
     )?;
 
-    
-    Ok(
-        Decimal256::from_ratio(
-            AMOUNT_TO_SIMULATE_TWAP,
-            coin.amount.u128(), 
-        )
-        
-    )
+    Ok(Decimal256::from_ratio(
+        AMOUNT_TO_SIMULATE_TWAP,
+        coin.amount.u128(),
+    ))
 }
-
 
 #[cfg(test)]
 mod get_twap_to_now_tests {
-    use cosmwasm_std::{
-        testing::mock_dependencies, StdError,
-    };
+    use cosmwasm_std::{testing::mock_dependencies, StdError};
 
     use crate::{
         handlers::get_twap_to_now::get_twap_to_now_handler,
@@ -63,22 +55,16 @@ mod get_twap_to_now_tests {
         )
     }
 
-
     #[test]
     fn with_no_pair_for_denoms_fails() {
-
         let err = get_twap_to_now_handler(
             mock_dependencies().as_ref(),
             DENOM_AARCH.to_string(),
             DENOM_UUSDC.to_string(),
-            0
+            0,
         )
         .unwrap_err();
 
-        match err {
-            StdError::NotFound { kind } => assert!(kind.starts_with("type: astrovault_calc::types::pair::Pair")),
-            _ => panic!("unexpected error type"),
-        }
-
+        assert_eq!(err, StdError::generic_err("Pair not found"));
     }
 }

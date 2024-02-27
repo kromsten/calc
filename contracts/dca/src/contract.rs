@@ -28,11 +28,13 @@ use crate::handlers::update_swap_adjustment_handler::update_swap_adjustment_hand
 use crate::handlers::update_vault::update_vault_handler;
 use crate::handlers::z_delegate::{log_delegation_result, z_delegate_handler};
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use cosmwasm_std::from_json;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{
     entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
     StdResult,
 };
+use shared::cw20::from_cw20;
 
 pub const CONTRACT_NAME: &str = "crates.io:calc-dca";
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -164,6 +166,18 @@ pub fn execute(
             delegator_address,
             validator_address,
         ),
+        ExecuteMsg::Receive(receive_msg) => {
+            let info = from_cw20(&deps.as_ref(), info, receive_msg.clone())?;
+            let msg = from_json(receive_msg.msg)?;
+            match msg {
+                ExecuteMsg::Receive(_) => {
+                    Err(ContractError::Std(cosmwasm_std::StdError::GenericErr {
+                        msg: "nested receive not allowed".to_string(),
+                    }))
+                }
+                _ => execute(deps, env, info, msg),
+            }
+        }
     }
 }
 

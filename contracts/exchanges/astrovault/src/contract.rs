@@ -1,29 +1,31 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, from_json, to_json_binary,
+    from_json, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
 };
-// use cw2::set_contract_version;
+use shared::cw20::from_cw20;
 
-use crate::helpers::balance::coin_to_asset;
-use crate::msg::{ExecuteMsg, QueryMsg};
 use crate::error::ContractError;
 use crate::handlers::create_pairs::create_pairs_handler;
 use crate::handlers::get_expected_receive_amount::get_expected_receive_amount_handler;
 use crate::handlers::get_pairs::get_pairs_handler;
-use crate::handlers::get_pairs_internal::get_pairs_internal_handler;
+use crate::handlers::get_pairs_internal::{
+    get_pairs_internal_full_handler, get_pairs_internal_handler,
+};
 use crate::handlers::get_twap_to_now::get_twap_to_now_handler;
-use crate::handlers::swap::{return_swapped_funds, swap_native_handler, swap_cw20_handler};
-use crate::msg::{InstantiateMsg, InternalExecuteMsg, InternalQueryMsg, MigrateMsg};
-use crate::state::config::update_config;
+use crate::handlers::swap::{return_swapped_funds, swap_msg, swap_native_handler};
+use crate::helpers::balance::coin_to_asset;
+use crate::msg::{ExecuteMsg, QueryMsg};
+use crate::msg::{InstantiateMsg, MigrateMsg};
+use crate::state::common::update_allow_implicit;
+use crate::state::config::{get_config, update_config, update_router_config};
 use crate::types::config::Config;
 
 /*
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:astrovault";
+const CONTRACT_NAME: &str = "crates.io:astrovault_calc";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 */
-
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -34,14 +36,19 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     deps.api.addr_validate(msg.admin.as_ref())?;
     deps.api.addr_validate(msg.dca_contract_address.as_ref())?;
+    deps.api.addr_validate(msg.router_address.as_ref())?;
 
     update_config(
         deps.storage,
         Config {
             admin: msg.admin.clone(),
             dca_contract_address: msg.dca_contract_address.clone(),
+            router_address: msg.router_address.clone(),
         },
     )?;
+
+    update_router_config(&deps.querier, deps.storage, msg.router_address.as_ref())?;
+    update_allow_implicit(deps.storage, msg.allow_implicit)?;
 
     Ok(Response::new()
         .add_attribute("instantiate", "true")
@@ -51,22 +58,58 @@ pub fn instantiate(
 
 #[entry_point]
 pub fn migrate(deps: DepsMut, _: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
-    deps.api.addr_validate(msg.dca_contract_address.as_ref())?;
+    let mut attributes: Vec<(&str, String)> = Vec::with_capacity(5);
+    attributes.push(("migrate", String::from("true")));
+
+    let config = get_config(deps.storage)?;
+
+    let dca_contract_address = if msg.dca_contract_address.is_some() {
+        let dca = msg.dca_contract_address.unwrap().clone();
+        deps.api.addr_validate(dca.as_ref())?;
+        attributes.push(("dca_contract_address", dca.to_string()));
+        dca
+    } else {
+        config.dca_contract_address
+    };
+
+    let admin = if msg.admin.is_some() {
+        let admin = msg.admin.unwrap();
+        deps.api.addr_validate(admin.as_ref())?;
+        attributes.push(("admin", admin.to_string()));
+        admin
+    } else {
+        config.admin
+    };
+
+    let router_address = if msg.router_address.is_some() {
+        let router_address = msg.router_address.unwrap();
+        deps.api.addr_validate(router_address.as_ref())?;
+        attributes.push(("router_address", router_address.to_string()));
+        update_router_config(&deps.querier, deps.storage, router_address.as_ref())?;
+        router_address
+    } else {
+        config.router_address
+    };
+
+    if msg.allow_implicit.is_some() {
+        attributes.push((
+            "allow_implicit_routes",
+            msg.allow_implicit.unwrap().to_string(),
+        ));
+        update_allow_implicit(deps.storage, msg.allow_implicit)?;
+    }
 
     update_config(
         deps.storage,
         Config {
-            admin: msg.admin.clone(),
-            dca_contract_address: msg.dca_contract_address.clone(),
+            admin,
+            dca_contract_address,
+            router_address,
         },
     )?;
 
-    Ok(Response::new()
-        .add_attribute("migrate", "true")
-        .add_attribute("admin", msg.admin)
-        .add_attribute("dca_contract_address", msg.dca_contract_address))
+    Ok(Response::new().add_attributes(attributes))
 }
-
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
@@ -76,63 +119,48 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
+        ExecuteMsg::SubmitOrder { .. } => not_implemented_handle(),
+        ExecuteMsg::RetractOrder { .. } => not_implemented_handle(),
+        ExecuteMsg::WithdrawOrder { .. } => not_implemented_handle(),
         ExecuteMsg::Swap {
             minimum_receive_amount,
+            route,
         } => swap_native_handler(
-            deps, 
-            env, 
-            info, 
-            coin_to_asset(minimum_receive_amount)),
-        ExecuteMsg::SubmitOrder {
-            target_price: _,
-            target_denom: _,
-        } => not_implemented_handle(),
-        ExecuteMsg::RetractOrder { 
-            order_idx: _, 
-            denoms: _ 
-        } => not_implemented_handle(),
-        ExecuteMsg::WithdrawOrder { 
-            order_idx: _, 
-            denoms: _ 
-        } => not_implemented_handle(),
-        ExecuteMsg::InternalMsg { msg } => match from_json(&msg).unwrap() {
-            InternalExecuteMsg::CreatePairs { pairs } => create_pairs_handler(deps, info, pairs),
-        },
-
+            deps,
+            env,
+            info,
+            coin_to_asset(minimum_receive_amount),
+            route,
+        ),
         ExecuteMsg::Receive(receive_msg) => {
-            let msg : ExecuteMsg = from_json(&receive_msg.msg)?;
-            match msg {
-                ExecuteMsg::Swap { 
-                    minimum_receive_amount
-                } => swap_cw20_handler(
-                    deps, 
-                    env, 
-                    info.sender, 
-                    receive_msg.amount, 
-                    receive_msg.sender, 
-                    coin_to_asset(minimum_receive_amount)
-                ),
+            let info = from_cw20(&deps.as_ref(), info, receive_msg.clone())?;
+            let msg = from_json(receive_msg.msg)?;
 
-                _ => Err(ContractError::Unauthorized {})
+            match msg {
+                ExecuteMsg::Receive(_) => {
+                    Err(ContractError::Std(cosmwasm_std::StdError::GenericErr {
+                        msg: "nested receive not allowed".to_string(),
+                    }))
+                }
+                _ => execute(deps, env, info, msg),
             }
         }
+        ExecuteMsg::CreatePairs { pairs } => create_pairs_handler(deps, info, pairs),
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
+        QueryMsg::GetOrder { .. } => to_json_binary(&not_implemented_query()?),
         QueryMsg::GetPairs { start_after, limit } => {
             to_json_binary(&get_pairs_handler(deps, start_after, limit)?)
         }
-        QueryMsg::GetOrder { 
-            order_idx: _, 
-            denoms: _ 
-        } => to_json_binary(&not_implemented_query()?),
         QueryMsg::GetTwapToNow {
             swap_denom,
             target_denom,
             period,
+            route: _,
         } => to_json_binary(&get_twap_to_now_handler(
             deps,
             swap_denom,
@@ -142,16 +170,31 @@ pub fn query(deps: Deps, _: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::GetExpectedReceiveAmount {
             swap_amount,
             target_denom,
+            route: _,
         } => to_json_binary(&get_expected_receive_amount_handler(
             deps,
             swap_amount,
             target_denom,
         )?),
-        QueryMsg::InternalQuery { msg } => match from_json(&msg).unwrap() {
-            InternalQueryMsg::GetPairs { start_after, limit } => {
-                to_json_binary(&get_pairs_internal_handler(deps, start_after, limit)?)
-            }
-        },
+        QueryMsg::Pairs { start_after, limit } => {
+            to_json_binary(&get_pairs_internal_handler(deps, start_after, limit)?)
+        }
+        QueryMsg::PopulatedPairs { start_after, limit } => {
+            to_json_binary(&get_pairs_internal_full_handler(deps, start_after, limit)?)
+        }
+        QueryMsg::SwapMsg {
+            offer_asset,
+            minimum_receive_amount,
+            funds,
+            route,
+        } => to_json_binary(&swap_msg(
+            deps,
+            env,
+            offer_asset,
+            minimum_receive_amount,
+            funds,
+            route,
+        )?),
     }
 }
 
@@ -159,7 +202,6 @@ pub const AFTER_SWAP: u64 = 1;
 pub const AFTER_SUBMIT_ORDER: u64 = 2;
 pub const AFTER_RETRACT_ORDER: u64 = 3;
 pub const AFTER_WITHDRAW_ORDER: u64 = 4;
-
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, ContractError> {
@@ -172,9 +214,10 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, Contract
     }
 }
 
-
 pub fn not_implemented_query() -> StdResult<()> {
-    Err(cosmwasm_std::StdError::GenericErr { msg: "not implemented".to_string() })
+    Err(cosmwasm_std::StdError::GenericErr {
+        msg: "not implemented".to_string(),
+    })
 }
 
 pub fn not_implemented_handle() -> Result<Response, ContractError> {

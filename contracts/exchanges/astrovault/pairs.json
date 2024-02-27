@@ -1,0 +1,119 @@
+{
+    "create_pairs": {
+       "pairs": [
+
+         {
+            "base_asset": {
+               "native_token": {
+                  "denom": "aconst"
+               }
+            },
+            "quote_asset": {
+               "token": {
+                  "contract_addr": "archway1sdzaas0068n42xk8ndm6959gpu6n09tajmeuq7vak8t9qt5jrp6sjjtnka"
+               }
+            },
+            "pair_type": {
+               "direct": {
+                  "address":   "archway1flsdgve559shl8fvqfrk3p2wdxn82ykqyqk7w2wjaw7p3gnhj3esfmq8t0",
+                  "pool_type": "stable"
+               }
+            }
+         },
+
+          {
+             "base_asset": {
+                "native_token": {
+                   "denom": "aconst"
+                }
+             },
+             "quote_asset": {
+                "token": {
+                   "contract_addr": "archway1erqguqc3hmfajgu7e2dvgaccx6feu5ru3gyatdxu94p66j9hp7msn2kcqp"
+                }
+             },
+             "pair_type": {
+                "routed": {
+                   "route": [
+                      {
+                         "denom": "archway1sdzaas0068n42xk8ndm6959gpu6n09tajmeuq7vak8t9qt5jrp6sjjtnka",
+                         "prev": {
+                            "address": "archway1flsdgve559shl8fvqfrk3p2wdxn82ykqyqk7w2wjaw7p3gnhj3esfmq8t0",
+                            "pool_type": "stable",
+                            "asset_info": {
+                                "native_token": {
+                                    "denom": "aconst"
+                                 }
+                            }
+                         },
+                         "next": {
+                            "address": "archway1903dqer5mdy4wen9duxhm7l76gw20vzk2vwm6t7zk305c0m38ldqjncc9f",
+                            "pool_type": "ratio",
+                            "asset_info": {
+                                "token": {
+                                    "contract_addr": "archway1erqguqc3hmfajgu7e2dvgaccx6feu5ru3gyatdxu94p66j9hp7msn2kcqp"
+                                 }
+                            }
+                         }
+                      }
+                   ]
+                }
+             }
+          },
+
+          {
+            "base_asset": {
+                "token": {
+                    "contract_addr": "archway1sdzaas0068n42xk8ndm6959gpu6n09tajmeuq7vak8t9qt5jrp6sjjtnka"
+                }
+            },
+            "quote_asset": {
+                "token": {
+                    "contract_addr": "archway1lcxaem4gqnp2mdeh5hawacxlzge8e6wzjaat73ahpf2rclqv9v4sj8e4kf"
+                }
+            },
+            "pair_type": {
+               "routed": {
+                  "route": [
+                    
+                     {
+                        "denom": "archway1mmu32f7hn0fyw8gh57xl5uhaqu4pq5xx59ynf0tju60n2nzha0as3vtmcm",
+                        "prev": {
+                           "address": "archway1jdrvvzd2tcfvhvyaedy7e8s92lh2m3a3jklvn74768fh6n5quh4sl6rgkx",
+                           "pool_type": "standard",
+                           "asset_info": {
+                               "token": {
+                                   "contract_addr": "archway1sdzaas0068n42xk8ndm6959gpu6n09tajmeuq7vak8t9qt5jrp6sjjtnka"
+                                }
+                           }
+                        }
+                     },
+
+                     {
+                        "denom": "archway12defza8nz2d2a3hgt6tftku28ly5lglsna69j7rpjeukg4pz8qese2326s",
+                        "prev": {
+                           "address": "archway1gzumcx38q446k9mup02cvmc4xjrlwa6xhnram3lghw2te8zeu7rqndhcrq",
+                           "pool_type": "stable",
+                            "asset_info": {
+                                 "token": {
+                                      "contract_addr": "archway1mmu32f7hn0fyw8gh57xl5uhaqu4pq5xx59ynf0tju60n2nzha0as3vtmcm"
+                                  }
+                            }
+                        },
+                        "next": {
+                           "address": "archway1gzumcx38q446k9mup02cvmc4xjrlwa6xhnram3lghw2te8zeu7rqndhcrq",
+                           "pool_type": "stable",
+                            "asset_info": {
+                                 "token": {
+                                      "contract_addr": "archway1lcxaem4gqnp2mdeh5hawacxlzge8e6wzjaat73ahpf2rclqv9v4sj8e4kf"
+                                  }
+                            }
+                        }
+                     }
+                  ]
+               }
+            }
+         }
+       ]
+    }
+ }

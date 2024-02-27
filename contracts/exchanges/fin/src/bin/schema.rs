@@ -1,13 +1,11 @@
 use cosmwasm_schema::write_api;
 
-use exchange::msg::{ExecuteMsg, QueryMsg};
-use fin::msg::{InstantiateMsg, InternalExecuteMsg};
+use fin::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 
 fn main() {
     write_api! {
         instantiate: InstantiateMsg,
         execute: ExecuteMsg,
         query: QueryMsg,
-        sudo: InternalExecuteMsg
     }
 }

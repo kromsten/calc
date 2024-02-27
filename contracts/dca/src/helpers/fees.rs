@@ -12,8 +12,9 @@ use cosmos_sdk_proto::{
     traits::Message,
 };
 use cosmwasm_std::{
-    BankMsg, Binary, Coin, CosmosMsg, Decimal, Deps, Env, StdResult, Storage, SubMsg, Uint128,
+    Binary, Coin, CosmosMsg, Decimal, Deps, Env, StdResult, Storage, SubMsg, Uint128,
 };
+use shared::cw20::into_bank_msg;
 use std::cmp::min;
 
 pub fn get_fee_messages(
@@ -32,7 +33,7 @@ pub fn get_fee_messages(
             if skip_community_pool && fee_collector.address == "community_pool" {
                 return None;
             }
-            return Some(FeeCollector {
+            Some(FeeCollector {
                 address: fee_collector.address.clone(),
                 allocation: if skip_community_pool {
                     let community_pool_allocation = config
@@ -44,7 +45,7 @@ pub fn get_fee_messages(
                 } else {
                     fee_collector.allocation
                 },
-            });
+            })
         })
         .collect::<Vec<FeeCollector>>();
 
@@ -81,10 +82,10 @@ pub fn get_fee_messages(
                                 }))
                             }
                         }
-                        _ => Some(SubMsg::new(BankMsg::Send {
-                            to_address: fee_collector.address.to_string(),
-                            amount: vec![fee_allocation],
-                        })),
+                        _ => Some(SubMsg::new(
+                            into_bank_msg(deps.api, &fee_collector.address, vec![fee_allocation])
+                                .expect("fee collection bank msg"),
+                        )),
                     }
                 } else {
                     None

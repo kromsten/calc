@@ -98,6 +98,7 @@ pub fn disburse_escrow_handler(
 
     Ok(response
         .add_submessages(get_disbursement_messages(
+            deps.api,
             deps.storage,
             &vault,
             amount_to_disburse.amount,

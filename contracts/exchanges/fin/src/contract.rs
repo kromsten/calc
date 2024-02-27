@@ -1,9 +1,10 @@
+use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     from_json, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
 };
-use exchange::msg::{ExecuteMsg, QueryMsg};
+use shared::cw20::from_cw20;
 // use cw2::set_contract_version;
 
 use crate::error::ContractError;
@@ -17,7 +18,6 @@ use crate::handlers::retract_order::{retract_order_handler, return_retracted_fun
 use crate::handlers::submit_order::{return_order_idx, submit_order_handler};
 use crate::handlers::swap::{return_swapped_funds, swap_handler};
 use crate::handlers::withdraw_order::{return_withdrawn_funds, withdraw_order_handler};
-use crate::msg::{InstantiateMsg, InternalExecuteMsg, InternalQueryMsg, MigrateMsg};
 use crate::state::config::update_config;
 use crate::types::config::Config;
 
@@ -91,9 +91,20 @@ pub fn execute(
         ExecuteMsg::WithdrawOrder { order_idx, denoms } => {
             withdraw_order_handler(deps, env, info, order_idx, denoms)
         }
-        ExecuteMsg::InternalMsg { msg } => match from_json(&msg).unwrap() {
-            InternalExecuteMsg::CreatePairs { pairs } => create_pairs_handler(deps, info, pairs),
-        },
+        ExecuteMsg::Receive(receive_msg) => {
+            let info = from_cw20(&deps.as_ref(), info, receive_msg.clone())?;
+            let msg = from_json(receive_msg.msg)?;
+
+            match msg {
+                ExecuteMsg::Receive(_) => {
+                    Err(ContractError::Std(cosmwasm_std::StdError::GenericErr {
+                        msg: "nested receive not allowed".to_string(),
+                    }))
+                }
+                _ => execute(deps, env, info, msg),
+            }
+        }
+        ExecuteMsg::CreatePairs { pairs } => create_pairs_handler(deps, info, pairs),
     }
 }
 
@@ -126,11 +137,9 @@ pub fn query(deps: Deps, _: Env, msg: QueryMsg) -> StdResult<Binary> {
             swap_amount,
             target_denom,
         )?),
-        QueryMsg::InternalQuery { msg } => match from_json(&msg).unwrap() {
-            InternalQueryMsg::GetPairs { start_after, limit } => {
-                to_json_binary(&get_pairs_internal_handler(deps, start_after, limit)?)
-            }
-        },
+        QueryMsg::Pairs { start_after, limit } => {
+            to_json_binary(&get_pairs_internal_handler(deps, start_after, limit)?)
+        }
     }
 }
 

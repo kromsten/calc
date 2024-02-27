@@ -1,6 +1,6 @@
 use cosmwasm_std::{BankMsg, Coin, Deps, DepsMut, Env, MessageInfo, Response, SubMsg};
 use kujira_fin::ExecuteMsg;
-use shared::coin::subtract;
+use shared::{balance::query_balance, coin::subtract};
 
 use crate::{
     contract::AFTER_SWAP,
@@ -43,9 +43,12 @@ pub fn swap_handler(
         &SwapCache {
             sender: info.sender.clone(),
             minimum_receive_amount: minimum_receive_amount.clone(),
-            target_denom_balance: deps
-                .querier
-                .query_balance(env.contract.address, minimum_receive_amount.denom.clone())?,
+            target_denom_balance: query_balance(
+                deps.api,
+                &deps.querier,
+                &minimum_receive_amount.denom,
+                &env.contract.address,
+            )?,
         },
     )?;
 
@@ -85,7 +88,7 @@ pub fn return_swapped_funds(deps: Deps, env: Env) -> Result<Response, ContractEr
     if return_amount.amount < swap_cache.minimum_receive_amount.amount {
         return Err(ContractError::FailedSwap {
             msg: format!(
-                "{} is less than the minumum return amount of {}",
+                "{} is less than the minimum return amount of {}",
                 return_amount, swap_cache.minimum_receive_amount
             ),
         });
@@ -290,7 +293,7 @@ mod return_swapped_funds_tests {
             return_swapped_funds(deps.as_ref(), mock_env()).unwrap_err(),
             ContractError::FailedSwap {
                 msg: format!(
-                    "{} is less than the minumum return amount of {}",
+                    "{} is less than the minimum return amount of {}",
                     empty_of(minimum_receive_amount.clone()),
                     minimum_receive_amount
                 )

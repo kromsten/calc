@@ -54,15 +54,11 @@ pub fn create_pairs_handler(
 
 #[cfg(test)]
 mod create_pairs_tests {
-    use cosmwasm_std::{
-        testing::{mock_env, mock_info},
-        to_json_binary,
-    };
-    use exchange::msg::ExecuteMsg;
+    use cosmwasm_std::testing::{mock_env, mock_info};
 
     use crate::{
         contract::execute,
-        msg::InternalExternalMsg,
+        msg::ExecuteMsg,
         state::{config::update_config, pairs::find_pair},
         tests::{
             constants::{ADMIN, DENOM_STAKE, DENOM_UOSMO},
@@ -85,15 +81,12 @@ mod create_pairs_tests {
             deps.as_mut(),
             env,
             info_with_unauthorised_sender,
-            ExecuteMsg::InternalMsg {
-                msg: to_json_binary(&InternalExternalMsg::CreatePairs {
-                    pairs: vec![Pair {
-                        base_denom: String::from("base"),
-                        quote_denom: String::from("quote"),
-                        route: vec![0],
-                    }],
-                })
-                .unwrap(),
+            ExecuteMsg::CreatePairs {
+                pairs: vec![Pair {
+                    base_denom: String::from("base"),
+                    quote_denom: String::from("quote"),
+                    route: vec![0],
+                }],
             },
         )
         .unwrap_err();
@@ -113,15 +106,12 @@ mod create_pairs_tests {
             deps.as_mut(),
             env,
             info,
-            ExecuteMsg::InternalMsg {
-                msg: to_json_binary(&InternalExternalMsg::CreatePairs {
-                    pairs: vec![Pair {
-                        quote_denom: DENOM_UOSMO.to_string(),
-                        base_denom: DENOM_STAKE.to_string(),
-                        route: vec![],
-                    }],
-                })
-                .unwrap(),
+            ExecuteMsg::CreatePairs {
+                pairs: vec![Pair {
+                    quote_denom: DENOM_UOSMO.to_string(),
+                    base_denom: DENOM_STAKE.to_string(),
+                    route: vec![],
+                }],
             },
         )
         .unwrap_err();
@@ -146,15 +136,12 @@ mod create_pairs_tests {
             deps.as_mut(),
             env,
             info,
-            ExecuteMsg::InternalMsg {
-                msg: to_json_binary(&InternalExternalMsg::CreatePairs {
-                    pairs: vec![Pair {
-                        quote_denom: DENOM_UOSMO.to_string(),
-                        base_denom: DENOM_STAKE.to_string(),
-                        route: vec![2],
-                    }],
-                })
-                .unwrap(),
+            ExecuteMsg::CreatePairs {
+                pairs: vec![Pair {
+                    quote_denom: DENOM_UOSMO.to_string(),
+                    base_denom: DENOM_STAKE.to_string(),
+                    route: vec![2],
+                }],
             },
         )
         .unwrap_err();
@@ -175,15 +162,12 @@ mod create_pairs_tests {
 
         update_config(deps.as_mut().storage, Config::default()).unwrap();
 
-        let create_pair_execute_message = ExecuteMsg::InternalMsg {
-            msg: to_json_binary(&InternalExternalMsg::CreatePairs {
-                pairs: vec![Pair {
-                    base_denom: DENOM_UOSMO.to_string(),
-                    quote_denom: DENOM_STAKE.to_string(),
-                    route: vec![4, 1, 4, 1],
-                }],
-            })
-            .unwrap(),
+        let create_pair_execute_message = ExecuteMsg::CreatePairs {
+            pairs: vec![Pair {
+                base_denom: DENOM_UOSMO.to_string(),
+                quote_denom: DENOM_STAKE.to_string(),
+                route: vec![4, 1, 4, 1],
+            }],
         };
 
         let err = execute(deps.as_mut(), env, info, create_pair_execute_message).unwrap_err();
@@ -204,15 +188,12 @@ mod create_pairs_tests {
 
         update_config(deps.as_mut().storage, Config::default()).unwrap();
 
-        let create_pair_execute_message = ExecuteMsg::InternalMsg {
-            msg: to_json_binary(&InternalExternalMsg::CreatePairs {
-                pairs: vec![Pair {
-                    base_denom: DENOM_UOSMO.to_string(),
-                    quote_denom: DENOM_STAKE.to_string(),
-                    route: vec![3],
-                }],
-            })
-            .unwrap(),
+        let create_pair_execute_message = ExecuteMsg::CreatePairs {
+            pairs: vec![Pair {
+                base_denom: DENOM_UOSMO.to_string(),
+                quote_denom: DENOM_STAKE.to_string(),
+                route: vec![3],
+            }],
         };
 
         execute(deps.as_mut(), env, info, create_pair_execute_message).unwrap();
@@ -236,26 +217,20 @@ mod create_pairs_tests {
 
         update_config(deps.as_mut().storage, Config::default()).unwrap();
 
-        let original_message = ExecuteMsg::InternalMsg {
-            msg: to_json_binary(&InternalExternalMsg::CreatePairs {
-                pairs: vec![Pair {
-                    base_denom: DENOM_UOSMO.to_string(),
-                    quote_denom: DENOM_STAKE.to_string(),
-                    route: vec![4, 1],
-                }],
-            })
-            .unwrap(),
+        let original_message = ExecuteMsg::CreatePairs {
+            pairs: vec![Pair {
+                base_denom: DENOM_UOSMO.to_string(),
+                quote_denom: DENOM_STAKE.to_string(),
+                route: vec![4, 1],
+            }],
         };
 
-        let message = ExecuteMsg::InternalMsg {
-            msg: to_json_binary(&InternalExternalMsg::CreatePairs {
-                pairs: vec![Pair {
-                    base_denom: DENOM_UOSMO.to_string(),
-                    quote_denom: DENOM_STAKE.to_string(),
-                    route: vec![3],
-                }],
-            })
-            .unwrap(),
+        let message = ExecuteMsg::CreatePairs {
+            pairs: vec![Pair {
+                base_denom: DENOM_UOSMO.to_string(),
+                quote_denom: DENOM_STAKE.to_string(),
+                route: vec![3],
+            }],
         };
 
         execute(deps.as_mut(), env.clone(), info.clone(), original_message).unwrap();
@@ -280,26 +255,20 @@ mod create_pairs_tests {
 
         update_config(deps.as_mut().storage, Config::default()).unwrap();
 
-        let original_message = ExecuteMsg::InternalMsg {
-            msg: to_json_binary(&InternalExternalMsg::CreatePairs {
-                pairs: vec![Pair {
-                    quote_denom: DENOM_UOSMO.to_string(),
-                    base_denom: DENOM_STAKE.to_string(),
-                    route: vec![1, 4],
-                }],
-            })
-            .unwrap(),
+        let original_message = ExecuteMsg::CreatePairs {
+            pairs: vec![Pair {
+                quote_denom: DENOM_UOSMO.to_string(),
+                base_denom: DENOM_STAKE.to_string(),
+                route: vec![1, 4],
+            }],
         };
 
-        let message = ExecuteMsg::InternalMsg {
-            msg: to_json_binary(&InternalExternalMsg::CreatePairs {
-                pairs: vec![Pair {
-                    quote_denom: DENOM_UOSMO.to_string(),
-                    base_denom: DENOM_STAKE.to_string(),
-                    route: vec![3],
-                }],
-            })
-            .unwrap(),
+        let message = ExecuteMsg::CreatePairs {
+            pairs: vec![Pair {
+                quote_denom: DENOM_UOSMO.to_string(),
+                base_denom: DENOM_STAKE.to_string(),
+                route: vec![3],
+            }],
         };
 
         execute(deps.as_mut(), env.clone(), info.clone(), original_message).unwrap();

@@ -22,9 +22,11 @@ cosmwasm-storage = { workspace = true }
 cw-storage-plus = { workspace = true }
 cw-utils = { workspace = true }
 cw20 = { workspace = true }
-exchange = { workspace = true }
-exchange-macros = { workspace = true }
+
 schemars = { workspace = true }
 serde = { workspace = true }
-shared = { workspace = true }
 thiserror = { workspace = true }
+
+shared = { workspace = true }
+exchange = { workspace = true }
+exchange-macros = { workspace = true }

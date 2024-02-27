@@ -1,5 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Binary, Coin, Decimal, Decimal256, Uint128};
+use cosmwasm_std::{Binary, Coin, Decimal256, Uint128};
+use cw20::Cw20ReceiveMsg;
 
 #[cw_serde]
 pub struct InstantiateMsg {}
@@ -22,6 +23,7 @@ pub enum ExecuteMsg {
         order_idx: Uint128,
         denoms: [String; 2],
     },
+    Receive(Cw20ReceiveMsg),
     InternalMsg {
         msg: Binary,
     },
@@ -40,7 +42,7 @@ pub enum QueryMsg {
         order_idx: Uint128,
         denoms: [String; 2],
     },
-    #[returns(Decimal)]
+    #[returns(cosmwasm_std::Decimal)]
     GetTwapToNow {
         swap_denom: String,
         target_denom: String,

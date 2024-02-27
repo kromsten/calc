@@ -12,6 +12,7 @@ use crate::types::vault::{Vault, VaultStatus};
 use cosmwasm_std::{to_json_binary, SubMsg, SubMsgResult, Uint128, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{Attribute, Coin, DepsMut, Env, Reply, Response};
+use shared::balance::query_balance;
 use shared::coin::{add_to, subtract};
 
 pub fn disburse_funds_handler(
@@ -29,16 +30,23 @@ pub fn disburse_funds_handler(
         SubMsgResult::Ok(_) => {
             let swap_cache = SWAP_CACHE.load(deps.storage)?;
 
-            let swap_denom_balance = &deps
-                .querier
-                .query_balance(&env.contract.address, vault.get_swap_denom())?;
+            let swap_denom_balance = query_balance(
+                deps.api,
+                &deps.querier,
+                &vault.get_swap_denom(),
+                &env.contract.address,
+            )?;
 
-            let receive_denom_balance = &deps
-                .querier
-                .query_balance(&env.contract.address, vault.target_denom.clone())?;
+            let receive_denom_balance = query_balance(
+                deps.api,
+                &deps.querier,
+                &vault.target_denom,
+                &env.contract.address,
+            )?;
 
-            let coin_sent = subtract(&swap_cache.swap_denom_balance, swap_denom_balance)?;
-            let coin_received = subtract(receive_denom_balance, &swap_cache.receive_denom_balance)?;
+            let coin_sent = subtract(&swap_cache.swap_denom_balance, &swap_denom_balance)?;
+            let coin_received =
+                subtract(&receive_denom_balance, &swap_cache.receive_denom_balance)?;
 
             let swap_fee_rate = get_swap_fee_rate(deps.storage, &vault.swap_adjustment_strategy)?;
             let automation_fee_rate = get_automation_fee_rate(deps.storage, &vault)?;
@@ -78,7 +86,8 @@ pub fn disburse_funds_handler(
             )?;
 
             sub_msgs.append(
-                &mut get_disbursement_messages(deps.storage, &vault, total_after_escrow)?.into(),
+                &mut get_disbursement_messages(deps.api, deps.storage, &vault, total_after_escrow)?
+                    .into(),
             );
 
             create_event(

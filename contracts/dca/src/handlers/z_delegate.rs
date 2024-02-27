@@ -4,7 +4,8 @@ use crate::helpers::validation::{assert_address_is_valid, assert_validator_is_va
 use crate::{error::ContractError, helpers::validation::assert_exactly_one_asset};
 use cosmos_sdk_proto::cosmos::base::v1beta1::Coin as ProtoCoin;
 use cosmos_sdk_proto::cosmos::staking::v1beta1::MsgDelegate;
-use cosmwasm_std::{Addr, BankMsg, Deps, Env, MessageInfo, Reply, Response, SubMsg, SubMsgResult};
+use cosmwasm_std::{Addr, Deps, Env, MessageInfo, Reply, Response, SubMsg, SubMsgResult};
+use shared::cw20::into_bank_msg;
 
 pub fn z_delegate_handler(
     deps: Deps,
@@ -27,10 +28,11 @@ pub fn z_delegate_handler(
             ("validator", validator_address.to_string()),
         ])
         .add_submessages(vec![
-            SubMsg::new(BankMsg::Send {
-                to_address: delegator_address.to_string(),
-                amount: vec![amount_to_delegate.clone()],
-            }),
+            SubMsg::new(into_bank_msg(
+                deps.api,
+                delegator_address.as_ref(),
+                vec![amount_to_delegate.clone()],
+            )?),
             SubMsg::reply_always(
                 create_authz_exec_message(
                     env.contract.address,

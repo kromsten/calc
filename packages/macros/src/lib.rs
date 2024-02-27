@@ -1,7 +1,6 @@
-use syn::{parse_macro_input, AttributeArgs, DataEnum, DeriveInput};
 use proc_macro::TokenStream;
 use quote::quote;
-
+use syn::{parse_macro_input, AttributeArgs, DataEnum, DeriveInput};
 
 fn merge_variants(metadata: TokenStream, left: TokenStream, right: TokenStream) -> TokenStream {
     use syn::Data::Enum;
@@ -16,10 +15,7 @@ fn merge_variants(metadata: TokenStream, left: TokenStream, right: TokenStream) 
 
     // parse the left enum
     let mut left: DeriveInput = parse_macro_input!(left);
-    let Enum(DataEnum {
-        variants,
-        ..
-    }) = &mut left.data else {
+    let Enum(DataEnum { variants, .. }) = &mut left.data else {
         return syn::Error::new(left.ident.span(), "only enums can accept variants")
             .to_compile_error()
             .into();
@@ -28,9 +24,9 @@ fn merge_variants(metadata: TokenStream, left: TokenStream, right: TokenStream) 
     // parse the right enum
     let right: DeriveInput = parse_macro_input!(right);
     let Enum(DataEnum {
-        variants: to_add,
-        ..
-    }) = right.data else {
+        variants: to_add, ..
+    }) = right.data
+    else {
         return syn::Error::new(left.ident.span(), "only enums can provide variants")
             .to_compile_error()
             .into();
@@ -42,9 +38,6 @@ fn merge_variants(metadata: TokenStream, left: TokenStream, right: TokenStream) 
     quote! { #left }.into()
 }
 
-
-
-
 /// Note: `#[exchange_execute]` must be applied _before_ `#[cw_serde]`.
 #[proc_macro_attribute]
 pub fn exchange_execute(metadata: TokenStream, input: TokenStream) -> TokenStream {
@@ -55,6 +48,7 @@ pub fn exchange_execute(metadata: TokenStream, input: TokenStream) -> TokenStrea
             enum Right {
                 Swap {
                     minimum_receive_amount: ::cosmwasm_std::Coin,
+                    route: Option<Binary>
                 },
                 SubmitOrder {
                     target_price: ::cosmwasm_std::Decimal256,
@@ -68,15 +62,12 @@ pub fn exchange_execute(metadata: TokenStream, input: TokenStream) -> TokenStrea
                     order_idx: ::cosmwasm_std::Uint128,
                     denoms: [String; 2],
                 },
-                InternalMsg {
-                    msg: ::cosmwasm_std::Binary,
-                },
+                Receive(::cw20::Cw20ReceiveMsg),
             }
         }
         .into(),
     )
 }
-
 
 /// Note: `#[exchange_query]` must be applied _before_ `#[cw_serde]`.
 #[proc_macro_attribute]
@@ -101,14 +92,14 @@ pub fn exchange_query(metadata: TokenStream, input: TokenStream) -> TokenStream 
                     swap_denom: String,
                     target_denom: String,
                     period: u64,
+                    route: Option<::cosmwasm_std::Binary>
                 },
                 #[returns(::cosmwasm_std::Coin)]
                 GetExpectedReceiveAmount {
                     swap_amount: ::cosmwasm_std::Coin,
                     target_denom: String,
-                },
-                #[returns(::cosmwasm_std::Binary)]
-                InternalQuery { msg: ::cosmwasm_std::Binary },
+                    route: Option<::cosmwasm_std::Binary>
+                }
             }
         }
         .into(),

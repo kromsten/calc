@@ -1,7 +1,6 @@
 use cosmwasm_schema::write_api;
 
-use exchange::msg::{ExecuteMsg, QueryMsg};
-use osmosis::msg::{InstantiateMsg, InternalExternalMsg, MigrateMsg};
+use osmosis::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 fn main() {
     write_api! {
@@ -9,6 +8,5 @@ fn main() {
         migrate: MigrateMsg,
         execute: ExecuteMsg,
         query: QueryMsg,
-        sudo: InternalExternalMsg
     }
 }

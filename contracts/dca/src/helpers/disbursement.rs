@@ -4,10 +4,12 @@ use crate::{
     state::cache::{PostExecutionActionCacheEntry, POST_EXECUTION_ACTION_CACHE},
     types::vault::Vault,
 };
-use cosmwasm_std::{BankMsg, Coin, StdResult, Storage, SubMsg, Uint128, WasmMsg};
+use cosmwasm_std::{Api, Coin, StdResult, Storage, SubMsg, Uint128};
+use shared::cw20::{into_bank_msg, into_execute_msg};
 use std::collections::VecDeque;
 
 pub fn get_disbursement_messages(
+    api: &dyn Api,
     store: &mut dyn Storage,
     vault: &Vault,
     amount_to_disburse: Uint128,
@@ -28,19 +30,23 @@ pub fn get_disbursement_messages(
             if allocation_amount.amount.gt(&Uint128::zero()) {
                 let msg = destination.msg.clone().map_or(
                     SubMsg::reply_always(
-                        BankMsg::Send {
-                            to_address: destination.address.to_string(),
-                            amount: vec![allocation_amount.clone()],
-                        },
+                        into_bank_msg(
+                            api,
+                            destination.address.as_ref(),
+                            vec![allocation_amount.clone()],
+                        )
+                        .expect("valid bank msg"),
                         AFTER_FAILED_AUTOMATION_REPLY_ID,
                     ),
                     |msg| {
                         SubMsg::reply_always(
-                            WasmMsg::Execute {
-                                contract_addr: destination.address.to_string(),
+                            into_execute_msg(
+                                api,
+                                destination.address.clone(),
                                 msg,
-                                funds: vec![allocation_amount.clone()],
-                            },
+                                allocation_amount.clone(),
+                            )
+                            .expect("valid wasm execute msg"),
                             AFTER_FAILED_AUTOMATION_REPLY_ID,
                         )
                     },
@@ -90,7 +96,9 @@ mod get_disbursement_messages_tests {
             ..Vault::default()
         };
 
-        let messages = get_disbursement_messages(deps.as_mut().storage, &vault, ONE).unwrap();
+        let messages =
+            get_disbursement_messages(&deps.api.clone(), deps.as_mut().storage, &vault, ONE)
+                .unwrap();
 
         assert!(messages.contains(&SubMsg::reply_always(
             BankMsg::Send {
@@ -130,7 +138,7 @@ mod get_disbursement_messages_tests {
             ..Vault::default()
         };
 
-        get_disbursement_messages(deps.as_mut().storage, &vault, ONE).unwrap();
+        get_disbursement_messages(&deps.api.clone(), deps.as_mut().storage, &vault, ONE).unwrap();
 
         let mut cache = POST_EXECUTION_ACTION_CACHE
             .load(deps.as_ref().storage, vault.id.into())

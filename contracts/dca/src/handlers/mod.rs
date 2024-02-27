@@ -18,7 +18,6 @@ pub mod get_vaults_by_address;
 pub mod handle_failed_automation;
 pub mod instantiate;
 pub mod migrate;
-pub mod migrate_limit_order;
 pub mod update_config;
 pub mod update_swap_adjustment_handler;
 pub mod update_vault;

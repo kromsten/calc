@@ -10,6 +10,7 @@ use crate::types::time_interval::TimeInterval;
 use crate::types::vault::{Vault, VaultStatus};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Binary, Coin, Decimal, Uint128, Uint64};
+use cw20::Cw20ReceiveMsg;
 use exchange::msg::Pair;
 
 #[cw_serde]
@@ -106,6 +107,7 @@ pub enum ExecuteMsg {
         delegator_address: Addr,
         validator_address: Addr,
     },
+    Receive(Cw20ReceiveMsg),
 }
 
 #[cw_serde]

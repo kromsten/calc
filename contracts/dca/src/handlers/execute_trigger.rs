@@ -18,6 +18,8 @@ use cosmwasm_std::{to_json_binary, Binary, Coin, Decimal, SubMsg, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{DepsMut, Env, Response, Uint128};
 use exchange::msg::{ExecuteMsg as ExchangeExecuteMsg, Order, QueryMsg as ExchangeQueryMsg};
+use shared::balance::query_balance;
+use shared::cw20::into_execute_msg;
 
 pub fn execute_trigger_handler(
     deps: DepsMut,
@@ -269,12 +271,18 @@ pub fn execute_trigger_handler(
     SWAP_CACHE.save(
         deps.storage,
         &SwapCache {
-            swap_denom_balance: deps
-                .querier
-                .query_balance(&env.contract.address, vault.get_swap_denom())?,
-            receive_denom_balance: deps
-                .querier
-                .query_balance(&env.contract.address, vault.target_denom.clone())?,
+            swap_denom_balance: query_balance(
+                deps.api,
+                &deps.querier,
+                &vault.get_swap_denom(),
+                &env.contract.address,
+            )?,
+            receive_denom_balance: query_balance(
+                deps.api,
+                &deps.querier,
+                &vault.target_denom,
+                &env.contract.address,
+            )?,
         },
     )?;
 
@@ -287,17 +295,18 @@ pub fn execute_trigger_handler(
             });
 
     Ok(response.add_submessage(SubMsg::reply_always(
-        WasmMsg::Execute {
-            contract_addr: config.exchange_contract_address.to_string(),
-            msg: to_json_binary(&ExchangeExecuteMsg::Swap {
+        into_execute_msg(
+            deps.api,
+            config.exchange_contract_address.clone(),
+            to_json_binary(&ExchangeExecuteMsg::Swap {
                 minimum_receive_amount: Coin {
                     amount: adjusted_minimum_receive_amount,
                     denom: vault.target_denom,
                 },
                 route,
             })?,
-            funds: vec![adjusted_swap_amount],
-        },
+            adjusted_swap_amount,
+        )?,
         AFTER_SWAP_REPLY_ID,
     )))
 }
