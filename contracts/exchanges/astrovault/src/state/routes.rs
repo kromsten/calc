@@ -1,4 +1,4 @@
-use cosmwasm_std::{Order, StdError, StdResult, Storage};
+use cosmwasm_std::{ensure, Order, StdError, StdResult, Storage};
 use cw_storage_plus::Map;
 
 use crate::{
@@ -14,7 +14,7 @@ use crate::{
 
 use super::{
     common::{allow_implicit, key_from, PAIRS},
-    pools::save_pool,
+    pools::{pool_exists, save_pool},
 };
 
 /// list if intermediate denoms between base and quote assets
@@ -38,6 +38,58 @@ pub fn get_stored_route(
     Ok(route)
 }
 
+
+pub fn get_route_pool_pairs(
+    storage: &dyn Storage,
+    denoms: [String; 2],
+    reverse: bool,
+) -> StdResult<Vec<Option<[String; 2]>>> {
+    let key = key_from(&denoms);
+    let mut route = get_stored_route(storage, key.clone(), reverse).unwrap_or_default();
+    ensure!(!route.is_empty(), StdError::generic_err("Route not found"));
+
+    let [base, quote] = if reverse {
+        [denoms[1].clone(), denoms[0].clone()]
+    } else {
+        denoms
+    };
+
+    let mut pairs = Vec::with_capacity(route.len() + 2);
+
+    let first = route.first().unwrap().clone();
+    let last = route.last().unwrap().clone();
+
+    let default_first = [base.clone(), first.clone()];
+    let reverse_first = [last.clone(), quote.clone()];
+
+    let (first_pair, last_pair) = if pool_exists(storage, &default_first) {
+        (default_first, reverse_first)
+    } else if pool_exists(storage, &reverse_first) {
+        (reverse_first, default_first) 
+    } else {
+        return Err(StdError::generic_err("No pool found for first or last pair"));
+    };
+
+    pairs.push(Some(first_pair));
+
+    for (index, second) in route.into_iter().enumerate().skip(1) {
+        let first = route.get(index - 1).unwrap().clone();
+        let pair = [first, second];
+        if pool_exists(storage, &pair) {
+            pairs.push(Some(pair));
+        } else {
+            pairs.push(None);
+        }
+    };
+
+    pairs.push(Some(last_pair));
+
+    Ok(pairs)
+
+}
+
+
+
 pub fn get_route(
     storage: &dyn Storage,
     denoms: [String; 2],
@@ -56,6 +108,7 @@ pub fn get_route(
 
     let first = route.first().unwrap().clone();
     let mut last = route.last().unwrap().clone();
+
 
     let first_pool = match get_pool(storage, key_from(&[base.clone(), first.clone()])) {
         Ok(pool) => pool,
@@ -80,6 +133,7 @@ pub fn get_route(
     Ok(hop_pools)
 }
 
+
 pub fn get_routed_pair(
     storage: &dyn Storage,
     denoms: [String; 2],
@@ -87,6 +141,7 @@ pub fn get_routed_pair(
 ) -> StdResult<PopulatedPair> {
     Ok(get_route(storage, denoms, reverse)?.into())
 }
+
 
 pub fn save_routed_pair(
     storage: &mut dyn Storage,
@@ -263,7 +318,7 @@ mod saving_routed_pairs_tests {
             assert!(POOLS.has(deps.storage, key_from(&pool.denoms())))
         }
 
-        let pairs = get_pairs(deps.storage, None, None);
+        let pairs = get_pairs(deps.storage, None, None).unwrap();
 
         assert_eq!(pairs.len(), 1);
     }
@@ -285,7 +340,7 @@ mod saving_routed_pairs_tests {
             assert!(POOLS.has(deps.storage, key_from(&pool.denoms())))
         }
 
-        let pairs = get_pairs(deps.storage, None, None);
+        let pairs = get_pairs(deps.storage, None, None).unwrap();
 
         let direct_pool_count = route.len();
 
@@ -297,28 +352,6 @@ mod saving_routed_pairs_tests {
             .enumerate()
             .take(len - 1)
             .fold(0usize, |acc, (index, _)| acc + (route.len() - 1 - index));
-
-        /*
-           A -> B   :  1
-           A -> C   :  2
-           A -> D   :  3
-           A -> E   :  4
-           A -> F   :  5
-
-           B -> C   :  6
-           B -> D   :  7
-           B -> E   :  8
-           B -> F   :  9
-
-           C -> D   : 10
-           C -> E   : 11
-           C -> F   : 12
-
-           D -> E   : 13
-           D -> F   : 14
-
-           E -> F   : 15
-        */
 
         let total = direct_pool_count + routed_count;
 

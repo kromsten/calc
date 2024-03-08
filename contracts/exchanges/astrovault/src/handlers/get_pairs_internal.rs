@@ -10,11 +10,11 @@ pub fn get_pairs_internal_handler(
     start_after: Option<Pair>,
     limit: Option<u16>,
 ) -> StdResult<Vec<Pair>> {
-    Ok(get_pairs(
+    get_pairs(
         deps.storage,
         start_after.map(|pair| pair.denoms()),
         limit,
-    ))
+    )
 }
 
 pub fn get_pairs_internal_full_handler(
@@ -22,9 +22,9 @@ pub fn get_pairs_internal_full_handler(
     start_after: Option<Pair>,
     limit: Option<u16>,
 ) -> StdResult<Vec<PopulatedPair>> {
-    Ok(get_pairs_full(
+    get_pairs_full(
         deps.storage,
         start_after.map(|pair| pair.denoms()),
         limit,
-    ))
+    )
 }

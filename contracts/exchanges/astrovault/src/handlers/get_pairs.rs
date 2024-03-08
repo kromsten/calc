@@ -8,11 +8,11 @@ pub fn get_pairs_handler(
     start_after: Option<Pair>,
     limit: Option<u16>,
 ) -> StdResult<Vec<Pair>> {
-    Ok(get_exchange_pairs(
+    get_exchange_pairs(
         deps.storage,
         start_after.map(|pair| pair.denoms),
         limit,
-    ))
+    )
 }
 
 #[cfg(test)]
@@ -28,7 +28,7 @@ mod get_pairs_handler {
         let deps = data.deps.as_ref();
         let pairs = routed_pairs_real_implicit();
 
-        let ex_pairs = get_pairs_handler(deps, None, None).unwrap();
+        get_pairs_handler(deps, None, None).unwrap();
 
         assert_eq!(pairs.len(), 2);
     }

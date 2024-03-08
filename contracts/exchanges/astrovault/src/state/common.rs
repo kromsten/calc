@@ -27,12 +27,12 @@ pub const PAIRS: Map<String, StoredPairType> = Map::new("pairs_v1");
 
 /// Flag that tells whether to allow swaps for pairs not created explicitly
 /// and wether to returns them in the list of pairs
-const IMPLICIT_PAIRS: Item<bool> = Item::new("i");
+const ALLOW_IMPLICIT: Item<bool> = Item::new("i");
 
 pub fn allow_implicit(storage: &dyn Storage) -> bool {
-    IMPLICIT_PAIRS.load(storage).unwrap_or(false)
+    ALLOW_IMPLICIT.load(storage).unwrap_or(false)
 }
 
 pub fn update_allow_implicit(storage: &mut dyn Storage, allow: Option<bool>) -> StdResult<()> {
-    IMPLICIT_PAIRS.save(storage, &allow.unwrap_or(false))
+    ALLOW_IMPLICIT.save(storage, &allow.unwrap_or(false))
 }

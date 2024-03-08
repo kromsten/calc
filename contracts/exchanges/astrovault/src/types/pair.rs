@@ -54,3 +54,11 @@ pub enum StoredPairType {
     Direct,
     Routed,
 }
+
+pub struct StoredPairStatus {
+    pub denoms                 :   [String; 2],
+    pub stored_type            :   Option<StoredPairType>,
+    pub stored_pool            :   Option<String>,
+    pub stored_route           :   Option<Vec<String>>,
+    pub stored_route_pools     :   Vec<Option<[String; 2]>>,
+}

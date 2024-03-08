@@ -245,7 +245,7 @@ mod creating_routed_pairs_tests {
         let pair = data.pair.unwrap();
 
         assert!(pair_exists(deps.storage, &pair.denoms()));
-        assert_eq!(get_pairs(deps.storage, None, None).len(), 1);
+        assert_eq!(get_pairs(deps.storage, None, None).unwrap().len(), 1);
 
         let route = validated_routed_pair(deps, &pair, Some(to_asset_info(DENOM_AARCH)))
             .unwrap()
